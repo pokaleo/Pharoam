@@ -1,0 +1,22 @@
+name: Content suggestion
+description: Suggest a pathway, skill, assessment item or learning resource
+labels: ["type: content"]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of content
+      options: [Pathway, Skill, Assessment item, Learning resource, Correction to existing content]
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+    validations:
+      required: true
+  - type: textarea
+    id: sources
+    attributes:
+      label: Sources
+      description: Time and cost figures must have a source (PRD F1). Please include links.

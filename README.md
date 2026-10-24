@@ -57,6 +57,7 @@ Every design decision is checked against the rules in the [Charter](docs/CHARTER
 - [Architecture](docs/ARCHITECTURE.md): decisions and the [ADR](docs/adr/) index.
 - Design specifications: [data model](docs/design/data-model.md), [interfaces](docs/design/interfaces.md), [security](docs/design/security.md).
 - [Research: skill inventories](docs/research/skills-inventory.md).
+- [Engineering standards](docs/ENGINEERING.md) and [AGENTS.md](AGENTS.md) (instructions for AI coding agents).
 
 ## Contributing
 
