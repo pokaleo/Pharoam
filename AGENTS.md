@@ -43,4 +43,13 @@ Pharoam is an open-source, browser-first web app. It helps people build an evide
 
 ## Commands
 
-*Added when the repository is scaffolded.*
+Node 24 (`.nvmrc`), pnpm (version pinned in `package.json`).
+
+| Command | Does |
+|---|---|
+| `pnpm install` | Install dependencies (build scripts are denied unless listed in `pnpm-workspace.yaml`) |
+| `pnpm test` / `pnpm test:watch` | Vitest |
+| `pnpm lint` | ESLint, including the architecture boundary rules |
+| `pnpm format` / `pnpm format:check` | Prettier (code, JSON, YAML; not Markdown) |
+| `pnpm typecheck` | TypeScript |
+| `pnpm check` | All of the above, as CI runs them |
