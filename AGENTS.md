@@ -43,7 +43,7 @@ Pharoam is an open-source, browser-first web app. It helps people build an evide
 
 ## Commands
 
-Node 24 (`.nvmrc`), pnpm (version pinned in `package.json`).
+Node 26 (`.nvmrc`), pnpm 12 (exact version pinned in `package.json`; pnpm switches to it automatically).
 
 | Command | Does |
 |---|---|

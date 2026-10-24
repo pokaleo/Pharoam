@@ -82,7 +82,7 @@ The core runs entirely in the browser. Some outside services don't allow direct 
 | AD19 | **Parsing and rendering** | **`yaml`** (eemeli/yaml, YAML 1.2), editing documents so comments, field order and unknown fields survive. **`react-markdown` + `rehype-sanitize`**, raw HTML disabled. | — |
 | AD20 | **Local cache library** | **Dexie.js** over IndexedDB, wrapped by the encryption layer ([Security](design/security.md) §8). | — |
 | AD21 | **Relay framework** | **Hono**, running unchanged on Cloudflare Workers, Node (Docker) and Bun. | — |
-| AD22 | **Runtime version** | The current **Node.js Active LTS** at repo setup, pinned via `.nvmrc` and `engines`. Linting, formatting and other developer tools are decided in Engineering & Agent Standards. | — |
+| AD22 | **Runtime version** | **The latest stable Node.js line** (currently **Node 26**, Active LTS from 2026-10-28), pinned via `.nvmrc` and `engines`. Dependencies track their latest stable versions, except where a tool's support lags (ENGINEERING §3). Linting, formatting and other developer tools are decided in Engineering & Agent Standards. | — |
 
 ## Spikes before implementation
 
