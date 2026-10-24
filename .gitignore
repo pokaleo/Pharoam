@@ -1,0 +1,5 @@
+# Editor / tooling
+.idea/
+.vscode/
+.omc/
+.DS_Store

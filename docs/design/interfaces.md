@@ -1,0 +1,107 @@
+# Interfaces
+
+| | |
+|---|---|
+| **Version** | 0.1 (in discussion) |
+| **Source** | [Architecture](../ARCHITECTURE.md) · [Data model](data-model.md) |
+| **Status** | The contracts between Pharoam's parts. Code signatures are illustrative; exact types are settled during implementation. |
+
+## 1. Storage connectors
+
+**Connectors exchange records in the standard shape, not raw files.** File-based connectors (local folder, Obsidian, Git) share one **Markdown codec** that turns a record into a `.md` file (top block plus body) and back. The Notion connector maps records to database properties and page content. The core never knows which backend it is using.
+
+```ts
+interface StorageConnector {
+  capabilities: { attachments: boolean; watch: boolean; offlineQueue: boolean }
+  list(type?: RecordType): RecordSummary[]           // id, type, version token
+  read(id): Record
+  write(record, expectedVersion?): VersionToken      // fails if changed since read → conflict (AD10)
+  delete(id, expectedVersion?)
+  readAttachment(ref) / writeAttachment(ownerId, file)
+  changesSince(cursor): Change[]                     // for automatic refresh (AD10a)
+}
+```
+
+- The **version token** detects conflicts: a file's modified time or content hash, or Notion's last-edited time.
+- A connector may have a **relay part** where its service blocks browsers (AD12). The interface is the same either way.
+
+## 2. AI task definitions
+
+Every AI feature is one task definition in `packages/core`, shared by the app and the relay (AD4):
+
+```ts
+defineTask({
+  name: "normalise-evidence", version: 1,
+  input:  z.object({ text: z.string(), kindHint: … }),   // Zod (AD7)
+  output: EvidenceShape,                                  // validated before the user sees it
+  prompt: "…template…",
+  label:  "AI-normalised evidence",                       // shown in the UI (PRD D6)
+  disclaimer: "AI-generated from your input… AI can make mistakes.",
+  dataUsed: ["pasted text"],                              // shown in the transparency view (PRD D4, J3)
+})
+```
+
+Validation, labelling, transparency and the relay's allow-list all come from this one definition.
+
+## 3. Model providers
+
+A thin interface over LangChain chat models (AD11a):
+
+```ts
+interface ModelProvider {
+  id: "anthropic" | "openai-compatible" | …
+  capabilities: { structuredOutput: boolean; toolCalling: boolean; streaming: boolean }
+  listModels(): Model[]
+  run(task, input, { model, signal }): TaskResult   // validated output + call record
+}
+```
+
+- The user configures the provider type, base URL (OpenRouter, Ollama, LM Studio), key and model.
+- Every call produces a **call record** (task, model, time, data sent). It is shown in the transparency view, and its summary goes into the resulting record's AI block.
+
+## 4. Workflows
+
+Workflows (adaptive assessment, profile update, later CVs and interview practice) are LangGraph graphs defined in the core. Each declares:
+- `name@version`, with nodes that are either **plain logic** or **registered tasks** (§2);
+- **approval points** where the user must confirm before anything is written (interrupts, R5);
+- **every step appends an entry to the readable session log** ([data model](data-model.md) §10);
+- **resuming means replaying the log** to rebuild the working state;
+- **records are written only through the core service** (§5), at approval points or when the workflow finishes.
+
+## 5. Core service
+
+The UI never calls connectors or providers directly. One core service layer:
+- **loads and queries** the profile, upgrading old formats when reading;
+- **saves records**: validate → encode → connector → handle conflicts (AD10);
+- runs **integrity checks** and keeps the **"Needs attention"** list;
+- emits **change events**. A batched **regeneration step** listens to them and updates proficiency summaries, overall levels, gaps and the `pharoam.md` overview, always showing the "recalculating" status;
+- manages the **local cache** and the **offline queue** (AD9).
+
+## 6. Content sources
+
+```ts
+interface ContentSource {
+  listPacks(): PackSummary[]
+  loadPack(nameAtVersion): Pack
+}
+```
+
+- Three implementations: **bundled** (in the app), **URL** and **connector** (packs in the user's own storage).
+- Every pack is validated against its manifest and `min_app_version`.
+- Loading a pack from a URL needs **the user's explicit confirmation**, showing its name, version, publisher and licences.
+
+## 7. Relay HTTP API
+
+Small and fixed:
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /tasks/{name}@{version}` | Runs **registered tasks only** (PRD L3), with the operator's key or the user's own |
+| `/connectors/{name}/…` | The relay part of a connector, for example Notion calls and OAuth callbacks |
+| `POST /fetch` | Fetches a public web page (job ads, course pages). Requests to private or internal network addresses are refused. |
+| `GET /health` | Health check |
+
+- Nothing else is exposed.
+- **Localhost relay:** accepts calls only from the Pharoam app's own address (origin), and only after **pairing**. It shows a pairing code when it first starts, and the user enters it in the app once. That stops other web pages in the browser from using it.
+- **Operator relay:** the operator's sign-in (PRD L1) issues a short-lived session token.
+- **The user's own key on an operator deployment** is sent with each request, used only for that call, and never stored.
