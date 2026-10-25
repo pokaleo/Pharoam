@@ -1,0 +1,13 @@
+packages:
+  - packages/*
+  - apps/*
+
+# Dependency build scripts are denied unless explicitly reviewed (supply chain, security §7).
+allowBuilds:
+  # Its postinstall only downloads a fallback binary; the prebuilt binding is used.
+  unrs-resolver: false
+
+peerDependencyRules:
+  allowedVersions:
+    # Works on ESLint 10 (verified); its declared peer range hasn't been updated since 2024.
+    eslint-plugin-jsx-a11y>eslint: "10"

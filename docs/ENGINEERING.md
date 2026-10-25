@@ -34,7 +34,12 @@
     - `packages/core` never imports browser, React, connector or provider code;
     - the UI never imports connectors or providers directly; it goes through the core service;
     - connectors and providers depend only on the core's interfaces.
-- **Prettier** for formatting. ESLint does not check formatting (`eslint-config-prettier`).
+- **Prettier** for formatting code, JSON and YAML. ESLint does not check formatting (`eslint-config-prettier`). **Markdown docs are excluded**: Prettier pads tables to their widest cell, which hurts editing and turns every table change into a full-table diff.
+- **Boundary rules are themselves tested** (`tooling/eslint/boundaries.test.ts`): a change to the rules must keep those tests green.
+- **Version notes:**
+  - **TypeScript 6.0** is pinned until `typescript-eslint` supports TypeScript 7.
+  - **ESLint 10** is used with a documented peer-range exception for `eslint-plugin-jsx-a11y`: it was verified to work, but its declared range is out of date.
+  - Dependency build scripts are **denied unless reviewed** (`allowBuilds` in `pnpm-workspace.yaml`).
 
 ## 4. Testing strategy
 
