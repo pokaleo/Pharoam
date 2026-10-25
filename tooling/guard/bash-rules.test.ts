@@ -23,6 +23,8 @@ describe("Bash command rules", () => {
       "git push --force-with-lease",
       "git push --force-with-lease=main:abc123",
       "git push --mirror",
+      "stdbuf -o0 git push --force",
+      "find . -name x -exec git push -f ;",
       "cd repo && git push origin +main",
       `git push origin "+main"`,
     ])("denies: %s", (cmd) => {
@@ -70,6 +72,12 @@ describe("Bash command rules", () => {
       `bash -c "git commit -m x"`,
       "bash <<'EOF'\ngit push\nEOF",
       "git -c alias.ci=commit ci -m x",
+      "cat <<EOF\n$(git commit -m x)\nEOF",
+      "find . -name x -exec git commit -m x ;",
+      "doas git push",
+      "watch git push",
+      `script -q -c "git push" /dev/null`,
+      `su -c "git commit -m x"`,
     ])("asks: %s", (cmd) => {
       expect(decision(cmd)).toBe("ask");
     });
@@ -115,6 +123,12 @@ describe("Bash command rules", () => {
       "printf 9 | tee /repo/.claude/guard-unlock",
       "cp /tmp/x .claude/guard-unlock",
       "echo 9 > .Claude/Guard-Unlock",
+      "make guard:unlock",
+      "find tooling -name unlock.ts -exec node {} 60 ;",
+      "node tooling/guard/bin/unl*.ts 60",
+      "pnpm guard:unl?ck 60",
+      "cp /tmp/x .claude/guard-unl*",
+      `bash -c "pnpm guard:unlock 60"`,
     ])("denies: %s", (cmd) => {
       expect(decision(cmd)).toBe("deny");
     });
@@ -149,6 +163,9 @@ describe("shell commands that write enforcement files", () => {
     "patch -p1 < /tmp/fix.patch",
     `bash -c "echo x > tooling/guard/a.ts"`,
     "echo tooling/guard/a.ts | xargs rm",
+    "rm tooling/gu*/hooks.ts",
+    "cp /tmp/x tooling/eslint/*.ts",
+    "rm tsconfig*",
   ])("detects: %s", (cmd) => {
     expect(writes(cmd)).toBe(true);
   });

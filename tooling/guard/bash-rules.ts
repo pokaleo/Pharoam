@@ -60,9 +60,13 @@ export function classifyCommand(
 ): CommandDecision {
   const expanded = expand(command);
   if (expanded.unreadable !== undefined) return ask(unreadable(expanded.unreadable));
-  const isUnlockFile = (token: string) => toRelative(token, context)?.toLowerCase() === UNLOCK_FILE;
+  const isUnlockFile = (token: string) => {
+    const relative = toRelative(token, context);
+    return relative !== undefined && globMatches(relative, UNLOCK_FILE);
+  };
   if (writeCandidates(expanded.commands).paths.some(isUnlockFile)) return deny(UNLOCK);
-  return strictest(expanded.commands.map(classifySimple));
+  if (expanded.commands.some((c) => c.argv.some(namesUnlock))) return deny(UNLOCK);
+  return strictest([...expanded.commands.map(classifySimple), backstop(command)]);
 }
 
 /**
@@ -83,7 +87,7 @@ export function writesProtectedPath(command: string, context: CommandContext): b
     hidden ||
     paths.some((token) => {
       const relative = toRelative(token, context);
-      return relative !== undefined && coversProtectedPath(relative);
+      return relative !== undefined && coversProtectedPath(globFolder(relative));
     })
   );
 }
@@ -98,8 +102,9 @@ interface Unwrapped {
 }
 
 const SHELLS = new Set(["sh", "bash", "zsh", "dash", "ksh"]);
+// Commands that run a command line given as one argument, after `-c` or `--command`.
+const STRING_RUNNERS = new Set([...SHELLS, "su", "runuser", "script", "flock"]);
 const INTERPRETERS = new Set(["python", "python3", "node", "deno", "bun", "ruby", "perl", ...SHELLS]);
-const SCRIPT_RUNNERS = new Set(["pnpm", "npm", "yarn", "npx", "node", "bun", "deno", "tsx"]);
 const PREFIXES = new Set(["!", "{", "if", "then", "else", "elif", "do", "while", "until", "time", "exec"]);
 // Prefix commands, with the options of each that take a separate value.
 const WRAPPERS: Record<string, readonly string[]> = {
@@ -151,13 +156,27 @@ function expand(command: string, depth = 0): { commands: Unwrapped[]; unreadable
   for (const simple of parsed.commands) {
     const unwrapped = unwrap(simple.assignments, simple.words, simple.dynamic);
     commands.push({ ...unwrapped, redirects: simple.redirects, heredocs: simple.heredocs });
-    if (!SHELLS.has(program(unwrapped.argv))) continue;
-    const scripts = [...simple.heredocs];
-    const flag = unwrapped.argv.findIndex((word, i) => i > 0 && /^-[a-zA-Z]*c[a-zA-Z]*$/.test(word));
-    if (flag !== -1) {
-      if (unwrapped.dynamic[flag + 1] === true) why ??= "a shell script built from a variable";
-      scripts.push(unwrapped.argv[flag + 1] ?? "");
+    const name = program(unwrapped.argv);
+    const scripts = SHELLS.has(name) ? [...simple.heredocs] : [];
+    if (STRING_RUNNERS.has(name)) {
+      const flag = unwrapped.argv.findIndex(
+        (word, i) => i > 0 && /^(?:-[a-zA-Z]*c[a-zA-Z]*|--command)$/.test(word),
+      );
+      if (flag !== -1) {
+        if (unwrapped.dynamic[flag + 1] === true) why ??= "a script built from a variable";
+        scripts.push(unwrapped.argv[flag + 1] ?? "");
+      }
+      const inline = unwrapped.argv.find((word) => word.startsWith("--command="));
+      if (inline !== undefined) scripts.push(inline.slice("--command=".length));
     }
+    // `watch` runs its remaining arguments as one command line.
+    if (name === "watch")
+      scripts.push(
+        unwrapped.argv
+          .slice(1)
+          .filter((word) => !word.startsWith("-"))
+          .join(" "),
+      );
     for (const script of scripts) {
       const nested = expand(script, depth + 1);
       commands.push(...nested.commands);
@@ -205,12 +224,59 @@ function classifySimple(command: Unwrapped): CommandDecision {
     return ask(
       "Pharoam's guard can't check commands run through eval, so they need the user's explicit approval.",
     );
-  if (SCRIPT_RUNNERS.has(name) && argv.some((word) => /guard:unlock|(?:^|\/)unlock\.ts$/.test(word))) {
-    return deny(UNLOCK);
+  // `git` or `gh` anywhere in the words, as in `find -exec git push` or `doas git commit`, is checked from
+  // there, so wrappers the guard doesn't know can't hide them.
+  const decisions = argv.flatMap((word, i) => {
+    if (dynamic[i] === true) return [];
+    const at = path.basename(word);
+    if (at === "git") return [classifyGit(argv.slice(i + 1), dynamic.slice(i + 1))];
+    if (at === "gh") return [classifyGh(argv.slice(i + 1), dynamic.slice(i + 1))];
+    return [];
+  });
+  return strictest(decisions);
+}
+
+// Whether a word names the unlock command or script, also as a glob such as `unl*.ts` that the shell expands.
+function namesUnlock(word: string): boolean {
+  return globMatches(word, "guard:unlock") || globMatches(path.basename(word), "unlock.ts");
+}
+
+// The old text patterns, kept as a second layer: commits, pushes and PR changes named in plain text ask.
+const BACKSTOP: readonly [RegExp, string][] = [
+  [/\bgit\s+commit\b/, COMMIT],
+  [/\bgit\s+push\b/, PUSH],
+  [/\bgh\s+pr\s+(?:create|merge|edit|close|reopen|ready)\b/, PUBLISH],
+];
+
+function backstop(command: string): CommandDecision {
+  const code = command.replace(/'[^']*'|"(?:\\.|[^"\\])*"/g, "''");
+  const match = BACKSTOP.find(([pattern]) => pattern.test(code));
+  return match === undefined ? ALLOW : ask(match[1]);
+}
+
+// Whether a path or word matches `target`, ignoring letter case and treating `*`, `?` and `[…]` as the shell
+// does in globs.
+function globMatches(pattern: string, target: string): boolean {
+  const lower = pattern.toLowerCase();
+  if (!/[*?[]/.test(lower)) return lower === target;
+  const source = lower
+    .replace(/[.+^${}()|\\]/g, "\\$&")
+    .replace(/\*/g, "[^/]*")
+    .replace(/\?/g, "[^/]")
+    .replace(/\[!/g, "[^");
+  try {
+    return new RegExp(`^${source}$`).test(target);
+  } catch {
+    return true;
   }
-  if (name === "git") return classifyGit(argv.slice(1), dynamic.slice(1));
-  if (name === "gh") return classifyGh(argv.slice(1), dynamic.slice(1));
-  return ALLOW;
+}
+
+// The folder a glob could write in: the part before the first glob character, up to its last `/`.
+function globFolder(relative: string): string {
+  const wildcard = relative.search(/[*?[]/);
+  if (wildcard === -1) return relative;
+  const folder = relative.slice(0, wildcard).replace(/\/[^/]*$|^[^/]*$/, "");
+  return folder === "" ? "." : folder;
 }
 
 // git's global options that take a separate value.

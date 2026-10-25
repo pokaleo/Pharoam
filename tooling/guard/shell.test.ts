@@ -83,6 +83,28 @@ describe("nested and hidden commands", () => {
   });
 });
 
+describe("substitutions in heredocs and expansions", () => {
+  it("parses substitutions in an unquoted heredoc, which the shell runs", () => {
+    expect(argv("cat <<EOF\nhello $(git commit -m x)\nEOF")).toContainEqual(["git", "commit", "-m", "x"]);
+    expect(argv("cat <<EOF\n`git push`\nEOF")).toContainEqual(["git", "push"]);
+  });
+
+  it.each([
+    "cat <<'EOF'\n$(git push)\nEOF",
+    'cat <<"EOF"\n$(git push)\nEOF',
+    "cat <<\\EOF\n$(git push)\nEOF",
+  ])("keeps a quoted heredoc as data: %j", (command) => {
+    expect(argv(command)).not.toContainEqual(["git", "push"]);
+  });
+
+  it.each(["echo ${x:-$(git push)}", "echo ${x:-`git push`}", "echo $((1 + $(git push)))"])(
+    "reports a substitution inside an expansion as unreadable: %j",
+    (command) => {
+      expect(parseShell(command).unreadable).toBeTruthy();
+    },
+  );
+});
+
 describe("commands it can't read", () => {
   it.each([
     `git commit -m "unterminated`,

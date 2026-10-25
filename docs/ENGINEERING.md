@@ -138,10 +138,10 @@ The enforcement code is itself built test-first (`tooling/**/*.test.ts`). Some r
 
 How shell commands are read (`tooling/guard/shell.ts`):
 - **Word by word, as the shell splits them:** quotes and escapes are removed, so `git "commit"` is still a commit.
-- **Every command counts:** each part of `;`, `&&`, `||` and pipes, plus `$(…)`, backticks, `sh -c` strings and heredocs fed to a shell.
-- **Prefixes are seen through:** git's global options (`git -C . commit`), and `env`, `sudo`, `command`, `xargs` and `timeout`.
-- **Hidden or unreadable commands ask** instead of guessing: unterminated quotes, a command name or git subcommand taken from a variable, `eval`, and git aliases set with `-c` or `git config`.
-- **Paths are matched after resolving symlinks and ignoring letter case.** An unlock expiry further ahead than 240 minutes counts as locked.
+- **Every command counts:** each part of `;`, `&&`, `||` and pipes, plus `$(…)`, backticks, substitutions in unquoted heredocs, `sh -c`, `su -c`, `script -c` and `watch` command lines, and heredocs fed to a shell.
+- **Prefixes are seen through:** git's global options (`git -C . commit`), and `env`, `sudo`, `command`, `xargs` and `timeout`. `git` or `gh` anywhere in a command is checked from that word, so other wrappers (`find -exec`, `doas`, `stdbuf`) can't hide them. The old text patterns stay as a second layer.
+- **Hidden or unreadable commands ask** instead of guessing: unterminated quotes, a substitution inside `${…}` or `$((…))`, a command name or git subcommand taken from a variable, `eval`, and git aliases set with `-c` or `git config`.
+- **Paths are matched after resolving symlinks and ignoring letter case,** and globs (`tooling/gu*`) by the folder they could write in. The unlock script and file are refused by any name, including globs. An unlock expiry further ahead than 240 minutes counts as locked.
 
 Known limits:
 - **Command checks read the command line, not what a program does when it runs.** A script file the agent runs (`bash script.sh`), a git alias already in the user's config, and files written outside the repository aren't inspected. The git hooks and CI still catch the result, and every enforcement change shows in the PR diff.

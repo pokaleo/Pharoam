@@ -49,6 +49,8 @@ const VARIABLE_NAME = /[A-Za-z0-9_@*#?$!-]/;
 interface PendingHeredoc {
   delimiter: string;
   stripTabs: boolean;
+  /** An unquoted delimiter means the shell expands `$(…)` and backticks in the body. */
+  expands: boolean;
   owner: SimpleCommand;
 }
 
@@ -57,6 +59,7 @@ function parseInto(input: string, out: SimpleCommand[]): string | undefined {
   let command = newCommand();
   let word: string | null = null;
   let dynamic = false;
+  let quoted = false;
   let target: "word" | "redirect" | "input" | "duplicate" | "heredoc" = "word";
   let heredocTabs = false;
   const heredocs: PendingHeredoc[] = [];
@@ -70,7 +73,7 @@ function parseInto(input: string, out: SimpleCommand[]): string | undefined {
   const finishWord = () => {
     if (word === null) return;
     if (target === "heredoc") {
-      heredocs.push({ delimiter: word, stripTabs: heredocTabs, owner: command });
+      heredocs.push({ delimiter: word, stripTabs: heredocTabs, expands: !quoted, owner: command });
     } else if (target === "redirect" || (target === "duplicate" && !FD_DUPLICATE.test(word))) {
       command.redirects.push(word);
     } else if (target === "word") {
@@ -82,6 +85,7 @@ function parseInto(input: string, out: SimpleCommand[]): string | undefined {
     }
     word = null;
     dynamic = false;
+    quoted = false;
     target = "word";
   };
   const finishCommand = () => {
@@ -102,7 +106,9 @@ function parseInto(input: string, out: SimpleCommand[]): string | undefined {
 
     if (c === "\n") {
       finishCommand();
-      i = readHeredocs(input, i + 1, heredocs.splice(0)) - 1;
+      const result = readHeredocs(input, i + 1, heredocs.splice(0), out);
+      if (typeof result === "string") return result;
+      i = result - 1;
     } else if (c === " " || c === "\t") {
       finishWord();
     } else if (c === "#" && !inWord()) {
@@ -146,14 +152,17 @@ function parseInto(input: string, out: SimpleCommand[]): string | undefined {
     } else if (c === "'") {
       const close = input.indexOf("'", i + 1);
       if (close === -1) return "an unterminated single quote";
+      quoted = true;
       append(input.slice(i + 1, close));
       i = close;
     } else if (c === '"') {
       const result = readDoubleQuoted(input, i + 1, out);
       if (typeof result === "string") return result;
+      quoted = true;
       append(result.text, result.dynamic);
       i = result.end;
     } else if (c === "\\") {
+      quoted = true;
       if (next !== "\n") append(next);
       i++;
     } else if (c === "$" || c === "`") {
@@ -209,13 +218,17 @@ function readExpansion(input: string, start: number, out: SimpleCommand[]): Piec
   if (next === "(") {
     const close = findClosingParen(input, start + 1);
     if (close === -1) return "an unterminated $( substitution";
-    const nested =
-      input.charAt(start + 2) === "(" ? undefined : parseInto(input.slice(start + 2, close), out);
+    if (input.charAt(start + 2) === "(") {
+      if (/\$\(|`/.test(input.slice(start + 3, close))) return "a substitution inside $((…)) arithmetic";
+      return { text: "$((…))", dynamic: true, end: close };
+    }
+    const nested = parseInto(input.slice(start + 2, close), out);
     return nested ?? { text: "$(…)", dynamic: true, end: close };
   }
   if (next === "{") {
     const close = input.indexOf("}", start + 2);
     if (close === -1) return "an unterminated ${ expansion";
+    if (/\$\(|`/.test(input.slice(start + 2, close))) return "a substitution inside a ${…} expansion";
     return { text: input.slice(start, close + 1), dynamic: true, end: close };
   }
   if (VARIABLE_NAME.test(next)) {
@@ -251,8 +264,14 @@ function findBacktick(input: string, start: number): number {
 }
 
 // Reads the bodies of pending heredocs from `start`, attaching each to its command; returns where parsing
-// resumes. A missing delimiter ends the body at the end of the input, as the shell does.
-function readHeredocs(input: string, start: number, pending: PendingHeredoc[]): number {
+// resumes, or why a body couldn't be read. A missing delimiter ends the body at the end of the input, as the
+// shell does. Substitutions in the body of an unquoted heredoc run, so they are parsed into `out`.
+function readHeredocs(
+  input: string,
+  start: number,
+  pending: PendingHeredoc[],
+  out: SimpleCommand[],
+): number | string {
   let position = start;
   for (const heredoc of pending) {
     let body = "";
@@ -265,8 +284,26 @@ function readHeredocs(input: string, start: number, pending: PendingHeredoc[]): 
       body += `${line}\n`;
     }
     heredoc.owner.heredocs.push(body);
+    if (heredoc.expands) {
+      const why = parseSubstitutions(body, out);
+      if (why !== undefined) return why;
+    }
   }
   return Math.min(position, input.length);
+}
+
+// Parses the `$(…)` and backtick substitutions in text the shell expands without splitting into commands.
+function parseSubstitutions(text: string, out: SimpleCommand[]): string | undefined {
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charAt(i);
+    if (c === "\\") i++;
+    else if (c === "$" || c === "`") {
+      const result = readExpansion(text, i, out);
+      if (typeof result === "string") return result;
+      i = result.end;
+    }
+  }
+  return undefined;
 }
 
 function newCommand(): SimpleCommand {
