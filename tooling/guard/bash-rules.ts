@@ -575,14 +575,18 @@ const FIND_WRITES = new Set(["-delete", "-fprint", "-fprint0", "-fprintf", "-fls
 const FIND_RUNS = new Set(["-exec", "-execdir", "-ok", "-okdir"]);
 
 // Whether `find` arguments may change files: an action that deletes or writes, or a command it runs that
-// changes files, as in `-exec rm {} +`.
+// changes files, as in `-exec rm {} +`. The run command ends at `;`, or at `+` only right after `{}`, as
+// find reads it. Fails closed when that command is missing, comes from a variable, or is `tee`.
 function findChangesFiles(args: readonly string[], dynamic: readonly boolean[]): boolean {
   return args.some((arg, at) => {
     if (FIND_WRITES.has(arg)) return true;
     if (!FIND_RUNS.has(arg)) return false;
-    const stop = args.findIndex((word, i) => i > at && (word === ";" || word === "+"));
+    const stop = args.findIndex(
+      (word, i) => i > at && (word === ";" || (word === "+" && args[i - 1] === "{}")),
+    );
     const end = stop === -1 ? args.length : stop;
     const run = unwrap([], args.slice(at + 1, end), dynamic.slice(at + 1, end));
+    if (run.argv.length === 0 || run.dynamic[0] === true || program(run.argv) === "tee") return true;
     return changesFiles({ ...run, redirects: [], heredocs: [] });
   });
 }
