@@ -1,6 +1,7 @@
 /**
  * Claude Code PreToolUse hook: blocks hard-rule violations, asks before enforcement changes and git publishing.
  *
+ * @remarks Fails closed: if the guard itself throws, the call goes to the user instead of running.
  * @packageDocumentation
  */
 import { realpathSync } from "node:fs";
@@ -16,11 +17,21 @@ const realpath = (path: string) => {
   }
 };
 
-emit(
-  preToolUse(readStdinJson(), {
-    projectDir,
-    readFile: readFileOrUndefined,
-    now: Date.now,
-    resolve: (path) => canonicalPath(path, realpath),
-  }),
-);
+try {
+  emit(
+    preToolUse(readStdinJson(), {
+      projectDir,
+      readFile: readFileOrUndefined,
+      now: Date.now,
+      resolve: (path) => canonicalPath(path, realpath),
+    }),
+  );
+} catch (error) {
+  emit({
+    hookSpecificOutput: {
+      hookEventName: "PreToolUse",
+      permissionDecision: "ask",
+      permissionDecisionReason: `Pharoam's guard failed (${String(error)}), so this needs the user's explicit approval.`,
+    },
+  });
+}

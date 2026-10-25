@@ -47,6 +47,12 @@ describe("Bash command rules", () => {
       "git tag v1.0.0 && git push --tags",
       "git config core.hooksPath /dev/null",
       "git config alias.ci commit",
+      "git config core.pager node",
+      "git config diff.external node",
+      "git config diff.ts.textconv node",
+      "git config core.fsmonitor node",
+      "git config credential.helper.command node",
+      "git -c core.pager=node log",
     ])("asks: %s", (cmd) => {
       expect(decision(cmd)).toBe("ask");
     });
@@ -163,6 +169,12 @@ describe("Bash command rules", () => {
       [`git ls-files "*/u*" | xargs node`, "/repo"],
       [`rg --files -g "u*" | xargs node`, "/repo"],
       ["node scripts/*.ts", "/repo"],
+      [`rg --pre node -g "u*" x`, "/repo"],
+      [`git log --ext-diff -- "tooling/guard/bin/u*"`, "/repo"],
+      [`git grep -O "x" -- "tooling/guard/bin/u*"`, "/repo"],
+      [`PAGER=node git ls-files "tooling/guard/bin/u*"`, "/repo"],
+      [`ls tooling/guard/bin/u* | awk '{ system("node " $0) }'`, "/repo"],
+      ["node tooling/guard/bin/[z-a]nlock.ts", "/repo"],
     ])("denies %s in %s", (cmd, cwd) => {
       expect(classifyCommand(cmd, { projectDir: "/repo", cwd }).decision).toBe("deny");
     });
@@ -174,6 +186,8 @@ describe("Bash command rules", () => {
       ["cat tooling/guard/bin/u*", "/repo"],
       ["wc -l tooling/guard/*.ts", "/repo"],
       ["node tooling/guard/bin/[*]nlock.ts", "/repo"],
+      ["ls tooling/guard/bin/* | wc -l", "/repo"],
+      [`git ls-files "tooling/guard/bin/*"`, "/repo"],
     ])("allows %s in %s", (cmd, cwd) => {
       expect(classifyCommand(cmd, { projectDir: "/repo", cwd }).decision).toBe("allow");
     });

@@ -39,6 +39,11 @@ const PUBLISH =
   "Changing pull requests, releases or the repository on GitHub needs the user's explicit approval.";
 const HOOKS_PATH = "Changing the git hooks path needs the user's explicit approval.";
 const ALIAS = "Git aliases can hide which command runs, so they need the user's explicit approval.";
+const PROGRAM_CONFIG =
+  "Git settings that run programs (pager, editor, external diff, text conversion, fsmonitor, commands) need the user's explicit approval.";
+// Git configuration keys whose value is a program git runs later.
+const RUNS_PROGRAM_CONFIG =
+  /^(?:core\.(?:pager|editor|fsmonitor|sshcommand|askpass)|pager\.|sequence\.editor|diff\.external|diff\..+\.(?:textconv|command)|filter\.|merge\..+\.driver|.+\.command|.+\.helper|gpg\.program|credential\.)/i;
 const unreadable = (why: string) =>
   `Pharoam's guard can't read this command reliably (${why}), so it needs the user's explicit approval.`;
 
@@ -67,10 +72,10 @@ export function classifyCommand(
     return relative !== undefined && globMatches(relative, UNLOCK_FILE);
   };
   if (writeCandidates(expanded.commands).paths.some(isUnlockFile)) return deny(UNLOCK);
-  // `xargs` is unwrapped from the words, so the raw text is checked for it too.
-  const runsPrograms =
-    /(?:^|[\s|;&(])xargs\s/.test(command) || expanded.commands.some((c) => RUNNERS.has(program(c.argv)));
-  const named = (c: Unwrapped) => c.argv.some((word) => namesUnlock(word, c.argv, runsPrograms));
+  // `xargs` and other prefixes are unwrapped from the words, so the raw text is checked for xargs too.
+  const lineReadsOnly =
+    !/(?:^|[\s|;&(])xargs\s/.test(command) && expanded.commands.every((c) => readsOnly(c));
+  const named = (c: Unwrapped) => c.argv.some((word) => namesUnlock(word, lineReadsOnly));
   if (UNLOCK_TEXT.test(command) || expanded.commands.some(named)) {
     return deny(UNLOCK);
   }
@@ -248,60 +253,36 @@ function classifySimple(command: Unwrapped): CommandDecision {
   return strictest(decisions);
 }
 
-// Commands that only read or list files.
-const READ_ONLY = new Set([
-  "ls",
-  "cat",
-  "grep",
-  "rg",
-  "wc",
-  "head",
-  "tail",
-  "stat",
-  "file",
-  "du",
-  "less",
-  "more",
-]);
-const READ_ONLY_GIT = new Set(["grep", "log", "diff", "show", "status", "ls-files", "blame"]);
-// Commands that run programs or scripts, including ones a listing feeds them (`ls … | xargs node`).
-const RUNNERS = new Set([
-  "node",
-  "bun",
-  "deno",
-  "tsx",
-  "ts-node",
-  "npx",
-  "pnpm",
-  "npm",
-  "yarn",
-  "python",
-  "python3",
-  "ruby",
-  "perl",
-  "source",
-  ".",
-  "exec",
-  "eval",
-  "xargs",
-  "parallel",
-  "watch",
-  ...SHELLS,
-]);
+// Commands that only read or list files and have no option that runs another program.
+const STRICT_READERS = new Set(["ls", "cat", "grep", "wc", "head", "tail", "stat", "file", "du"]);
+const STRICT_GIT = new Set(["grep", "ls-files", "status"]);
+// git options that run a pager, an external diff or a text conversion, or set configuration.
+const GIT_RUNS_PROGRAMS =
+  /^(?:-O|--open-files-in-pager|--textconv|--ext-diff|-p|--paginate|-c|--config-env)(?:=|$)/;
+
+// Whether a command only reads or lists files: a strict reader, with no variable assignments (such as a
+// PAGER) and, for git, none of the options that run another program.
+function readsOnly(command: Unwrapped): boolean {
+  if (command.assignments.length > 0) return false;
+  const name = program(command.argv);
+  if (STRICT_READERS.has(name)) return true;
+  const args = command.argv.slice(1);
+  return (
+    name === "git" &&
+    STRICT_GIT.has(gitSubcommand(args) ?? "") &&
+    !args.some((arg) => GIT_RUNS_PROGRAMS.test(arg))
+  );
+}
 
 // Whether a word names the unlock command or script. Fails closed for globs: one whose file-name part could
-// match `unlock.ts` counts, unless its command only reads or lists files and nothing in the line runs
-// programs. So `ls *` and `cat tooling/guard/bin/u*` stay allowed; `node tooling/guard/bin/u*` and
-// `ls tooling/guard/bin/u* | xargs node` don't.
-function namesUnlock(word: string, argv: readonly string[], lineRunsPrograms: boolean): boolean {
+// match `unlock.ts` counts, unless every command in the line only reads or lists files. So `ls *` and
+// `cat tooling/guard/bin/u*` stay allowed; `node tooling/guard/bin/u*`, `ls … | xargs node` and
+// `ls … | awk …` don't.
+function namesUnlock(word: string, lineReadsOnly: boolean): boolean {
   const base = path.basename(word);
   if (!/[*?[]/.test(word)) return word.toLowerCase() === "guard:unlock" || base.toLowerCase() === "unlock.ts";
   if (word.includes(":") && globMatches(word, "guard:unlock")) return true;
-  if (!globMatches(base, "unlock.ts")) return false;
-  const name = program(argv);
-  const readsOnly =
-    READ_ONLY.has(name) || (name === "git" && READ_ONLY_GIT.has(gitSubcommand(argv.slice(1)) ?? ""));
-  return !readsOnly || lineRunsPrograms;
+  return globMatches(base, "unlock.ts") && !lineReadsOnly;
 }
 
 // The unlock command or script named anywhere in the command line, even inside a longer argument or a
@@ -327,8 +308,14 @@ function globMatches(pattern: string, target: string): boolean {
   const lower = pattern.toLowerCase();
   if (!/[*?[]/.test(lower)) return lower === target;
   const source = globSource(lower);
-  // A glob too unusual to convert, such as one with a POSIX class, is assumed to match: fail closed.
-  return source === undefined || new RegExp(`^${source}$`).test(target);
+  // A glob too unusual to convert, such as one with a POSIX class or a reversed range, is assumed to match:
+  // fail closed.
+  if (source === undefined) return true;
+  try {
+    return new RegExp(`^${source}$`).test(target);
+  } catch {
+    return true;
+  }
 }
 
 // A glob as a regular-expression source, or undefined when it uses bracket features this doesn't convert.
@@ -391,6 +378,7 @@ function classifyGit(args: readonly string[], dynamic: readonly boolean[]): Comm
   }
   if (configs.some((c) => /^core\.hookspath/i.test(c))) return deny(SKIP_HOOKS);
   if (configs.some((c) => /^alias\./i.test(c))) return ask(ALIAS);
+  if (configs.some((c) => RUNS_PROGRAM_CONFIG.test(c))) return ask(PROGRAM_CONFIG);
   const subcommand = args[i];
   if (subcommand === undefined) return ALLOW;
   if (dynamic[i] === true) return ask(unreadable("the git subcommand comes from a variable or substitution"));
@@ -403,7 +391,8 @@ function classifyGit(args: readonly string[], dynamic: readonly boolean[]): Comm
       return forcesPush(rest) ? deny(FORCE_PUSH) : ask(PUSH);
     case "config":
       if (rest.some((word) => /core\.hookspath/i.test(word))) return ask(HOOKS_PATH);
-      return rest.some((word) => /^alias\./i.test(word)) ? ask(ALIAS) : ALLOW;
+      if (rest.some((word) => /^alias\./i.test(word))) return ask(ALIAS);
+      return rest.some((word) => RUNS_PROGRAM_CONFIG.test(word)) ? ask(PROGRAM_CONFIG) : ALLOW;
     default:
       return ALLOW;
   }
