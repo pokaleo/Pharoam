@@ -1,20 +1,30 @@
 import { describe, expect, it } from "vitest";
 import { classifyCommand, writesProtectedPath } from "./bash-rules.ts";
 
-const decision = (cmd: string) => classifyCommand(cmd).decision;
+const context = { projectDir: "/repo" };
+const decision = (cmd: string) => classifyCommand(cmd, context).decision;
 
 describe("Bash command rules", () => {
   describe("skipping or rewriting verification is denied", () => {
     it.each([
       "git commit --no-verify -m 'x'",
+      "git commit --no-veri -m 'x'",
       "git commit -nm 'x'",
+      "git commit -anm 'x'",
       "git commit -n -m 'x'",
       "git push --no-verify",
       "HUSKY=0 git commit -m 'x'",
+      "env HUSKY=0 git commit -m 'x'",
+      "git -c core.hooksPath=/dev/null commit -m x",
+      "GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.hooksPath GIT_CONFIG_VALUE_0=/dev/null git commit -m x",
       "git push --force",
       "git push -f origin main",
+      "git push -uf origin main",
       "git push --force-with-lease",
+      "git push --force-with-lease=main:abc123",
+      "git push --mirror",
       "cd repo && git push origin +main",
+      `git push origin "+main"`,
     ])("denies: %s", (cmd) => {
       expect(decision(cmd)).toBe("deny");
     });
@@ -23,16 +33,57 @@ describe("Bash command rules", () => {
   describe("recording or publishing needs the user's explicit approval", () => {
     it.each([
       "git commit -m 'feat: x'",
+      "git commit -mn",
+      `git commit -m "docs: explain why --no-verify is refused"`,
+      `git commit -m "docs: mention guard:unlock"`,
       "git push",
       "git push -u origin feat/x",
       "gh pr create --title x",
       "gh pr merge 1 --squash",
       "gh pr edit 1 --title y",
+      "gh api -X PUT repos/o/r/pulls/1/merge",
+      "gh release create v1.0.0",
       "git tag v1.0.0 && git push --tags",
       "git config core.hooksPath /dev/null",
+      "git config alias.ci commit",
     ])("asks: %s", (cmd) => {
       expect(decision(cmd)).toBe("ask");
     });
+  });
+
+  describe("disguised commits and pushes still ask", () => {
+    it.each([
+      `git "commit" -m x`,
+      "git com'mit' -m x",
+      "git -C . commit -m x",
+      "git -c user.name=x commit -m x",
+      "git --git-dir=.git --work-tree=. commit -m x",
+      "git --no-pager push",
+      "/usr/bin/git commit -m x",
+      "command git commit -m x",
+      "env git push",
+      "sudo git push",
+      "echo x | xargs git commit -m x",
+      "if git commit -m x; then echo ok; fi",
+      "echo $(git commit -m x)",
+      "echo `git push`",
+      `bash -c "git commit -m x"`,
+      "bash <<'EOF'\ngit push\nEOF",
+      "git -c alias.ci=commit ci -m x",
+    ])("asks: %s", (cmd) => {
+      expect(decision(cmd)).toBe("ask");
+    });
+  });
+
+  describe("commands it can't read ask instead of guessing", () => {
+    it.each([`git commit -m "unterminated`, "git $SUB -m x", "$GIT commit", `eval "git commit -m x"`])(
+      "asks: %s",
+      (cmd) => {
+        const result = classifyCommand(cmd, context);
+        expect(result.decision).toBe("ask");
+        expect(result.reason).toMatch(/can't read|can't check/i);
+      },
+    );
   });
 
   describe("ordinary commands are allowed", () => {
@@ -40,10 +91,14 @@ describe("Bash command rules", () => {
       "git status",
       "git diff --stat",
       "git log --oneline -5",
+      "git -C . status",
       "pnpm test",
       "gh pr view 1",
       "gh pr checks 1",
       "echo 'git push is documented here'",
+      `grep -rn "git commit" docs`,
+      "cat .claude/guard-unlock",
+      "echo $(date)",
     ])("allows: %s", (cmd) => {
       expect(decision(cmd)).toBe("allow");
     });
@@ -53,27 +108,34 @@ describe("Bash command rules", () => {
     it.each([
       "pnpm guard:unlock 60",
       "pnpm run guard:unlock 60",
+      "npm run guard:unlock 60",
       "node tooling/guard/bin/unlock.ts 60",
       "echo 9999999999999 > .claude/guard-unlock",
+      `echo 9999999999999 > ".claude/guard-unlock"`,
+      "printf 9 | tee /repo/.claude/guard-unlock",
+      "cp /tmp/x .claude/guard-unlock",
+      "echo 9 > .Claude/Guard-Unlock",
     ])("denies: %s", (cmd) => {
       expect(decision(cmd)).toBe("deny");
     });
   });
 
   it("gives a reason for every non-allow decision", () => {
-    expect(classifyCommand("git push --force").reason).toMatch(/force/i);
-    expect(classifyCommand("git commit -m x").reason).toMatch(/approval/i);
+    expect(classifyCommand("git push --force", context).reason).toMatch(/force/i);
+    expect(classifyCommand("git commit -m x", context).reason).toMatch(/approval/i);
   });
 });
 
 describe("shell commands that write enforcement files", () => {
-  const writes = (cmd: string) => writesProtectedPath(cmd, "/repo");
+  const writes = (cmd: string) => writesProtectedPath(cmd, context);
 
   it.each([
     "sed -i '' 's/a/b/' eslint.config.ts",
     "sed -i 's/a/b/' /repo/vitest.config.ts",
     "echo x > tooling/guard/hooks.ts",
+    `echo x > "tooling/guard/hooks.ts"`,
     "echo x >> .husky/pre-commit",
+    "echo x > Tooling/Guard/hooks.ts",
     "cat x | tee knip.json",
     "cp /tmp/x tooling/eslint/docs.ts",
     "git mv eslint.config.js eslint.config.ts",
@@ -85,8 +147,15 @@ describe("shell commands that write enforcement files", () => {
     "git restore .",
     "git apply /tmp/fix.patch",
     "patch -p1 < /tmp/fix.patch",
+    `bash -c "echo x > tooling/guard/a.ts"`,
+    "echo tooling/guard/a.ts | xargs rm",
   ])("detects: %s", (cmd) => {
     expect(writes(cmd)).toBe(true);
+  });
+
+  it("follows symlinks to protected files", () => {
+    const resolve = (absolute: string) => absolute.replace(/^\/repo\/link(?=\/|$)/, "/repo/tooling/guard");
+    expect(writesProtectedPath("echo x > link/hooks.ts", { projectDir: "/repo", resolve })).toBe(true);
   });
 
   it.each([

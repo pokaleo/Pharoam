@@ -136,8 +136,15 @@ The enforcement code is itself built test-first (`tooling/**/*.test.ts`). Some r
 
 **Enforcement files** (listed in `tooling/guard/protected.ts` and AGENTS.md) change only with the user's approval. These are the checks themselves, when they run, and the settings that could quietly weaken them: the root `package.json`, any `tsconfig*.json`, `vitest.config.ts`, `typedoc.json` and `knip.json`. Agents are asked before an edit to them, and before a shell command that writes them. The user can pause the prompts with `pnpm guard:unlock <minutes>`, which agents are refused. Commits, pushes and PRs still ask, and hard-rule violations are still refused.
 
+How shell commands are read (`tooling/guard/shell.ts`):
+- **Word by word, as the shell splits them:** quotes and escapes are removed, so `git "commit"` is still a commit.
+- **Every command counts:** each part of `;`, `&&`, `||` and pipes, plus `$(…)`, backticks, `sh -c` strings and heredocs fed to a shell.
+- **Prefixes are seen through:** git's global options (`git -C . commit`), and `env`, `sudo`, `command`, `xargs` and `timeout`.
+- **Hidden or unreadable commands ask** instead of guessing: unterminated quotes, a command name or git subcommand taken from a variable, `eval`, and git aliases set with `-c` or `git config`.
+- **Paths are matched after resolving symlinks and ignoring letter case.** An unlock expiry further ahead than 240 minutes counts as locked.
+
 Known limits:
-- The shell-command check is pattern matching, so a determined workaround can get past it. The git hooks and CI still catch the result, and every enforcement change shows in the PR diff.
+- **Command checks read the command line, not what a program does when it runs.** A script file the agent runs (`bash script.sh`), a git alias already in the user's config, and files written outside the repository aren't inspected. The git hooks and CI still catch the result, and every enforcement change shows in the PR diff.
 - The hook fails closed: if a change breaks it, it refuses every protected change, including the fix. The user then applies the fix by hand.
 - Hooks can be disabled locally. CI cannot.
 
