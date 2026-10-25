@@ -20,6 +20,7 @@
 
 - [ ] Tests written first; all tests pass
 - [ ] No LSP diagnostics, lint or format errors
+- [ ] Every new or changed export has a TSDoc comment; expected failures return typed results
 - [ ] Hard rules in `AGENTS.md` respected (no server-side user data, human-readable storage, registered AI tasks, no telemetry or third-party scripts)
 - [ ] Interface text in translation files; accessibility checked
 - [ ] ADR / design spec / docs updated if a decision changed

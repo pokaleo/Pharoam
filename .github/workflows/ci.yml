@@ -34,6 +34,12 @@ jobs:
         run: pnpm typecheck
       - name: Tests
         run: pnpm test
+      - name: Hard rules (content checks)
+        run: pnpm guard
+      - name: Unused files, exports and dependencies
+        run: pnpm knip
+      - name: API docs (every export documented)
+        run: pnpm docs:api
       - name: Commit messages
         if: github.event_name == 'pull_request'
         run: pnpm exec commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }}

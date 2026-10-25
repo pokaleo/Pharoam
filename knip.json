@@ -1,0 +1,6 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": ["tooling/guard/bin/*.ts"],
+  "ignore": ["**/__fixtures__/**"],
+  "ignoreExportsUsedInFile": true
+}
