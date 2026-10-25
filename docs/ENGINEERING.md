@@ -142,7 +142,8 @@ How shell commands are read (`tooling/guard/shell.ts`):
 - **Prefixes are seen through:** git's global options (`git -C . commit`), and `env`, `sudo`, `command`, `xargs` and `timeout`. `git` or `gh` anywhere in a command is checked from that word, so other wrappers (`find -exec`, `doas`, `stdbuf`) can't hide them. The old text patterns stay as a second layer.
 - **Hidden or unreadable commands ask** instead of guessing: unterminated quotes, a substitution inside `${…}` or `$((…))`, a command name or git subcommand taken from a variable, `eval`, and git aliases set with `-c` or `git config`.
 - **Paths are matched after resolving symlinks and ignoring letter case,** and globs (`tooling/gu*`) by the folder they could write in. The unlock script and file are refused by any name; a glob that could name the script is allowed only in a line where every command just reads or lists files (`ls`, `cat`, `grep`, `git ls-files` and the like, with no option or variable that runs another program). An unlock expiry further ahead than 240 minutes counts as locked.
-- **Git settings that run programs ask** (pager, editor, external diff, text conversion, fsmonitor, helpers and other `*.command` keys), whether set with `git config` or `git -c`.
+- **Wildcards are what the shell or program treats as patterns:** unquoted `*`, `?` and `[`, plus quoted ones given to programs that match patterns themselves (`git`, `find`, `rg`, `fd`, `grep`). `--jq '.fields[]'` is just text.
+- **Changing git settings asks**, through `git config` or `git -c`, except a short list of safe ones (`user.name`, `user.email`, `init.defaultBranch`, `pull.rebase`, `push.autoSetupRemote`, `fetch.prune`, `color.ui`). Many settings make git run programs, and a list of risky ones would always miss one. Reading settings never asks.
 - **The guard fails closed:** if it throws, the command goes to the user instead of running.
 
 Known limits:

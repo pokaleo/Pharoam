@@ -53,6 +53,11 @@ describe("Bash command rules", () => {
       "git config core.fsmonitor node",
       "git config credential.helper.command node",
       "git -c core.pager=node log",
+      "git config include.path /tmp/x",
+      "git config core.anything value",
+      "git config --add remote.origin.uploadpack node",
+      "git config set core.pager node",
+      "git -c diff.external=node log",
     ])("asks: %s", (cmd) => {
       expect(decision(cmd)).toBe("ask");
     });
@@ -119,6 +124,10 @@ describe("Bash command rules", () => {
       "ls tooling/guard/*.ts",
       "git grep -n x -- '*.md' '.github/*'",
       "rm -f /tmp/*.log",
+      "git config user.email someone@example.com",
+      "git config --get core.pager",
+      "git config --list",
+      "git config get user.name",
       "grep -n a[b docs/x.md",
       "python3 - <<'EOF'\nfirst = items[0\nopen('/tmp/out.txt', 'w').write(first)\nEOF",
     ])("allows: %s", (cmd) => {
@@ -175,6 +184,8 @@ describe("Bash command rules", () => {
       [`PAGER=node git ls-files "tooling/guard/bin/u*"`, "/repo"],
       [`ls tooling/guard/bin/u* | awk '{ system("node " $0) }'`, "/repo"],
       ["node tooling/guard/bin/[z-a]nlock.ts", "/repo"],
+      [`git grep --open "x" -- "tooling/guard/bin/u*"`, "/repo"],
+      [`git grep -nO "x" -- "tooling/guard/bin/u*"`, "/repo"],
     ])("denies %s in %s", (cmd, cwd) => {
       expect(classifyCommand(cmd, { projectDir: "/repo", cwd }).decision).toBe("deny");
     });
@@ -187,6 +198,9 @@ describe("Bash command rules", () => {
       ["wc -l tooling/guard/*.ts", "/repo"],
       ["node tooling/guard/bin/[*]nlock.ts", "/repo"],
       ["ls tooling/guard/bin/* | wc -l", "/repo"],
+      [`gh project field-list 1 --jq '.fields[] | .name'`, "/repo"],
+      [`node "tooling/guard/bin/u*"`, "/repo"],
+      [`git grep -n -i x -- "tooling/guard/bin/*"`, "/repo"],
       [`git ls-files "tooling/guard/bin/*"`, "/repo"],
     ])("allows %s in %s", (cmd, cwd) => {
       expect(classifyCommand(cmd, { projectDir: "/repo", cwd }).decision).toBe("allow");
