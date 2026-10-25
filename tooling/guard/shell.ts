@@ -16,8 +16,6 @@ export interface SimpleCommand {
   words: string[];
   /** For each word, whether it contains a variable or command substitution whose value isn't known. */
   dynamic: boolean[];
-  /** For each word, whether it has an unquoted `*`, `?` or `[`, so the shell expands it as a glob. */
-  globbed: boolean[];
   /** Files written by `>`, `>>`, `>|` or `&>`. */
   redirects: string[];
   /** Heredoc bodies fed to the command, as text. */
@@ -62,7 +60,6 @@ function parseInto(input: string, out: SimpleCommand[]): string | undefined {
   let word: string | null = null;
   let dynamic = false;
   let quoted = false;
-  let globbed = false;
   let target: "word" | "redirect" | "input" | "duplicate" | "heredoc" = "word";
   let heredocTabs = false;
   const heredocs: PendingHeredoc[] = [];
@@ -84,13 +81,11 @@ function parseInto(input: string, out: SimpleCommand[]): string | undefined {
       else {
         command.words.push(word);
         command.dynamic.push(dynamic);
-        command.globbed.push(globbed);
       }
     }
     word = null;
     dynamic = false;
     quoted = false;
-    globbed = false;
     target = "word";
   };
   const finishCommand = () => {
@@ -179,7 +174,6 @@ function parseInto(input: string, out: SimpleCommand[]): string | undefined {
       append(result.text, result.dynamic);
       i = result.end;
     } else {
-      if (c === "*" || c === "?" || c === "[") globbed = true;
       append(c);
     }
   }
@@ -316,5 +310,5 @@ function parseSubstitutions(text: string, out: SimpleCommand[]): string | undefi
 }
 
 function newCommand(): SimpleCommand {
-  return { assignments: [], words: [], dynamic: [], globbed: [], redirects: [], heredocs: [] };
+  return { assignments: [], words: [], dynamic: [], redirects: [], heredocs: [] };
 }
