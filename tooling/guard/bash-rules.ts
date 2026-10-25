@@ -123,7 +123,8 @@ export function classifyCommand(
  * Tells whether a shell command may write a protected enforcement file.
  *
  * @remarks Checks redirection and `tee` targets, and every path named by a command that changes files
- * (`cp`, `mv`, `rm`, in-place `sed` or `perl`, git restores, inline scripts and the like). Applied patches
+ * (`cp`, `mv`, `rm`, in-place `sed` or `perl`, git restores, `find -delete` or `-exec rm`, inline scripts and
+ * the like). Applied patches
  * always count, because their targets are inside the patch. Paths are matched after resolving symlinks and
  * ignoring letter case. Pattern-based, so not airtight; git hooks and CI check the result.
  * @param command - The full command line.
@@ -300,6 +301,18 @@ const SAFE_GIT_GREP_OPTION = /^(?:-[nilwEFhvcHI]+|-e|--)$/;
 const GIT_RUNS_PROGRAMS =
   /^(?:-O|--open-files-in-pager|--textconv|--ext-diff|-p|--paginate|-c|--config-env)(?:=|$)/;
 
+// `find` options that only test files or print their names; any other option, such as `-exec`, `-delete` or
+// `-fprint`, makes the command not read-only, which also covers options this list doesn't know.
+const FIND_READ_OPTIONS = new Set([
+  ...["-H", "-L", "-P", "-E", "-x", "-s", "-f"],
+  ...["-name", "-iname", "-path", "-ipath", "-wholename", "-iwholename", "-regex", "-iregex", "-regextype"],
+  ...["-lname", "-ilname", "-type", "-xtype", "-size", "-empty", "-newer", "-perm", "-user", "-group"],
+  ...["-mtime", "-mmin", "-atime", "-amin", "-ctime", "-cmin", "-nouser", "-nogroup", "-links", "-inum"],
+  ...["-samefile", "-readable", "-writable", "-executable", "-maxdepth", "-mindepth", "-depth", "-prune"],
+  ...["-follow", "-mount", "-xdev", "-true", "-false", "-not", "-a", "-and", "-o", "-or"],
+  ...["-print", "-print0", "-ls"],
+]);
+
 // Whether a command only reads or lists files: a strict reader, with no variable assignments (such as a
 // PAGER) and, for git, none of the options that run another program.
 function readsOnly(command: Unwrapped): boolean {
@@ -307,6 +320,9 @@ function readsOnly(command: Unwrapped): boolean {
   const name = program(command.argv);
   if (STRICT_READERS.has(name)) return true;
   const args = command.argv.slice(1);
+  // Numbers such as `-mtime -7` are values, not options.
+  if (name === "find")
+    return args.every((a) => !a.startsWith("-") || /^-\d/.test(a) || FIND_READ_OPTIONS.has(a));
   const subcommand = gitSubcommand(args);
   if (
     name !== "git" ||
@@ -545,12 +561,30 @@ function changesFiles(command: Unwrapped): boolean {
   if (FILE_CHANGERS.has(name)) return true;
   if (name === "sed") return args.some((a) => /^-[a-zA-Z]*i/.test(a) || a.startsWith("--in-place"));
   if (name === "git") return GIT_FILE_CHANGERS.has(gitSubcommand(args) ?? "");
+  if (name === "find") return findChangesFiles(args, command.dynamic.slice(1));
   if (INTERPRETERS.has(name)) {
     return (
       heredocs.length > 0 || args.some((a) => /^-[a-zA-Z]*[ceip]/.test(a) || a === "-" || a === "--eval")
     );
   }
   return false;
+}
+
+// `find` actions that delete or write files, and those that run a command on each file found.
+const FIND_WRITES = new Set(["-delete", "-fprint", "-fprint0", "-fprintf", "-fls"]);
+const FIND_RUNS = new Set(["-exec", "-execdir", "-ok", "-okdir"]);
+
+// Whether `find` arguments may change files: an action that deletes or writes, or a command it runs that
+// changes files, as in `-exec rm {} +`.
+function findChangesFiles(args: readonly string[], dynamic: readonly boolean[]): boolean {
+  return args.some((arg, at) => {
+    if (FIND_WRITES.has(arg)) return true;
+    if (!FIND_RUNS.has(arg)) return false;
+    const stop = args.findIndex((word, i) => i > at && (word === ";" || word === "+"));
+    const end = stop === -1 ? args.length : stop;
+    const run = unwrap([], args.slice(at + 1, end), dynamic.slice(at + 1, end));
+    return changesFiles({ ...run, redirects: [], heredocs: [] });
+  });
 }
 
 function appliesPatch(command: Unwrapped): boolean {
