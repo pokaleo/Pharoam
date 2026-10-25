@@ -67,8 +67,12 @@ export function classifyCommand(
     return relative !== undefined && globMatches(relative, UNLOCK_FILE);
   };
   if (writeCandidates(expanded.commands).paths.some(isUnlockFile)) return deny(UNLOCK);
-  // After a `cd` in the same line, the directory a glob expands in isn't known.
-  const movesDirectory = expanded.commands.some((c) => ["cd", "pushd"].includes(program(c.argv)));
+  // After a `cd`, a directory option (`-C`, `--chdir`, `--dir`, `--prefix`, sudo's `-D`) or with `find`, which
+  // matches patterns itself, the directory a glob is matched in isn't known.
+  // The raw text is checked too, because prefixes such as `env` are removed from the words.
+  const movesDirectory =
+    /(?:^|\s)(?:-C|-D|--chdir|--dir|--prefix|--cwd)(?:=|\s|$)/.test(command) ||
+    expanded.commands.some((c) => ["cd", "pushd", "find"].includes(program(c.argv)));
   const named = (word: string) => namesUnlock(word, context, movesDirectory);
   if (UNLOCK_TEXT.test(command) || expanded.commands.some((c) => c.argv.some(named))) {
     return deny(UNLOCK);
@@ -249,16 +253,24 @@ function classifySimple(command: Unwrapped): CommandDecision {
 
 const UNLOCK_SCRIPT = "tooling/guard/bin/unlock.ts";
 
-// Whether a word names the unlock command or script. A glob, such as `bin/u*`, counts when it could expand to
-// the script where it really is, judged from the shell's working directory; after a `cd` in the same line,
-// any glob that could match the script's file name counts. Ordinary globs like `ls *` stay allowed.
+// Whether a word names the unlock command or script. Fails closed for globs: one whose file-name part could
+// match `unlock.ts` counts, unless it is provably in a folder of the repository other than the script's —
+// a literal folder, resolved from the shell's working directory, with no `**` and no directory change in
+// the line. So `ls *` and `ls tooling/guard/*.ts` stay allowed, while `node tooling/guard/bin/u*` doesn't.
 function namesUnlock(word: string, context: CommandContext, movesDirectory: boolean): boolean {
   const base = path.basename(word);
   if (!/[*?[]/.test(word)) return word.toLowerCase() === "guard:unlock" || base.toLowerCase() === "unlock.ts";
   if (word.includes(":") && globMatches(word, "guard:unlock")) return true;
-  if (movesDirectory) return globMatches(base, "unlock.ts");
+  if (!globMatches(base, "unlock.ts")) return false;
   const relative = toRelative(word, context);
-  return relative !== undefined && globMatches(relative, UNLOCK_SCRIPT);
+  const folder = relative === undefined ? undefined : path.posix.dirname(relative);
+  const provablyElsewhere =
+    !movesDirectory &&
+    !word.includes("**") &&
+    folder !== undefined &&
+    !/[*?[]/.test(folder) &&
+    folder.toLowerCase() !== path.posix.dirname(UNLOCK_SCRIPT);
+  return !provablyElsewhere;
 }
 
 // The unlock command or script named anywhere in the command line, even inside a longer argument or a
@@ -291,7 +303,8 @@ function globMatches(pattern: string, target: string): boolean {
   try {
     return new RegExp(`^${source}$`).test(target);
   } catch {
-    return true;
+    // An unmatched `[` isn't a glob; the shell keeps the word as it is.
+    return lower === target;
   }
 }
 

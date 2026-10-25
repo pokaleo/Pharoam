@@ -113,6 +113,8 @@ describe("Bash command rules", () => {
       "ls tooling/guard/*.ts",
       "git grep -n x -- '*.md' '.github/*'",
       "rm -f /tmp/*.log",
+      "grep -n a[b docs/x.md",
+      "python3 - <<'EOF'\nfirst = items[0\nopen('/tmp/out.txt', 'w').write(first)\nEOF",
     ])("allows: %s", (cmd) => {
       expect(decision(cmd)).toBe("allow");
     });
@@ -150,6 +152,11 @@ describe("Bash command rules", () => {
       ["node ./bin/u*", "/repo/tooling/guard"],
       ["node u*", "/repo/tooling/guard/bin"],
       ["cd tooling/guard/bin && node u*", "/repo"],
+      ["node tooling/**/u*", "/repo"],
+      [`find . -name "u*" -exec node {} 60 ;`, "/repo"],
+      ["pnpm -C tooling/guard/bin exec node u*", "/repo"],
+      ["env --chdir=tooling/guard/bin node u*", "/repo"],
+      ["node ~/code/pharoam/tooling/guard/bin/u*", "/repo"],
     ])("denies %s in %s", (cmd, cwd) => {
       expect(classifyCommand(cmd, { projectDir: "/repo", cwd }).decision).toBe("deny");
     });
