@@ -55,6 +55,7 @@ Every design decision is checked against the rules in the [Charter](docs/CHARTER
 - [Charter & Product Vision](docs/CHARTER.md): what Pharoam is, its design rules, scope and decisions.
 - [PRD](docs/PRD.md): the whole product blueprint.
 - [MVP and release plan](docs/MVP.md): what each release delivers, its stories and acceptance criteria, and what's deferred.
+- [Implementation plan](docs/ROADMAP.md): the order of work.
 - [Architecture](docs/ARCHITECTURE.md): decisions and the [ADR](docs/adr/) index.
 - Design specifications: [data model](docs/design/data-model.md), [interfaces](docs/design/interfaces.md), [security](docs/design/security.md).
 - Research: [existing tools and differentiation](docs/research/discovery.md), [skill inventories](docs/research/skills-inventory.md).
