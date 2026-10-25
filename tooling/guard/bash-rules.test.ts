@@ -143,6 +143,26 @@ describe("Bash command rules", () => {
     });
   });
 
+  describe("globs are checked against the unlock script's real location", () => {
+    it.each([
+      ["node tooling/guard/bin/u*", "/repo"],
+      ["node tooling/guard/bin/*.ts", "/repo"],
+      ["node ./bin/u*", "/repo/tooling/guard"],
+      ["node u*", "/repo/tooling/guard/bin"],
+      ["cd tooling/guard/bin && node u*", "/repo"],
+    ])("denies %s in %s", (cmd, cwd) => {
+      expect(classifyCommand(cmd, { projectDir: "/repo", cwd }).decision).toBe("deny");
+    });
+
+    it.each([
+      ["ls *", "/repo"],
+      ["ls tooling/guard/*.ts", "/repo"],
+      ["ls *.ts", "/repo/tooling/guard"],
+    ])("allows %s in %s", (cmd, cwd) => {
+      expect(classifyCommand(cmd, { projectDir: "/repo", cwd }).decision).toBe("allow");
+    });
+  });
+
   it("gives a reason for every non-allow decision", () => {
     expect(classifyCommand("git push --force", context).reason).toMatch(/force/i);
     expect(classifyCommand("git commit -m x", context).reason).toMatch(/approval/i);
@@ -177,6 +197,13 @@ describe("shell commands that write enforcement files", () => {
     "rm tsconfig*",
   ])("detects: %s", (cmd) => {
     expect(writes(cmd)).toBe(true);
+  });
+
+  it("resolves relative paths from the shell's working directory", () => {
+    expect(
+      writesProtectedPath("echo x > hooks.ts", { projectDir: "/repo", cwd: "/repo/tooling/guard" }),
+    ).toBe(true);
+    expect(writesProtectedPath("echo x > hooks.ts", { projectDir: "/repo", cwd: "/repo/docs" })).toBe(false);
   });
 
   it("follows symlinks to protected files", () => {

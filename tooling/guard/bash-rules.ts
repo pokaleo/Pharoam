@@ -24,6 +24,8 @@ export interface CommandDecision {
 export interface CommandContext {
   /** The repository root. */
   projectDir: string;
+  /** The shell's working directory, which relative paths start from; the repository root when absent. */
+  cwd?: string;
   /** Resolves symlinks in an absolute path; paths are taken as they are when absent. */
   resolve?: (absolutePath: string) => string;
 }
@@ -65,7 +67,10 @@ export function classifyCommand(
     return relative !== undefined && globMatches(relative, UNLOCK_FILE);
   };
   if (writeCandidates(expanded.commands).paths.some(isUnlockFile)) return deny(UNLOCK);
-  if (UNLOCK_TEXT.test(command) || expanded.commands.some((c) => c.argv.some(namesUnlock))) {
+  // After a `cd` in the same line, the directory a glob expands in isn't known.
+  const movesDirectory = expanded.commands.some((c) => ["cd", "pushd"].includes(program(c.argv)));
+  const named = (word: string) => namesUnlock(word, context, movesDirectory);
+  if (UNLOCK_TEXT.test(command) || expanded.commands.some((c) => c.argv.some(named))) {
     return deny(UNLOCK);
   }
   return strictest([...expanded.commands.map(classifySimple), backstop(command)]);
@@ -242,15 +247,18 @@ function classifySimple(command: Unwrapped): CommandDecision {
   return strictest(decisions);
 }
 
-// Whether a word names the unlock command or script, also as a glob such as `unl*.ts` that the shell expands.
-// A glob is only compared when it spells part of a name, so ordinary globs like `*.md` aren't refused.
-function namesUnlock(word: string): boolean {
-  const spells = (text: string, hint: RegExp) => !/[*?[]/.test(text) || hint.test(text.toLowerCase());
+const UNLOCK_SCRIPT = "tooling/guard/bin/unlock.ts";
+
+// Whether a word names the unlock command or script. A glob, such as `bin/u*`, counts when it could expand to
+// the script where it really is, judged from the shell's working directory; after a `cd` in the same line,
+// any glob that could match the script's file name counts. Ordinary globs like `ls *` stay allowed.
+function namesUnlock(word: string, context: CommandContext, movesDirectory: boolean): boolean {
   const base = path.basename(word);
-  return (
-    (spells(word, /guard:|unl|lock/) && globMatches(word, "guard:unlock")) ||
-    (spells(base, /unl|lock/) && globMatches(base, "unlock.ts"))
-  );
+  if (!/[*?[]/.test(word)) return word.toLowerCase() === "guard:unlock" || base.toLowerCase() === "unlock.ts";
+  if (word.includes(":") && globMatches(word, "guard:unlock")) return true;
+  if (movesDirectory) return globMatches(base, "unlock.ts");
+  const relative = toRelative(word, context);
+  return relative !== undefined && globMatches(relative, UNLOCK_SCRIPT);
 }
 
 // The unlock command or script named anywhere in the command line, even inside a longer argument or a
@@ -469,7 +477,7 @@ function toRelative(token: string, context: CommandContext): string | undefined 
     return undefined;
   const resolve = context.resolve ?? ((p: string) => p);
   const root = resolve(path.resolve(context.projectDir || "/"));
-  const absolute = resolve(path.resolve(root, token));
+  const absolute = resolve(path.resolve(context.cwd ?? root, token));
   const relative = path.relative(root, absolute);
   if (relative.startsWith("..") || path.isAbsolute(relative)) return undefined;
   return relative === "" ? "." : relative.split(path.sep).join("/");
