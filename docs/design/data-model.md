@@ -63,8 +63,20 @@ The user controls their storage, so **any file can be edited or deleted by hand*
 | `session` | Yes, until the workflow ends | Then deleted or archived |
 
 - **Deletion is real.** References to a deleted record show as "removed" and never cause an error.
-- **Manual edits to records Pharoam never edits.** Pharoam stores an `integrity` fingerprint (SHA-256 of the content) when it creates such a record. On a mismatch, the record is labelled **"edited outside Pharoam"**; it is still used, but the change is visible. This catches casual edits, not deliberate tampering. Signing comes later (P15).
+- **Manual edits to records Pharoam never edits.** Pharoam stores an `integrity` fingerprint (below) when it creates such a record or entry. On a mismatch, the record is labelled **"edited outside Pharoam"**; it is still used, but the change is visible. This catches casual edits, not deliberate tampering. Signing comes later (P15).
 - **Invalid records** (broken syntax, a missing or wrong field) are **never deleted or overwritten**. They appear in a **"Needs attention"** list with a plain explanation. The user fixes them by hand, or accepts a fix Pharoam proposes. Until then they are left out of calculations. Fields Pharoam doesn't recognise are always kept unchanged.
+
+### Integrity fingerprint
+
+The value is `sha256-c1:` followed by 64 lowercase hex digits. `c1` names the rule below. A changed rule gets a new name; old values are still checked with the rule they name.
+
+1. **What is fingerprinted:** for a `skill-record` entry, that entry; for an assessment record, an object `{ "top": <top block>, "body": <body> }`.
+2. **Left out:** the `integrity` and `signature` fields at the top level of what is fingerprinted. A future signature signs the same form.
+3. **Parsed values, not text:** YAML 1.2 core schema, so dates and times stay the strings written, and `yes` stays a string. Aliases are resolved. A duplicate key makes the record invalid (Needs attention), never fingerprinted.
+4. **Body text:** line endings become LF and trailing newlines at the end are removed. Nothing else changes; text is not Unicode-normalised.
+5. **Canonical form:** the result is serialised with the JSON Canonicalization Scheme (RFC 8785): keys sorted, no whitespace, one way to write each number. The fingerprint is the SHA-256 of its UTF-8 bytes.
+
+So **layout doesn't count as an edit**, but values do: quoting, indentation, comments, key order and line endings can change without a mismatch; changing any value, or adding or removing any field (including ones Pharoam doesn't know), is reported.
 
 ## 5. AI provenance
 

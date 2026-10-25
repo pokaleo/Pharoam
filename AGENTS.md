@@ -65,7 +65,7 @@ Rules that code scanning can't detect (2–4, 6, 8, 9) are enforced by tests, su
 
 ## How to work
 
-- **TDD, always:** write a failing test first, confirm it fails for the right reason, then implement the minimum and refactor. Bug fixes start with a reproducing test. Only spikes are exempt.
+- **TDD, always:** write a failing test first, confirm it fails for the right reason, then implement the minimum and refactor. Bug fixes start with a reproducing test. Only spikes are exempt. The commit-time TDD check only sees that a test file exists or changed, so the red run is your evidence: record it in the PR (ENGINEERING §10).
 - **TypeScript only:** all code, including tool configs and scripts, is `.ts` or `.tsx`. JavaScript only as a named exception in `tooling/guard/content-rules.ts` (ADR-0002).
 - **Document every export with TSDoc** (summary, `@param`, `@returns`, `@throws`, `@remarks` with the why and PRD/ADR IDs; no types in comments). Return expected failures as typed results; exceptions mean bugs. Follow the TypeScript practices in ENGINEERING §2 and §11 (ADR-0018).
 - **Use the LSP** (go to definition, find references, rename, diagnostics) to navigate and change code. Changed files must have no diagnostics before committing.

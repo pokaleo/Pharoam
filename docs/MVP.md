@@ -52,6 +52,8 @@ Order after v0.1 can change as v0.1 teaches us; §7 keeps the full list.
 
 The rules are checked from the top; the first that applies decides the group. So evidenced 2 and self-reported 3 against L = 3 is *claimed*, and the view shows both levels. Related skills never count for each other (no hidden inference, R4 and R6). Requirements show as core or helpful. There is no score or total (R1).
 
+**In v0.1, *supported* is still the user's own claim.** Both labels available in v0.1 come from the user: `evidenced` means they linked evidence, not that anyone checked the evidence shows that level. So the interface names the group for what it is ("evidence linked"), says Pharoam hasn't checked it, and never uses "verified" (R6). From v0.3, `demonstrated` levels are shown apart from `evidenced` ones, so recorded performance is never mixed up with linked evidence.
+
 ## 4. Exit criteria
 
 v0.1 is done when **the founder has used it for their own profile for 2 weeks** and:
@@ -111,7 +113,7 @@ Each story lists the PRD requirements it implements. Criteria use Given/When/The
 *As a user, I want to record my level in a skill, either from my own judgement or backed by evidence, so that every claim says where it came from.* Implements C1, C2, C5.
 
 - **S6.1** Given a skill from the vocabulary, when I record a level 0–4 as my own judgement, then an observation with `provenance: self-reported` is **appended** to `skills/<slug>.md`, creating the file if needed.
-- **S6.2** Given I link one or more evidence records, when I record a level, then the observation has `provenance: evidenced` and lists the evidence IDs. An `evidenced` observation without evidence can't be saved.
+- **S6.2** Given I link one or more evidence records, when I record a level, then the observation has `provenance: evidenced` and lists the evidence IDs. An `evidenced` observation without evidence can't be saved. The form says that Pharoam doesn't check whether the evidence shows the level I chose.
 - **S6.3** Given levels, then the form shows the shared description of each level, or the skill-specific one where it exists.
 - **S6.4** Given any new observation, then it carries `id`, `level`, `provenance`, `observed_at` and an `integrity` fingerprint, and existing entries in the file are byte-for-byte unchanged.
 - **S6.5** Given the skill list, then only `self-reported` and `evidenced` can be chosen; `demonstrated` and `ai-inferred` aren't offered in v0.1.
@@ -153,6 +155,7 @@ Each story lists the PRD requirements it implements. Criteria use Given/When/The
 - **S11.4** Given I open a gap view, then `gaps/<pathway>.md` is written with the pathway pinned to its version and a readable summary in the body.
 - **S11.5** Given my observations change, then the stored gap is regenerated and the view shows "Updated just now"; a refresh button does the same by hand.
 - **S11.6** Given any pathway, including one where most requirements are *below* or *unknown*, then I can still choose to explore it (R2).
+- **S11.7** Given a requirement grouped as *supported*, then the view and `gaps/<pathway>.md` label it "evidence linked", list the linked evidence, and say Pharoam hasn't checked that it shows the level; the word "verified" appears nowhere (R6).
 
 ### S12. Never lose an edit made outside Pharoam
 *As a user who also edits these files in Obsidian, I want Pharoam to notice my changes, so that it never overwrites them.* Implements AD10, hard rule 3.
