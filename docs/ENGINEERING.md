@@ -141,7 +141,9 @@ How shell commands are read (`tooling/guard/shell.ts`):
 - **Every command counts:** each part of `;`, `&&`, `||` and pipes, plus `$(…)`, backticks, substitutions in unquoted heredocs, `sh -c`, `su -c`, `script -c` and `watch` command lines, and heredocs fed to a shell.
 - **Prefixes are seen through:** git's global options (`git -C . commit`), and `env`, `sudo`, `command`, `xargs` and `timeout`. `git` or `gh` anywhere in a command is checked from that word, so other wrappers (`find -exec`, `doas`, `stdbuf`) can't hide them. The old text patterns stay as a second layer.
 - **Hidden or unreadable commands ask** instead of guessing: unterminated quotes, a substitution inside `${…}` or `$((…))`, a command name or git subcommand taken from a variable, `eval`, and git aliases set with `-c` or `git config`.
-- **Paths are matched after resolving symlinks and ignoring letter case,** and globs (`tooling/gu*`) by the folder they could write in. The unlock script and file are refused by any name, including globs. An unlock expiry further ahead than 240 minutes counts as locked.
+- **Paths are matched after resolving symlinks and ignoring letter case,** and globs (`tooling/gu*`) by the folder they could write in. The unlock script and file are refused by any name; a glob that could name the script is allowed only in a line where every command just reads or lists files (`ls`, `cat`, `grep`, `git ls-files` and the like, with no option or variable that runs another program). An unlock expiry further ahead than 240 minutes counts as locked.
+- **Git settings that run programs ask** (pager, editor, external diff, text conversion, fsmonitor, helpers and other `*.command` keys), whether set with `git config` or `git -c`.
+- **The guard fails closed:** if it throws, the command goes to the user instead of running.
 
 Known limits:
 - **Command checks read the command line, not what a program does when it runs.** A script file the agent runs (`bash script.sh`), a git alias already in the user's config, and files written outside the repository aren't inspected. The git hooks and CI still catch the result, and every enforcement change shows in the PR diff.
