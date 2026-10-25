@@ -108,7 +108,7 @@ Every requirement must satisfy the Charter's design rules **R1–R16**. In short
 ### F. Pathways and gaps (Explore)
 - **F1** Browse career pathways. Each has requirements (skill, level, importance), prerequisites, an estimated time and cost investment with cited sources, known uncertainties, and transferable skills.
 - **F2** Compare two or more pathways side by side.
-- **F3** The gap view shows each requirement as *supported* (demonstrated or evidenced), *claimed* (self-reported or accepted AI inference only), *below* or *unknown*. There is never a fit score (R1).
+- **F3** The gap view shows each requirement as *supported* (demonstrated or evidenced), *claimed* (self-reported or accepted AI inference only), *below* or *unknown*. *Supported* never means verified (R6): the view says what it rests on, either evidence the user linked themselves or an assessment Pharoam recorded, and keeps the two apart. There is never a fit score (R1).
 - **F4** The user can choose any pathway, including a low-fit or demanding one (R2).
 
 ### G. Learning plans (Learn)

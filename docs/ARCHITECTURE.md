@@ -94,7 +94,7 @@ Short, throwaway tests that confirm a decision before building on it.
 |---|---|---|
 | S1 | Call each service in the CORS table directly from a browser | The "no server where possible" table |
 | S2 | Run a small LangGraph.js graph in the browser with an interrupt; **pause it, discard the checkpoint, and resume from a readable session log alone**; measure download size with AI code loaded only when needed | AD11a |
-| S3 | Derive an encryption key from a passkey (WebAuthn PRF) in Chrome, Safari and Firefox, with the passphrase fallback | [Security](design/security.md) §8 |
+| S3 | Derive an encryption key from a passkey (WebAuthn PRF) in Chrome, Safari and Firefox, with the passphrase fallback; confirm how a stored non-extractable key is written to disk | [Security](design/security.md) §8 |
 
 ## Open decisions
 

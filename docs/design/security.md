@@ -16,6 +16,10 @@
 
 The user's profile files are readable by design (data model §0). Their protection at rest is the job of the storage the user chooses (disk encryption, Notion's security, and so on).
 
+**Two kinds of attacker need different defences:**
+- **Code running in Pharoam's page** (XSS, a compromised dependency, an extension that injects scripts into the page) can do anything the app can. That includes asking WebCrypto to decrypt the cache and reading remembered keys and tokens. **Encryption is no defence against it.** The defences are prevention: safe rendering (§2), a strict content security policy and Trusted Types (§4), and minimal dependencies (§7).
+- **Someone with a copy of the device's files** (a backup, a copied browser profile, malware that grabs raw files) can't run code in the page. Encryption helps here only when the key isn't in the same copy (§8).
+
 ## 2. Safe rendering
 - Markdown from the user's files, AI output and content packs is rendered with **raw HTML disabled and the output sanitised**: no scripts, no embedded frames, safe link handling.
 - **Remote images are blocked by default** (they can reveal the user's IP address when displayed). The user can allow them per record.
@@ -31,6 +35,7 @@ The user's profile files are readable by design (data model §0). Their protecti
 - **API keys:** session-only by default; "remember on this device" is opt-in (AD11).
 - **OAuth tokens** (for example Notion): stored like keys, with the **narrowest permissions** each service allows. The relay never stores them.
 - **Strict content security policy:** scripts only from the app itself; network calls only to the configured providers and relay; **no third-party scripts, ever**; LangSmith blocked (AD11a).
+- **Trusted Types** (`require-trusted-types-for 'script'`, supported in every Chromium browser v0.1 targets): the browser refuses strings written into places that would run them as HTML or script, unless they come from the sanitiser.
 
 ## 5. Content pack trust
 - **Packs are data only, never code.** They are validated against the schemas and rendered through the sanitiser.
@@ -52,15 +57,21 @@ The user's profile files are readable by design (data model §0). Their protecti
 
 **Layer 1: always on, no friction**
 - The local cache and any remembered keys or tokens are **encrypted** (AES-GCM via WebCrypto).
-- The encryption key is created by the browser as **non-extractable**: usable by the browser, never readable by scripts, extensions or copied files.
-- Protects against copying of the browser's storage files, backups, and malware that grabs raw files. It does not protect against someone using the already-open browser.
+- The encryption key is created as **non-extractable**: no script can read its raw bytes. But any script running in Pharoam's page can still **use** it to decrypt, so it is **not a defence against XSS or malicious extensions** (§1).
+- The key itself is kept in the browser's storage (IndexedDB). Chromium is expected to write its raw bytes to disk in the same browser profile as the encrypted data, so a full copy of the profile, or a backup of it, would hold both. Spike S3 confirms this.
+- **Protects against:** casual inspection of the storage files, partial copies that leave out the key, and tools that scan files for plain-text secrets.
+- **Does not protect against:** a full copy of the browser profile, code running in the page, or someone using the already-open browser. It is a cheap extra layer, not protection at rest.
 
 **Layer 2: optional App lock**
-- The app locks and needs a **passkey** (Touch ID, Windows Hello, a security key) to unlock. The encryption key is derived from the passkey (WebAuthn PRF), so **without the passkey the cache can't be decrypted at all**.
-- A **passphrase** is the fallback where passkeys aren't supported.
+- The app locks and needs a **passkey** (Touch ID, Windows Hello, a security key) to unlock. The encryption key is derived from the passkey (WebAuthn PRF) and **never stored**, so **without the passkey the cache can't be decrypted at all**, even from a full copy of the device's files.
+- A **passphrase** is the fallback where passkeys aren't supported. Its key is derived from the passphrase and also never stored.
 - **Auto-lock** after an inactivity period set by the user.
-- Protects against someone else using the device or browser.
+- **Protects against** someone else using the device or browser, and against copied files.
+- **Does not protect against** code running in the page while the app is unlocked: the key is then in memory, usable by any script in the page. Auto-lock shortens that window.
 
 **Always:** a "Clear local data" button, a shared-device warning, and session-only keys by default.
 
-**Limits:** profile files in the user's chosen storage stay readable by design (data model §0); protecting them is the job of that storage. Passkey-derived keys depend on browser support, which spike S3 confirms.
+**Limits:**
+- No layer protects data from code running in Pharoam's page while the app is unlocked. Preventing such code (§1) is the only defence.
+- Profile files in the user's chosen storage stay readable by design (data model §0); protecting them is the job of that storage.
+- Passkey-derived keys depend on browser support, which spike S3 confirms.

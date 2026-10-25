@@ -12,6 +12,7 @@ The profile lives in storage the user chooses: folders, Obsidian, Git, Notion an
 - **File connectors:** each record is **one `.md` file**. The exact fields go in the YAML block between the `---` lines at the top (which Obsidian shows as Properties), and the free text goes in the Markdown body.
 - **The Notion connector** maps the same shape to database properties and page content.
 - Parsing uses **`yaml`** (YAML 1.2). Pharoam edits the document in place, so comments, field order and unknown fields survive.
+- **Re-printing a parsed document can still change its layout** (line folding, quoting, indentation, where comments sit). Where a story promises bytes stay the same (MVP S3.2, S6.4), Pharoam **inserts text** instead of re-printing, then parses the result and checks that everything it didn't mean to change is byte-for-byte the same. If not, it writes nothing and reports the bug.
 - Rendering uses **`react-markdown` + `rehype-sanitize`** with raw HTML disabled.
 
 ## Alternatives rejected
