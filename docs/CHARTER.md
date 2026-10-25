@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| **Version** | 0.1 (draft) |
-| **Date** | 24 October 2026 |
+| **Version** | 0.2 (draft) |
+| **Date** | 25 October 2026 |
 | **Licence** | AGPL-3.0-only |
 | **Status labels** | **Agreed**: direction chosen. **Proposed**: working position, open to change. **Open**: not yet decided. |
 
@@ -23,15 +23,24 @@ Its centre is a **personal knowledge profile**. The profile grows over a person'
 
 > The lighthouse does not choose the road. It helps people see it.
 
+### Goals
+
+*Agreed. What Pharoam is for; §8 says how we'll know.*
+
+1. **An honest picture.** Give each person an evidence-based, portable picture of their skills, where every claim says where it came from.
+2. **Honest options.** Show the real gap to any pathway the person chooses, without scores, rankings or promises.
+3. **Learning that shows.** Help them learn toward a chosen pathway, with progress shown in evidence and assessments rather than ticked off.
+4. **Ownership without compromise.** Prove that this works with the person's data only in storage they control, and no server holding it.
+
 ---
 
 ## 2. The problem and who it's for
 
 AI and the wider changes in technology are making careers harder to read. Students struggle to see how their courses, assessments and projects connect to real work. Working professionals struggle to see which of their skills carry over to a new role, and what they would need to learn.
 
-Existing tools each cover part of this. Courses teach, CV builders format, job boards list, and interview bots drill. None of them builds a continuous, evidence-based picture of the person. Many push toward volume: more applications, more keywords, more noise.
+Existing tools each cover part of this. Courses teach, CV builders format, job boards list, and interview bots drill. None of them builds a continuous, evidence-based picture of the person. Many push toward volume: more applications, more keywords, more noise. A [comparison with existing tools](research/discovery.md) found the same: each covers one slice, most reduce the person to a score or ranking, and almost none lets the person hold their own data.
 
-**v1 users** (Agreed): **technical, self-directed people like the founding team.** They are comfortable with Markdown, their own storage and bringing their own AI model key. The team builds for itself first and tests every v1 decision on its own real situations. This is a deliberately biased starting sample, and later audiences need their own discovery.
+**v1 users** (Agreed): **technical, self-directed people like the founder.** They are comfortable with Markdown, their own storage and bringing their own AI model key. The founder builds for themselves first and tests every v1 decision on their own real situation; **v1 validation is the founder's own use** ([MVP](MVP.md) §4). This is a deliberately biased starting sample, and later audiences need their own discovery before they are targeted.
 
 **Next users** (Proposed): adult computer-science students, recent graduates and early-career learners exploring technical careers, including less technical users who will need simpler storage and model options.
 
@@ -55,7 +64,7 @@ Each principle comes with rules that a design or a pull request can be checked a
 ### 3.2 Evidence and inference are kept apart
 - **R4.** Every observation in a profile has exactly one **provenance** label:
   - `self-reported`: the user said so;
-  - `evidenced`: backed by an attached artefact (a certificate, transcript, repository or work sample);
+  - `evidenced`: backed by an evidence record (a certificate, transcript, repository, job or work sample);
   - `demonstrated`: shown in a Pharoam assessment or practical task;
   - `ai-inferred`: proposed by a model from other evidence.
   A capability shown to the user is built from its observations and always shows the breakdown by provenance. A blended overall level may exist **only as an AI judgement**: labelled, explained, dated and based on stated inputs, and never calculated silently by a hidden formula or required. Without AI, only the breakdown is shown.
@@ -82,7 +91,7 @@ Each principle comes with rules that a design or a pull request can be checked a
 
 ## 4. The core idea: the personal knowledge profile
 
-*Proposed. The concept, not a specification.*
+*Agreed. The concept; the specification is the [data model](design/data-model.md).*
 
 ```
 Profile (user-owned files)
@@ -107,7 +116,7 @@ Key relationships:
 - **Observations** link to the **evidence** behind them. One piece of evidence can support many observations.
 - **Levels** use one five-step scale: 0 aware · 1 beginner · 2 working · 3 proficient · 4 expert.
 - A **gap** is always shown with the provenance of the observations involved. It is never shown as a single score.
-- A **skills taxonomy** (the shared vocabulary linking modules, evidence, observations and pathways) is a foundational dependency. Skills are referenced in a taxonomy-neutral way (`scheme:id`). **Open:** adopt an existing taxonomy, build our own, or map between several.
+- A **skill inventory** (the shared vocabulary linking modules, evidence, observations and pathways) is a foundational dependency. **Agreed:** Pharoam keeps its own inventory, forked from the MIND Tech Ontology and cross-referenced to ESCO, Wikidata and GitHub topics (PRD I1). Profiles reference skills by Pharoam slug only; people can add custom skills of their own.
 
 ---
 
@@ -120,11 +129,25 @@ Key relationships:
 4. **Learn**: a personal learning plan with materials, exercises and reviews, and progress tracked against real outcomes.
 5. **Prepare** *(later)*: job-search literacy, evidence-based CV guidance and interview practice.
 
-### First version (Proposed)
-Steps 1–4, narrowed to computer-science and adjacent technical pathways, running as a browser-based web app over a profile in the user's own storage.
+### First version (Agreed)
+Steps 1–4, narrowed to computer-science and adjacent technical pathways, running as a browser-based web app over a profile in the user's own storage. It is delivered in small releases ([MVP and release plan](MVP.md)):
+- **v0.1, the MVP:** Map plus the gap view of Explore, with no AI, over a local folder;
+- **v0.2:** AI assistance; **v0.3:** assessments (Assess); **v0.4:** learning plans and pathway comparison (Learn, the rest of Explore).
+
+What each release leaves out is recorded in MVP §7, so nothing is dropped silently.
 
 ### Later
-Step 5, more fields, multi-language support, outside connectors and larger deployments.
+Step 5, more fields, multi-language support, more connectors and browsers, and larger deployments.
+
+### Constraints
+*Agreed. The limits every plan has to fit.*
+- **One developer**, the founder, working with AI coding agents. Scope stays small (R16), and machine-checked standards replace review by a team ([Engineering standards](ENGINEERING.md)).
+- **No servers holding user data, and none run by the project** (R11). The official app is a static site on GitHub Pages, so running costs stay near zero.
+- **No AI cost to the project.** Users bring their own model key, or an operator pays for its own users.
+- **Browser limits.** Storage reached directly from the browser depends on browser support; the first connector (a local folder) works in desktop Chromium browsers only.
+- **Licences.** Code is AGPL-3.0-only. Skill and occupation data keep their own licences (MIT for the MIND fork, ESCO's attribution terms), kept apart in `data/`.
+- **Closed to outside pull requests** until contributor terms exist (§7).
+- **Accessible and translatable from the start:** WCAG 2.2 AA and English first, with no hard-coded interface text.
 
 ### Non-goals
 - Bulk or automated job applications (R8).
@@ -137,7 +160,7 @@ Step 5, more fields, multi-language support, outside connectors and larger deplo
 
 ## 6. Technical direction
 
-*Direction only. Concrete choices will be recorded in design records under `docs/adr/`.*
+*Direction only. The concrete choices are in [Architecture](ARCHITECTURE.md) (AD1–AD23) and its design records under `docs/adr/`.*
 
 - **No profile data on any infrastructure running Pharoam** (Agreed): the profile lives in storage the user chooses and is reached through connectors (R11, R14). Pharoam has no profile database. Operator-hosted deployments may hold only minimal account data.
 - **Form** (Agreed): a web application whose core **runs entirely in the browser** and can be served as a static site. Self-hosting it is as simple as hosting static files.
@@ -148,7 +171,7 @@ Step 5, more fields, multi-language support, outside connectors and larger deplo
 - **Assessment integrity** (Agreed for v1): honour system. `demonstrated` means "recorded by a Pharoam assessment" and is not tamper-proof. The format reserves a signature field for later.
 - **Data minimisation** (Agreed): features declare which data they read, and nothing is sent to a model provider beyond what the feature needs.
 - **Accessibility** (Agreed): WCAG 2.2 AA as the baseline for the web interface.
-- **Open:** language and framework, which connectors to build first and in what order (tracked as issues), and the relay's scope.
+- **Decided since:** TypeScript throughout, React + Vite, LangChain.js + LangGraph.js behind Pharoam's own interfaces (ADR-0002, 0008, 0012); the **local folder connector first**, the others tracked as issues (MVP §7); the relay's scope (ADR-0013).
 
 ---
 
@@ -175,20 +198,29 @@ Pharoam succeeds when people understand themselves and their options better, not
 
 Outcomes are reported only in aggregate, with their uncertainty and possible bias, and are never presented as proven causal effects.
 
+**v1 success criteria** (Agreed). Checkable, and none of them counts usage (R10):
+1. **The MVP exit criteria are met** ([MVP](MVP.md) §4): the founder keeps their real profile in Pharoam for 2 weeks, and judges the gap view to a pathway accurate.
+2. **The profile stands on its own:** every file is readable and editable without Pharoam, and no edit made outside it is ever lost.
+3. **Every claim has a source:** for each skill in the profile, the founder can say where each level came from, from the capability view alone.
+4. **Each later release adds its own check**, written into the MVP plan before it's built (for example: v0.3 shows progress in assessments, not just claims).
+5. **No user data on any server**, confirmed by the app making no requests in v0.1 beyond loading itself.
+
 ---
 
 ## 9. Roadmap of foundational deliverables
 
 | # | Deliverable | Status |
 |---|---|---|
-| 1 | This charter | Draft |
-| 2 | `README.md` derived from the charter | Next |
+| 1 | This charter | Draft (v0.2) |
+| 2 | `README.md` derived from the charter | Done |
 | 3 | [PRD](PRD.md): the whole product blueprint | Draft |
-| 4 | [Architecture](ARCHITECTURE.md): decisions AD1–AD16 | Decided; design system deferred; spikes S1 and S2 pending |
+| 3a | [MVP and release plan](MVP.md): stories, acceptance criteria, what's deferred | Done |
+| 4 | [Architecture](ARCHITECTURE.md): decisions AD1–AD23, ADRs 0001–0018, data model, interfaces, security | Decided; design system deferred; spikes S1–S3 pending (none needed for v0.1) |
+| 4c | [Engineering standards](ENGINEERING.md) and agent instructions, enforced by hooks and CI | Done; waiting to be merged |
 | 4b | Implementation plan and GitHub project | Next |
-| 4a | Storage connectors: one issue per connector | Not started |
-| 5 | Skills-taxonomy decision (§4) | Open |
-| 6 | Talk to a handful of target users to test the journey (§5) before building at scale | Proposed |
+| 4a | Storage connectors: one issue per connector | Local folder in v0.1; the rest after |
+| 5 | Skill-inventory decision (§4) | Decided (PRD I1) |
+| 6 | Discovery: a [comparison with existing tools](research/discovery.md), then talking to target users before each new audience | Comparison done; v1 validation is the founder's own use |
 | 7 | Landing page: a static site (Astro) in `site/`, deployed to GitHub Pages. It starts as a manifesto-style page and grows into a full product page once something ships | Proposed |
 | 8 | Trademark-use policy and contributor terms (§7) | Before promotion / before outside PRs |
 
@@ -205,11 +237,13 @@ Outcomes are reported only in aggregate, with their uncertainty and possible bia
 | P05 | Provenance labels on every observation (R4) | Agreed |
 | P06 | No bulk applications, rankings or outcome promises (§5 non-goals) | Agreed |
 | P07 | Model-provider agnostic; no training on user data by default | Agreed |
-| P08 | v1 users: technical, self-directed people like the founding team. CS students and early-career learners come next. | Agreed |
-| P09 | First-version scope: journey steps 1–4 | Proposed |
+| P08 | v1 users: technical, self-directed people like the founder. CS students and early-career learners come next. | Agreed |
+| P09 | First-version scope: journey steps 1–4, delivered as v0.1–v0.4; v0.1 is Map plus the gap view, with no AI ([MVP](MVP.md)) | Agreed |
 | P10 | Landing page: static Astro site on GitHub Pages | Proposed |
-| P11 | Stack, connector order, relay scope, taxonomy | Open |
+| P11 | Stack, connector order, relay scope, skill inventory | Agreed: see §4, §6 and [Architecture](ARCHITECTURE.md) |
 | P12 | No profile data on any infrastructure running Pharoam; the profile lives in user-chosen storage via connectors. Operators may hold only minimal account data. | Agreed |
 | P13 | Two-layer model: immutable observations with one provenance each → derived capability views | Agreed |
 | P14 | One five-step level scale (0 aware … 4 expert) | Agreed |
 | P15 | `demonstrated` uses the honour system in v1; signature field reserved | Agreed |
+| P16 | Goals (§1), constraints (§5) and v1 success criteria (§8) | Agreed |
+| P17 | v1 validation is the founder's own use; each new audience gets its own discovery first | Agreed |

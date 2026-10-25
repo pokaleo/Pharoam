@@ -5,7 +5,7 @@
 | **Version** | 0.1 (draft) |
 | **Date** | 24 October 2026 |
 | **Source** | [Charter](CHARTER.md) |
-| **Status** | Blueprint of the whole product. It records what Pharoam does, not how it is built or in what order. Items marked **[Q]** are open. |
+| **Status** | Blueprint of the whole product. It records what Pharoam does, not how it is built. The order of delivery, the MVP's stories and acceptance criteria, and what the MVP leaves out are in [MVP and release plan](MVP.md). Items marked **[Q]** are open. |
 
 ## 1. Goal
 
@@ -44,20 +44,20 @@ Every requirement must satisfy the Charter's design rules **R1–R16**. In short
 
 ## 4. Product map
 
-| Area | Journey step | Purpose |
-|---|---|---|
-| A. Profile and storage | — | The user-owned profile and how Pharoam reaches it |
-| B. Evidence | Map | What the person has studied and done |
-| C. Observations and capabilities | Map | What there is reason to believe about their skills, and from which source |
-| D. AI assistance | all steps | Proposals, explanations and suggestions, always gated by the user |
-| E. Assessments | Assess | Turn claims into demonstrated evidence |
-| F. Pathways and gaps | Explore | Career directions and how the person compares to them |
-| G. Learning plans | Learn | Steps toward a chosen pathway, with progress tracking |
-| H. Career readiness | Prepare | CV, job analysis and interview practice, built only on real evidence |
-| I. Content | — | Skill vocabulary, pathways, assessment items and learning resources |
-| J. Settings and trust | — | Model choice, connections and transparency |
-| K. Sharing *(future)* | — | User-controlled sharing with chosen people |
-| L. Operator toolkit *(lower priority)* | — | Safeguards for organisations hosting Pharoam for others |
+| Area | Journey step | Purpose | First release ([MVP](MVP.md)) |
+|---|---|---|---|
+| A. Profile and storage | — | The user-owned profile and how Pharoam reaches it | v0.1 (local folder) |
+| B. Evidence | Map | What the person has studied and done | v0.1 (forms); v0.2 (pasted text, attachments) |
+| C. Observations and capabilities | Map | What there is reason to believe about their skills, and from which source | v0.1; v0.2 (AI overall level) |
+| D. AI assistance | all steps | Proposals, explanations and suggestions, always gated by the user | v0.2 |
+| E. Assessments | Assess | Turn claims into demonstrated evidence | v0.3 |
+| F. Pathways and gaps | Explore | Career directions and how the person compares to them | v0.1 (gap view); v0.4 (comparison, full detail) |
+| G. Learning plans | Learn | Steps toward a chosen pathway, with progress tracking | v0.4 |
+| H. Career readiness | Prepare | CV, job analysis and interview practice, built only on real evidence | Later |
+| I. Content | — | Skill vocabulary, pathways, assessment items and learning resources | v0.1 (subset, 4 pathways) |
+| J. Settings and trust | — | Model choice, connections and transparency | v0.1 (connections); v0.2 (models, transparency) |
+| K. Sharing *(future)* | — | User-controlled sharing with chosen people | Future |
+| L. Operator toolkit *(lower priority)* | — | Safeguards for organisations hosting Pharoam for others | Later |
 
 ## 5. Functional requirements
 
