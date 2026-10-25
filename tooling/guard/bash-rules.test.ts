@@ -37,7 +37,6 @@ describe("Bash command rules", () => {
       "git commit -m 'feat: x'",
       "git commit -mn",
       `git commit -m "docs: explain why --no-verify is refused"`,
-      `git commit -m "docs: mention guard:unlock"`,
       "git push",
       "git push -u origin feat/x",
       "gh pr create --title x",
@@ -78,6 +77,9 @@ describe("Bash command rules", () => {
       "watch git push",
       `script -q -c "git push" /dev/null`,
       `su -c "git commit -m x"`,
+      `pnpm exec bash -c "git push"`,
+      `find . -exec sh -c "git commit -m x" ;`,
+      "doas bash <<'EOF'\ngit push\nEOF",
     ])("asks: %s", (cmd) => {
       expect(decision(cmd)).toBe("ask");
     });
@@ -107,6 +109,10 @@ describe("Bash command rules", () => {
       `grep -rn "git commit" docs`,
       "cat .claude/guard-unlock",
       "echo $(date)",
+      "ls *",
+      "ls tooling/guard/*.ts",
+      "git grep -n x -- '*.md' '.github/*'",
+      "rm -f /tmp/*.log",
     ])("allows: %s", (cmd) => {
       expect(decision(cmd)).toBe("allow");
     });
@@ -129,6 +135,9 @@ describe("Bash command rules", () => {
       "pnpm guard:unl?ck 60",
       "cp /tmp/x .claude/guard-unl*",
       `bash -c "pnpm guard:unlock 60"`,
+      `pnpm exec bash -c "pnpm guard:unlock 60"`,
+      `doas sh -c "node tooling/guard/bin/unlock.ts 60"`,
+      `git commit -m "docs: mention guard:unlock"`,
     ])("denies: %s", (cmd) => {
       expect(decision(cmd)).toBe("deny");
     });

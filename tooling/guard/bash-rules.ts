@@ -65,7 +65,9 @@ export function classifyCommand(
     return relative !== undefined && globMatches(relative, UNLOCK_FILE);
   };
   if (writeCandidates(expanded.commands).paths.some(isUnlockFile)) return deny(UNLOCK);
-  if (expanded.commands.some((c) => c.argv.some(namesUnlock))) return deny(UNLOCK);
+  if (UNLOCK_TEXT.test(command) || expanded.commands.some((c) => c.argv.some(namesUnlock))) {
+    return deny(UNLOCK);
+  }
   return strictest([...expanded.commands.map(classifySimple), backstop(command)]);
 }
 
@@ -156,27 +158,31 @@ function expand(command: string, depth = 0): { commands: Unwrapped[]; unreadable
   for (const simple of parsed.commands) {
     const unwrapped = unwrap(simple.assignments, simple.words, simple.dynamic);
     commands.push({ ...unwrapped, redirects: simple.redirects, heredocs: simple.heredocs });
-    const name = program(unwrapped.argv);
-    const scripts = SHELLS.has(name) ? [...simple.heredocs] : [];
-    if (STRING_RUNNERS.has(name)) {
-      const flag = unwrapped.argv.findIndex(
-        (word, i) => i > 0 && /^(?:-[a-zA-Z]*c[a-zA-Z]*|--command)$/.test(word),
-      );
-      if (flag !== -1) {
-        if (unwrapped.dynamic[flag + 1] === true) why ??= "a script built from a variable";
-        scripts.push(unwrapped.argv[flag + 1] ?? "");
+    const { argv, dynamic } = unwrapped;
+    const names = argv.map((word) => path.basename(word));
+    // A shell or command runner anywhere in the words (`pnpm exec bash -c …`, `find -exec sh -c …`) runs
+    // the script after its `-c`; a heredoc goes to whichever shell is in the command.
+    const scripts = names.some((name) => SHELLS.has(name)) ? [...simple.heredocs] : [];
+    names.forEach((name, at) => {
+      if (STRING_RUNNERS.has(name)) {
+        const flag = argv.findIndex((word, i) => i > at && /^(?:-[a-zA-Z]*c[a-zA-Z]*|--command)$/.test(word));
+        if (flag !== -1) {
+          if (dynamic[flag + 1] === true) why ??= "a script built from a variable";
+          scripts.push(argv[flag + 1] ?? "");
+        }
+        const inline = argv.slice(at + 1).find((word) => word.startsWith("--command="));
+        if (inline !== undefined) scripts.push(inline.slice("--command=".length));
       }
-      const inline = unwrapped.argv.find((word) => word.startsWith("--command="));
-      if (inline !== undefined) scripts.push(inline.slice("--command=".length));
-    }
-    // `watch` runs its remaining arguments as one command line.
-    if (name === "watch")
-      scripts.push(
-        unwrapped.argv
-          .slice(1)
-          .filter((word) => !word.startsWith("-"))
-          .join(" "),
-      );
+      // `watch` runs its remaining arguments as one command line.
+      if (name === "watch") {
+        scripts.push(
+          argv
+            .slice(at + 1)
+            .filter((word) => !word.startsWith("-"))
+            .join(" "),
+        );
+      }
+    });
     for (const script of scripts) {
       const nested = expand(script, depth + 1);
       commands.push(...nested.commands);
@@ -237,9 +243,19 @@ function classifySimple(command: Unwrapped): CommandDecision {
 }
 
 // Whether a word names the unlock command or script, also as a glob such as `unl*.ts` that the shell expands.
+// A glob is only compared when it spells part of a name, so ordinary globs like `*.md` aren't refused.
 function namesUnlock(word: string): boolean {
-  return globMatches(word, "guard:unlock") || globMatches(path.basename(word), "unlock.ts");
+  const spells = (text: string, hint: RegExp) => !/[*?[]/.test(text) || hint.test(text.toLowerCase());
+  const base = path.basename(word);
+  return (
+    (spells(word, /guard:|unl|lock/) && globMatches(word, "guard:unlock")) ||
+    (spells(base, /unl|lock/) && globMatches(base, "unlock.ts"))
+  );
 }
+
+// The unlock command or script named anywhere in the command line, even inside a longer argument or a
+// script string. Commit messages that mention them are refused too; write those from a file.
+const UNLOCK_TEXT = /guard:unlock|unlock\.ts/i;
 
 // The old text patterns, kept as a second layer: commits, pushes and PR changes named in plain text ask.
 const BACKSTOP: readonly [RegExp, string][] = [

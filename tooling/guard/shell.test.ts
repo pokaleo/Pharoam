@@ -89,6 +89,10 @@ describe("substitutions in heredocs and expansions", () => {
     expect(argv("cat <<EOF\n`git push`\nEOF")).toContainEqual(["git", "push"]);
   });
 
+  it("treats a delimiter after a line continuation as unquoted, as the shell does", () => {
+    expect(argv("cat <<\\\nEOF\n$(git push)\nEOF")).toContainEqual(["git", "push"]);
+  });
+
   it.each([
     "cat <<'EOF'\n$(git push)\nEOF",
     'cat <<"EOF"\n$(git push)\nEOF',
