@@ -162,6 +162,8 @@ Pharoam/                              ← the folder the user chooses
 
 Profile records reference skills by **Pharoam inventory slug only** (for example `skills: [python, postgres]`). Cross-references to ESCO, Wikidata and GitHub topics live in the inventory, so profiles never need rewriting when a mapping changes.
 
+**Custom skills.** A skill the inventory lacks can be added by the person. Its slug starts with `custom-` (for example `custom-kdb-q`), and its skill record holds `name` and an optional `description` in the top block. Custom skills are marked as the person's own and never match pathway requirements, which name inventory skills only ([MVP](../MVP.md) S8).
+
 ## 10. Other profile records
 
 ### `pharoam` (the central record, `pharoam.md`)

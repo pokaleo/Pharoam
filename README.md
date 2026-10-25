@@ -8,7 +8,7 @@ Pharoam helps people understand what they know, what they can show, which paths 
 
 *Pharos* (the lighthouse of Alexandria) + *roam* (the freedom to explore).
 
-> **Status: early design.** There is no usable software yet. Read the [Charter](docs/CHARTER.md) to see where the project is heading.
+> **Status: design done, building the first release.** There is no usable software yet. The first release (v0.1) lets you keep an evidence-based skills profile in a folder on your own computer and see your gap to a career pathway, with no AI and no server. See the [MVP and release plan](docs/MVP.md).
 
 ---
 
@@ -19,7 +19,7 @@ At Pharoam's centre is a **personal knowledge profile**, not a static CV. It gro
 | Label | Meaning |
 |---|---|
 | `self-reported` | You said so |
-| `evidenced` | Backed by an artefact such as a certificate, transcript or repository |
+| `evidenced` | Backed by an evidence record such as a certificate, transcript, job or repository |
 | `demonstrated` | Shown in a Pharoam assessment or practical task |
 | `ai-inferred` | Suggested by a model, with an explanation, its limits and a clear AI disclaimer; you accept, correct or reject it |
 
@@ -30,7 +30,7 @@ Pharoam builds on that profile in four steps:
 3. **Explore**: compare several plausible career pathways, with their prerequisites, gaps, learning investment and trade-offs.
 4. **Learn**: follow a personal learning plan and track real progress.
 
-v1 is built for technical, self-directed people, starting with the team that builds it. Computer-science students, recent graduates and early-career learners come next.
+v1 is built for technical, self-directed people, starting with its founder. Computer-science students, recent graduates and early-career learners come next.
 
 ## What Pharoam won't do
 
@@ -54,14 +54,15 @@ Every design decision is checked against the rules in the [Charter](docs/CHARTER
 
 - [Charter & Product Vision](docs/CHARTER.md): what Pharoam is, its design rules, scope and decisions.
 - [PRD](docs/PRD.md): the whole product blueprint.
+- [MVP and release plan](docs/MVP.md): what each release delivers, its stories and acceptance criteria, and what's deferred.
 - [Architecture](docs/ARCHITECTURE.md): decisions and the [ADR](docs/adr/) index.
 - Design specifications: [data model](docs/design/data-model.md), [interfaces](docs/design/interfaces.md), [security](docs/design/security.md).
-- [Research: skill inventories](docs/research/skills-inventory.md).
+- Research: [existing tools and differentiation](docs/research/discovery.md), [skill inventories](docs/research/skills-inventory.md).
 - [Engineering standards](docs/ENGINEERING.md) and [AGENTS.md](AGENTS.md) (instructions for AI coding agents).
 
 ## Contributing
 
-Pharoam is in early design and **does not accept outside pull requests yet**. Issues, ideas and discussion are very welcome. Contributor terms will be published before outside code is accepted.
+Pharoam is at an early stage and **does not accept outside pull requests yet**. Issues, ideas and discussion are very welcome. Contributor terms will be published before outside code is accepted.
 
 ## Licence
 
