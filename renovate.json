@@ -3,11 +3,18 @@
   "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
   "rangeStrategy": "pin",
   "semanticCommits": "enabled",
+  "minimumReleaseAge": "3 days",
+  "internalChecksFilter": "strict",
   "packageRules": [
     {
       "description": "TypeScript 7 waits for typescript-eslint support (ENGINEERING §3).",
       "matchPackageNames": ["typescript"],
       "allowedVersions": "<6.1"
+    },
+    {
+      "description": "engines states the supported Node range (>=26); the exact Node version is pinned in .nvmrc.",
+      "matchDepTypes": ["engines"],
+      "enabled": false
     }
   ]
 }
