@@ -32,6 +32,7 @@
 | [0015](adr/0015-translation-and-ui-components.md) | Translation and UI components | AD14 |
 | [0016](adr/0016-skill-records-and-overall-level.md) | One file per skill; overall level by AI only | Data model §6 |
 | [0017](adr/0017-human-readable-user-data.md) | Everything in the user's storage is human-readable | Data model §0 |
+| [0018](adr/0018-tsdoc-api-reference-and-typed-results.md) | TSDoc on every export, a generated API reference, and typed results | AD23 |
 
 ## Principle: no server where possible, a relay where necessary
 
@@ -83,6 +84,7 @@ The core runs entirely in the browser. Some outside services don't allow direct 
 | AD20 | **Local cache library** | **Dexie.js** over IndexedDB, wrapped by the encryption layer ([Security](design/security.md) §8). | — |
 | AD21 | **Relay framework** | **Hono**, running unchanged on Cloudflare Workers, Node (Docker) and Bun. | — |
 | AD22 | **Runtime version** | **The latest stable Node.js line** (currently **Node 26**, Active LTS from 2026-10-28), pinned via `.nvmrc` and `engines`. Dependencies track their latest stable versions, except where a tool's support lags (ENGINEERING §3). Linting, formatting and other developer tools are decided in Engineering & Agent Standards. | — |
+| AD23 | **Code documentation and errors** | **TSDoc on every exported item**, checked by `eslint-plugin-jsdoc` and turned into an API reference by **TypeDoc** in CI. **Expected failures are returned as typed results**; exceptions mean bugs ([ADR-0018](adr/0018-tsdoc-api-reference-and-typed-results.md)). | Every export costs a comment; callers must handle each error kind. |
 
 ## Spikes before implementation
 

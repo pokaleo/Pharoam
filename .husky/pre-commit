@@ -1,0 +1,2 @@
+pnpm exec lint-staged
+node tooling/guard/bin/pre-commit.ts

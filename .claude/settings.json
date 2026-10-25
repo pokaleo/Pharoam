@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/tooling/guard/bin/claude-pre-tool-use.ts\"",
+            "timeout": 30,
+            "onFailure": "block",
+            "statusMessage": "Checking Pharoam hard rules"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/tooling/guard/bin/claude-post-tool-use.ts\"",
+            "timeout": 120,
+            "statusMessage": "Linting the edited file"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/tooling/guard/bin/claude-stop.ts\"",
+            "timeout": 600,
+            "statusMessage": "Running pnpm check before finishing"
+          }
+        ]
+      }
+    ]
+  }
+}

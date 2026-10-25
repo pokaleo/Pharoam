@@ -5,9 +5,9 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "types": ["node"],
-    "allowJs": true,
-    "checkJs": true
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true
   },
-  "include": ["tooling/**/*", "*.config.ts", "*.config.js"],
+  "include": ["tooling/**/*", "*.config.ts"],
   "exclude": ["tooling/**/__fixtures__/**"]
 }

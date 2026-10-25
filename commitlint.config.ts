@@ -1,8 +1,7 @@
 // Conventional Commits, as defined in docs/ENGINEERING.md §6.
-import { RuleConfigSeverity } from "@commitlint/types";
+import { RuleConfigSeverity, type UserConfig } from "@commitlint/types";
 
-/** @type {import("@commitlint/types").UserConfig} */
-export default {
+const config: UserConfig = {
   extends: ["@commitlint/config-conventional"],
   rules: {
     "type-enum": [
@@ -13,3 +12,5 @@ export default {
     "header-max-length": [RuleConfigSeverity.Error, "always", 72],
   },
 };
+
+export default config;

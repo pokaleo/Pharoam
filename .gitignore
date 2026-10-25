@@ -3,6 +3,8 @@
 .vscode/*
 !.vscode/extensions.json
 .omc/
+.claude/settings.local.json
+.claude/guard-unlock
 .DS_Store
 
 # Dependencies and build output
@@ -10,3 +12,6 @@ node_modules/
 dist/
 coverage/
 *.tsbuildinfo
+
+# Generated API reference (pnpm docs:api)
+api-docs/

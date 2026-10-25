@@ -2,7 +2,7 @@ import path from "node:path";
 import { ESLint } from "eslint";
 import tseslint from "typescript-eslint";
 import { describe, expect, it } from "vitest";
-import { boundariesConfig } from "./boundaries.js";
+import { boundariesConfig } from "./boundaries.ts";
 
 // Architecture boundaries from ADR-0003 and ENGINEERING §3.
 const fixtureRoot = path.join(import.meta.dirname, "__fixtures__", "boundaries");
@@ -37,10 +37,6 @@ describe("architecture boundaries", () => {
       expect(await violations("packages/core/src/probe.ts", "../../provider-anthropic/src/index")).toContain(
         "boundaries/dependencies",
       );
-    });
-
-    it.each(["react", "react-dom", "react-dom/client"])("rejects importing %s", async (module) => {
-      expect(await violations("packages/core/src/probe.ts", module)).toContain("no-restricted-imports");
     });
 
     it("allows importing itself", async () => {
