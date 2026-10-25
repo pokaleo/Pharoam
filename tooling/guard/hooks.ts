@@ -6,7 +6,7 @@
  * @packageDocumentation
  */
 import path from "node:path";
-import { classifyCommand, writesProtectedPath } from "./bash-rules.ts";
+import { type CommandContext, classifyCommand, writesProtectedPath } from "./bash-rules.ts";
 import { checkContent } from "./content-rules.ts";
 import { type EditInput, resultingContent } from "./edit-result.ts";
 import { isProtectedPath } from "./protected.ts";
@@ -28,6 +28,8 @@ export interface HookInput {
   };
   /** Set when the agent is already continuing because a Stop hook blocked it. */
   stop_hook_active?: boolean;
+  /** The shell's working directory when the hook ran, which persists between commands. */
+  cwd?: string;
 }
 
 /** A PreToolUse hook's answer that asks the user or refuses the call. */
@@ -85,9 +87,9 @@ export function preToolUse(
 ): PreToolUseOutput | undefined {
   const toolName = input.tool_name ?? "";
   const unlocked = () => isUnlocked(deps.readFile(path.join(deps.projectDir, UNLOCK_FILE)), deps.now());
-  const context = deps.resolve
-    ? { projectDir: deps.projectDir, resolve: deps.resolve }
-    : { projectDir: deps.projectDir };
+  const context: CommandContext = { projectDir: deps.projectDir };
+  if (deps.resolve) context.resolve = deps.resolve;
+  if (input.cwd !== undefined) context.cwd = path.resolve(deps.projectDir, input.cwd);
 
   if (toolName === "Bash") {
     const command = input.tool_input?.command ?? "";

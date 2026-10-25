@@ -162,8 +162,11 @@ function parseInto(input: string, out: SimpleCommand[]): string | undefined {
       append(result.text, result.dynamic);
       i = result.end;
     } else if (c === "\\") {
-      quoted = true;
-      if (next !== "\n") append(next);
+      // A backslash before a newline only continues the line; it doesn't quote anything.
+      if (next !== "\n") {
+        quoted = true;
+        append(next);
+      }
       i++;
     } else if (c === "$" || c === "`") {
       const result = readExpansion(input, i, out);

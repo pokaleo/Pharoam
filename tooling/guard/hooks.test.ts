@@ -68,6 +68,16 @@ describe("PreToolUse hook", () => {
       ).toBe("deny");
     });
 
+    it("resolves shell paths from the working directory in the hook payload", () => {
+      expect(
+        decide({
+          tool_name: "Bash",
+          cwd: "/repo/tooling/guard",
+          tool_input: { command: "echo x > hooks.ts" },
+        })?.permissionDecision,
+      ).toBe("ask");
+    });
+
     it("asks before a disguised commit", () => {
       expect(
         decide({ tool_name: "Bash", tool_input: { command: `git -C . "commit" -m x` } })?.permissionDecision,

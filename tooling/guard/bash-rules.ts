@@ -24,6 +24,8 @@ export interface CommandDecision {
 export interface CommandContext {
   /** The repository root. */
   projectDir: string;
+  /** The shell's working directory, which relative paths start from; the repository root when absent. */
+  cwd?: string;
   /** Resolves symlinks in an absolute path; paths are taken as they are when absent. */
   resolve?: (absolutePath: string) => string;
 }
@@ -65,7 +67,13 @@ export function classifyCommand(
     return relative !== undefined && globMatches(relative, UNLOCK_FILE);
   };
   if (writeCandidates(expanded.commands).paths.some(isUnlockFile)) return deny(UNLOCK);
-  if (expanded.commands.some((c) => c.argv.some(namesUnlock))) return deny(UNLOCK);
+  // `xargs` is unwrapped from the words, so the raw text is checked for it too.
+  const runsPrograms =
+    /(?:^|[\s|;&(])xargs\s/.test(command) || expanded.commands.some((c) => RUNNERS.has(program(c.argv)));
+  const named = (c: Unwrapped) => c.argv.some((word) => namesUnlock(word, c.argv, runsPrograms));
+  if (UNLOCK_TEXT.test(command) || expanded.commands.some(named)) {
+    return deny(UNLOCK);
+  }
   return strictest([...expanded.commands.map(classifySimple), backstop(command)]);
 }
 
@@ -156,27 +164,31 @@ function expand(command: string, depth = 0): { commands: Unwrapped[]; unreadable
   for (const simple of parsed.commands) {
     const unwrapped = unwrap(simple.assignments, simple.words, simple.dynamic);
     commands.push({ ...unwrapped, redirects: simple.redirects, heredocs: simple.heredocs });
-    const name = program(unwrapped.argv);
-    const scripts = SHELLS.has(name) ? [...simple.heredocs] : [];
-    if (STRING_RUNNERS.has(name)) {
-      const flag = unwrapped.argv.findIndex(
-        (word, i) => i > 0 && /^(?:-[a-zA-Z]*c[a-zA-Z]*|--command)$/.test(word),
-      );
-      if (flag !== -1) {
-        if (unwrapped.dynamic[flag + 1] === true) why ??= "a script built from a variable";
-        scripts.push(unwrapped.argv[flag + 1] ?? "");
+    const { argv, dynamic } = unwrapped;
+    const names = argv.map((word) => path.basename(word));
+    // A shell or command runner anywhere in the words (`pnpm exec bash -c …`, `find -exec sh -c …`) runs
+    // the script after its `-c`; a heredoc goes to whichever shell is in the command.
+    const scripts = names.some((name) => SHELLS.has(name)) ? [...simple.heredocs] : [];
+    names.forEach((name, at) => {
+      if (STRING_RUNNERS.has(name)) {
+        const flag = argv.findIndex((word, i) => i > at && /^(?:-[a-zA-Z]*c[a-zA-Z]*|--command)$/.test(word));
+        if (flag !== -1) {
+          if (dynamic[flag + 1] === true) why ??= "a script built from a variable";
+          scripts.push(argv[flag + 1] ?? "");
+        }
+        const inline = argv.slice(at + 1).find((word) => word.startsWith("--command="));
+        if (inline !== undefined) scripts.push(inline.slice("--command=".length));
       }
-      const inline = unwrapped.argv.find((word) => word.startsWith("--command="));
-      if (inline !== undefined) scripts.push(inline.slice("--command=".length));
-    }
-    // `watch` runs its remaining arguments as one command line.
-    if (name === "watch")
-      scripts.push(
-        unwrapped.argv
-          .slice(1)
-          .filter((word) => !word.startsWith("-"))
-          .join(" "),
-      );
+      // `watch` runs its remaining arguments as one command line.
+      if (name === "watch") {
+        scripts.push(
+          argv
+            .slice(at + 1)
+            .filter((word) => !word.startsWith("-"))
+            .join(" "),
+        );
+      }
+    });
     for (const script of scripts) {
       const nested = expand(script, depth + 1);
       commands.push(...nested.commands);
@@ -236,10 +248,65 @@ function classifySimple(command: Unwrapped): CommandDecision {
   return strictest(decisions);
 }
 
-// Whether a word names the unlock command or script, also as a glob such as `unl*.ts` that the shell expands.
-function namesUnlock(word: string): boolean {
-  return globMatches(word, "guard:unlock") || globMatches(path.basename(word), "unlock.ts");
+// Commands that only read or list files.
+const READ_ONLY = new Set([
+  "ls",
+  "cat",
+  "grep",
+  "rg",
+  "wc",
+  "head",
+  "tail",
+  "stat",
+  "file",
+  "du",
+  "less",
+  "more",
+]);
+const READ_ONLY_GIT = new Set(["grep", "log", "diff", "show", "status", "ls-files", "blame"]);
+// Commands that run programs or scripts, including ones a listing feeds them (`ls … | xargs node`).
+const RUNNERS = new Set([
+  "node",
+  "bun",
+  "deno",
+  "tsx",
+  "ts-node",
+  "npx",
+  "pnpm",
+  "npm",
+  "yarn",
+  "python",
+  "python3",
+  "ruby",
+  "perl",
+  "source",
+  ".",
+  "exec",
+  "eval",
+  "xargs",
+  "parallel",
+  "watch",
+  ...SHELLS,
+]);
+
+// Whether a word names the unlock command or script. Fails closed for globs: one whose file-name part could
+// match `unlock.ts` counts, unless its command only reads or lists files and nothing in the line runs
+// programs. So `ls *` and `cat tooling/guard/bin/u*` stay allowed; `node tooling/guard/bin/u*` and
+// `ls tooling/guard/bin/u* | xargs node` don't.
+function namesUnlock(word: string, argv: readonly string[], lineRunsPrograms: boolean): boolean {
+  const base = path.basename(word);
+  if (!/[*?[]/.test(word)) return word.toLowerCase() === "guard:unlock" || base.toLowerCase() === "unlock.ts";
+  if (word.includes(":") && globMatches(word, "guard:unlock")) return true;
+  if (!globMatches(base, "unlock.ts")) return false;
+  const name = program(argv);
+  const readsOnly =
+    READ_ONLY.has(name) || (name === "git" && READ_ONLY_GIT.has(gitSubcommand(argv.slice(1)) ?? ""));
+  return !readsOnly || lineRunsPrograms;
 }
+
+// The unlock command or script named anywhere in the command line, even inside a longer argument or a
+// script string. Commit messages that mention them are refused too; write those from a file.
+const UNLOCK_TEXT = /guard:unlock|unlock\.ts/i;
 
 // The old text patterns, kept as a second layer: commits, pushes and PR changes named in plain text ask.
 const BACKSTOP: readonly [RegExp, string][] = [
@@ -259,16 +326,38 @@ function backstop(command: string): CommandDecision {
 function globMatches(pattern: string, target: string): boolean {
   const lower = pattern.toLowerCase();
   if (!/[*?[]/.test(lower)) return lower === target;
-  const source = lower
-    .replace(/[.+^${}()|\\]/g, "\\$&")
-    .replace(/\*/g, "[^/]*")
-    .replace(/\?/g, "[^/]")
-    .replace(/\[!/g, "[^");
-  try {
-    return new RegExp(`^${source}$`).test(target);
-  } catch {
-    return true;
+  const source = globSource(lower);
+  // A glob too unusual to convert, such as one with a POSIX class, is assumed to match: fail closed.
+  return source === undefined || new RegExp(`^${source}$`).test(target);
+}
+
+// A glob as a regular-expression source, or undefined when it uses bracket features this doesn't convert.
+// Inside `[…]`, `*` and `?` are ordinary characters; `[!…]` and `[^…]` negate; `]` right after the opening
+// bracket is a member; an unmatched `[` is an ordinary character, as in the shell.
+function globSource(glob: string): string | undefined {
+  let source = "";
+  for (let i = 0; i < glob.length; i++) {
+    const c = glob.charAt(i);
+    if (c === "*") source += "[^/]*";
+    else if (c === "?") source += "[^/]";
+    else if (c === "[") {
+      let j = i + 1;
+      const negated = glob.charAt(j) === "!" || glob.charAt(j) === "^";
+      if (negated) j++;
+      const start = j;
+      if (glob.charAt(j) === "]") j++;
+      while (j < glob.length && glob.charAt(j) !== "]") j++;
+      if (j >= glob.length) {
+        source += "\\[";
+        continue;
+      }
+      const members = glob.slice(start, j);
+      if (/\[[:=.]/.test(members)) return undefined;
+      source += `[${negated ? "^" : ""}${members.replace(/[\\\]^]/g, "\\$&")}]`;
+      i = j;
+    } else source += c.replace(/[.+^${}()|\\\]]/g, "\\$&");
   }
+  return source;
 }
 
 // The folder a glob could write in: the part before the first glob character, up to its last `/`.
@@ -453,7 +542,7 @@ function toRelative(token: string, context: CommandContext): string | undefined 
     return undefined;
   const resolve = context.resolve ?? ((p: string) => p);
   const root = resolve(path.resolve(context.projectDir || "/"));
-  const absolute = resolve(path.resolve(root, token));
+  const absolute = resolve(path.resolve(context.cwd ?? root, token));
   const relative = path.relative(root, absolute);
   if (relative.startsWith("..") || path.isAbsolute(relative)) return undefined;
   return relative === "" ? "." : relative.split(path.sep).join("/");

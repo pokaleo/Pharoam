@@ -37,7 +37,6 @@ describe("Bash command rules", () => {
       "git commit -m 'feat: x'",
       "git commit -mn",
       `git commit -m "docs: explain why --no-verify is refused"`,
-      `git commit -m "docs: mention guard:unlock"`,
       "git push",
       "git push -u origin feat/x",
       "gh pr create --title x",
@@ -78,6 +77,9 @@ describe("Bash command rules", () => {
       "watch git push",
       `script -q -c "git push" /dev/null`,
       `su -c "git commit -m x"`,
+      `pnpm exec bash -c "git push"`,
+      `find . -exec sh -c "git commit -m x" ;`,
+      "doas bash <<'EOF'\ngit push\nEOF",
     ])("asks: %s", (cmd) => {
       expect(decision(cmd)).toBe("ask");
     });
@@ -107,6 +109,12 @@ describe("Bash command rules", () => {
       `grep -rn "git commit" docs`,
       "cat .claude/guard-unlock",
       "echo $(date)",
+      "ls *",
+      "ls tooling/guard/*.ts",
+      "git grep -n x -- '*.md' '.github/*'",
+      "rm -f /tmp/*.log",
+      "grep -n a[b docs/x.md",
+      "python3 - <<'EOF'\nfirst = items[0\nopen('/tmp/out.txt', 'w').write(first)\nEOF",
     ])("allows: %s", (cmd) => {
       expect(decision(cmd)).toBe("allow");
     });
@@ -129,8 +137,45 @@ describe("Bash command rules", () => {
       "pnpm guard:unl?ck 60",
       "cp /tmp/x .claude/guard-unl*",
       `bash -c "pnpm guard:unlock 60"`,
+      `pnpm exec bash -c "pnpm guard:unlock 60"`,
+      `doas sh -c "node tooling/guard/bin/unlock.ts 60"`,
+      `git commit -m "docs: mention guard:unlock"`,
     ])("denies: %s", (cmd) => {
       expect(decision(cmd)).toBe("deny");
+    });
+  });
+
+  describe("globs are checked against the unlock script's real location", () => {
+    it.each([
+      ["node tooling/guard/bin/u*", "/repo"],
+      ["node tooling/guard/bin/*.ts", "/repo"],
+      ["node ./bin/u*", "/repo/tooling/guard"],
+      ["node u*", "/repo/tooling/guard/bin"],
+      ["cd tooling/guard/bin && node u*", "/repo"],
+      ["node tooling/**/u*", "/repo"],
+      [`find . -name "u*" -exec node {} 60 ;`, "/repo"],
+      ["pnpm -C tooling/guard/bin exec node u*", "/repo"],
+      ["env --chdir=tooling/guard/bin node u*", "/repo"],
+      ["node ~/code/pharoam/tooling/guard/bin/u*", "/repo"],
+      ["node tooling/guard/bin/[u]nlock.ts", "/repo"],
+      ["node tooling/guard/bin/[t-v]nlock.ts", "/repo"],
+      ["node tooling/guard/bin/[[:lower:]]nlock.ts", "/repo"],
+      [`git ls-files "*/u*" | xargs node`, "/repo"],
+      [`rg --files -g "u*" | xargs node`, "/repo"],
+      ["node scripts/*.ts", "/repo"],
+    ])("denies %s in %s", (cmd, cwd) => {
+      expect(classifyCommand(cmd, { projectDir: "/repo", cwd }).decision).toBe("deny");
+    });
+
+    it.each([
+      ["ls *", "/repo"],
+      ["ls tooling/guard/*.ts", "/repo"],
+      ["ls *.ts", "/repo/tooling/guard"],
+      ["cat tooling/guard/bin/u*", "/repo"],
+      ["wc -l tooling/guard/*.ts", "/repo"],
+      ["node tooling/guard/bin/[*]nlock.ts", "/repo"],
+    ])("allows %s in %s", (cmd, cwd) => {
+      expect(classifyCommand(cmd, { projectDir: "/repo", cwd }).decision).toBe("allow");
     });
   });
 
@@ -168,6 +213,13 @@ describe("shell commands that write enforcement files", () => {
     "rm tsconfig*",
   ])("detects: %s", (cmd) => {
     expect(writes(cmd)).toBe(true);
+  });
+
+  it("resolves relative paths from the shell's working directory", () => {
+    expect(
+      writesProtectedPath("echo x > hooks.ts", { projectDir: "/repo", cwd: "/repo/tooling/guard" }),
+    ).toBe(true);
+    expect(writesProtectedPath("echo x > hooks.ts", { projectDir: "/repo", cwd: "/repo/docs" })).toBe(false);
   });
 
   it("follows symlinks to protected files", () => {

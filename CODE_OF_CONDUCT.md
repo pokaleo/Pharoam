@@ -36,7 +36,7 @@ This Code of Conduct applies within all community spaces, and also applies when 
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement at the maintainer, privately through [GitHub private reporting](https://github.com/pokaleo/Pharoam/security/advisories/new) or a direct message to [@pokaleo](https://github.com/pokaleo). All complaints will be reviewed and investigated promptly and fairly.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement, currently the maintainer [@pokaleo](https://github.com/pokaleo), privately through GitHub's [private reporting form](https://github.com/pokaleo/Pharoam/security/advisories/new). Start the title with "Code of Conduct" so the report is handled as a conduct report rather than a security issue. A dedicated contact will be added before the project accepts outside contributions. All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the reporter of any incident.
 
