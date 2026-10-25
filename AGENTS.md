@@ -13,6 +13,7 @@ Pharoam is an open-source, browser-first web app. It helps people build an evide
 | Principles and design rules R1–R16 | [docs/CHARTER.md](docs/CHARTER.md) §3 |
 | What the product does | [docs/PRD.md](docs/PRD.md) |
 | What to build now: releases, stories, acceptance criteria, what's deferred | [docs/MVP.md](docs/MVP.md) |
+| The order of work, and what depends on what | [docs/ROADMAP.md](docs/ROADMAP.md) |
 | Architecture decisions | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/adr/](docs/adr/) |
 | Data shapes and file format | [docs/design/data-model.md](docs/design/data-model.md) |
 | Contracts between parts | [docs/design/interfaces.md](docs/design/interfaces.md) |

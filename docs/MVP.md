@@ -171,11 +171,7 @@ Each story lists the PRD requirements it implements. Criteria use Given/When/The
 ## 6. Built before the stories
 
 - **No spikes are needed for v0.1.** S1 (CORS) matters only for outside calls, S2 (LangGraph in the browser) only for AI, and S3 (WebAuthn PRF) only for the app lock. They come before v0.2.
-- In this order:
-  1. **Workspace packages:** `packages/core`, `packages/connector-folder`, `apps/web`, plus `content/` and `data/`.
-  2. **Core first:** Zod schemas and codecs for `pharoam`, `evidence`, `skill-record`, `gap`, `skill` and `pathway`, with round-trip tests (ENGINEERING §4).
-  3. **The shared connector test suite**, then the folder connector against it.
-  4. **Content:** the skill-vocabulary subset and the 4 pathways, compiled into the built-in bundle.
+- **The order of work is in the [implementation plan](ROADMAP.md).** In short: foundations, core, folder connector and content, then every story's behaviour in the core; **the interface waits for the founder's design system**, then the screens are built on it.
 
 ## 7. Not achieved in the MVP
 

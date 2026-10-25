@@ -217,7 +217,7 @@ Outcomes are reported only in aggregate, with their uncertainty and possible bia
 | 3a | [MVP and release plan](MVP.md): stories, acceptance criteria, what's deferred | Done |
 | 4 | [Architecture](ARCHITECTURE.md): decisions AD1–AD23, ADRs 0001–0018, data model, interfaces, security | Decided; design system deferred; spikes S1–S3 pending (none needed for v0.1) |
 | 4c | [Engineering standards](ENGINEERING.md) and agent instructions, enforced by hooks and CI | Done; waiting to be merged |
-| 4b | Implementation plan and GitHub project | Next |
+| 4b | [Implementation plan](ROADMAP.md) and GitHub project | Plan done; GitHub project next |
 | 4a | Storage connectors: one issue per connector | Local folder in v0.1; the rest after |
 | 5 | Skill-inventory decision (§4) | Decided (PRD I1) |
 | 6 | Discovery: a [comparison with existing tools](research/discovery.md), then talking to target users before each new audience | Comparison done; v1 validation is the founder's own use |
