@@ -71,11 +71,6 @@ describe("nested and hidden commands", () => {
     expect(command?.dynamic).toEqual([false, true, false, false]);
   });
 
-  it("marks words with unquoted glob characters, which the shell expands", () => {
-    const [command] = parseShell(`ls *.ts "a*b" 'c?' d\\* x[y]`).commands;
-    expect(command?.globbed).toEqual([false, true, false, false, false, true]);
-  });
-
   it("keeps single-quoted dollars literal", () => {
     expect(parseShell("echo '$HOME'").commands[0]?.dynamic).toEqual([false, false]);
   });

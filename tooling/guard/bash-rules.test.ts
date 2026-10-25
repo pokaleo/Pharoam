@@ -57,6 +57,10 @@ describe("Bash command rules", () => {
       "git config core.anything value",
       "git config --add remote.origin.uploadpack node",
       "git config set core.pager node",
+      "git config user.email someone@example.com",
+      "git config --get core.pager node",
+      "git config --fi /tmp/c core.pager",
+      "git -c user.name=x log",
       "git -c diff.external=node log",
     ])("asks: %s", (cmd) => {
       expect(decision(cmd)).toBe("ask");
@@ -124,7 +128,6 @@ describe("Bash command rules", () => {
       "ls tooling/guard/*.ts",
       "git grep -n x -- '*.md' '.github/*'",
       "rm -f /tmp/*.log",
-      "git config user.email someone@example.com",
       "git config --get core.pager",
       "git config --list",
       "git config get user.name",
@@ -184,6 +187,8 @@ describe("Bash command rules", () => {
       [`PAGER=node git ls-files "tooling/guard/bin/u*"`, "/repo"],
       [`ls tooling/guard/bin/u* | awk '{ system("node " $0) }'`, "/repo"],
       ["node tooling/guard/bin/[z-a]nlock.ts", "/repo"],
+      [`node "tooling/guard/bin/u*"`, "/repo"],
+      [`python3 tooling/run.py "tooling/guard/bin/u*"`, "/repo"],
       [`git grep --open "x" -- "tooling/guard/bin/u*"`, "/repo"],
       [`git grep -nO "x" -- "tooling/guard/bin/u*"`, "/repo"],
     ])("denies %s in %s", (cmd, cwd) => {
@@ -199,7 +204,6 @@ describe("Bash command rules", () => {
       ["node tooling/guard/bin/[*]nlock.ts", "/repo"],
       ["ls tooling/guard/bin/* | wc -l", "/repo"],
       [`gh project field-list 1 --jq '.fields[] | .name'`, "/repo"],
-      [`node "tooling/guard/bin/u*"`, "/repo"],
       [`git grep -n -i x -- "tooling/guard/bin/*"`, "/repo"],
       [`git ls-files "tooling/guard/bin/*"`, "/repo"],
     ])("allows %s in %s", (cmd, cwd) => {
