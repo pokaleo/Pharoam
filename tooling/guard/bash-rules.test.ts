@@ -157,6 +157,12 @@ describe("Bash command rules", () => {
       ["pnpm -C tooling/guard/bin exec node u*", "/repo"],
       ["env --chdir=tooling/guard/bin node u*", "/repo"],
       ["node ~/code/pharoam/tooling/guard/bin/u*", "/repo"],
+      ["node tooling/guard/bin/[u]nlock.ts", "/repo"],
+      ["node tooling/guard/bin/[t-v]nlock.ts", "/repo"],
+      ["node tooling/guard/bin/[[:lower:]]nlock.ts", "/repo"],
+      [`git ls-files "*/u*" | xargs node`, "/repo"],
+      [`rg --files -g "u*" | xargs node`, "/repo"],
+      ["node scripts/*.ts", "/repo"],
     ])("denies %s in %s", (cmd, cwd) => {
       expect(classifyCommand(cmd, { projectDir: "/repo", cwd }).decision).toBe("deny");
     });
@@ -165,6 +171,9 @@ describe("Bash command rules", () => {
       ["ls *", "/repo"],
       ["ls tooling/guard/*.ts", "/repo"],
       ["ls *.ts", "/repo/tooling/guard"],
+      ["cat tooling/guard/bin/u*", "/repo"],
+      ["wc -l tooling/guard/*.ts", "/repo"],
+      ["node tooling/guard/bin/[*]nlock.ts", "/repo"],
     ])("allows %s in %s", (cmd, cwd) => {
       expect(classifyCommand(cmd, { projectDir: "/repo", cwd }).decision).toBe("allow");
     });

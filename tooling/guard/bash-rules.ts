@@ -67,14 +67,11 @@ export function classifyCommand(
     return relative !== undefined && globMatches(relative, UNLOCK_FILE);
   };
   if (writeCandidates(expanded.commands).paths.some(isUnlockFile)) return deny(UNLOCK);
-  // After a `cd`, a directory option (`-C`, `--chdir`, `--dir`, `--prefix`, sudo's `-D`) or with `find`, which
-  // matches patterns itself, the directory a glob is matched in isn't known.
-  // The raw text is checked too, because prefixes such as `env` are removed from the words.
-  const movesDirectory =
-    /(?:^|\s)(?:-C|-D|--chdir|--dir|--prefix|--cwd)(?:=|\s|$)/.test(command) ||
-    expanded.commands.some((c) => ["cd", "pushd", "find"].includes(program(c.argv)));
-  const named = (word: string) => namesUnlock(word, context, movesDirectory);
-  if (UNLOCK_TEXT.test(command) || expanded.commands.some((c) => c.argv.some(named))) {
+  // `xargs` is unwrapped from the words, so the raw text is checked for it too.
+  const runsPrograms =
+    /(?:^|[\s|;&(])xargs\s/.test(command) || expanded.commands.some((c) => RUNNERS.has(program(c.argv)));
+  const named = (c: Unwrapped) => c.argv.some((word) => namesUnlock(word, c.argv, runsPrograms));
+  if (UNLOCK_TEXT.test(command) || expanded.commands.some(named)) {
     return deny(UNLOCK);
   }
   return strictest([...expanded.commands.map(classifySimple), backstop(command)]);
@@ -251,26 +248,60 @@ function classifySimple(command: Unwrapped): CommandDecision {
   return strictest(decisions);
 }
 
-const UNLOCK_SCRIPT = "tooling/guard/bin/unlock.ts";
+// Commands that only read or list files.
+const READ_ONLY = new Set([
+  "ls",
+  "cat",
+  "grep",
+  "rg",
+  "wc",
+  "head",
+  "tail",
+  "stat",
+  "file",
+  "du",
+  "less",
+  "more",
+]);
+const READ_ONLY_GIT = new Set(["grep", "log", "diff", "show", "status", "ls-files", "blame"]);
+// Commands that run programs or scripts, including ones a listing feeds them (`ls … | xargs node`).
+const RUNNERS = new Set([
+  "node",
+  "bun",
+  "deno",
+  "tsx",
+  "ts-node",
+  "npx",
+  "pnpm",
+  "npm",
+  "yarn",
+  "python",
+  "python3",
+  "ruby",
+  "perl",
+  "source",
+  ".",
+  "exec",
+  "eval",
+  "xargs",
+  "parallel",
+  "watch",
+  ...SHELLS,
+]);
 
 // Whether a word names the unlock command or script. Fails closed for globs: one whose file-name part could
-// match `unlock.ts` counts, unless it is provably in a folder of the repository other than the script's —
-// a literal folder, resolved from the shell's working directory, with no `**` and no directory change in
-// the line. So `ls *` and `ls tooling/guard/*.ts` stay allowed, while `node tooling/guard/bin/u*` doesn't.
-function namesUnlock(word: string, context: CommandContext, movesDirectory: boolean): boolean {
+// match `unlock.ts` counts, unless its command only reads or lists files and nothing in the line runs
+// programs. So `ls *` and `cat tooling/guard/bin/u*` stay allowed; `node tooling/guard/bin/u*` and
+// `ls tooling/guard/bin/u* | xargs node` don't.
+function namesUnlock(word: string, argv: readonly string[], lineRunsPrograms: boolean): boolean {
   const base = path.basename(word);
   if (!/[*?[]/.test(word)) return word.toLowerCase() === "guard:unlock" || base.toLowerCase() === "unlock.ts";
   if (word.includes(":") && globMatches(word, "guard:unlock")) return true;
   if (!globMatches(base, "unlock.ts")) return false;
-  const relative = toRelative(word, context);
-  const folder = relative === undefined ? undefined : path.posix.dirname(relative);
-  const provablyElsewhere =
-    !movesDirectory &&
-    !word.includes("**") &&
-    folder !== undefined &&
-    !/[*?[]/.test(folder) &&
-    folder.toLowerCase() !== path.posix.dirname(UNLOCK_SCRIPT);
-  return !provablyElsewhere;
+  const name = program(argv);
+  const readsOnly =
+    READ_ONLY.has(name) || (name === "git" && READ_ONLY_GIT.has(gitSubcommand(argv.slice(1)) ?? ""));
+  return !readsOnly || lineRunsPrograms;
 }
 
 // The unlock command or script named anywhere in the command line, even inside a longer argument or a
@@ -295,17 +326,38 @@ function backstop(command: string): CommandDecision {
 function globMatches(pattern: string, target: string): boolean {
   const lower = pattern.toLowerCase();
   if (!/[*?[]/.test(lower)) return lower === target;
-  const source = lower
-    .replace(/[.+^${}()|\\]/g, "\\$&")
-    .replace(/\*/g, "[^/]*")
-    .replace(/\?/g, "[^/]")
-    .replace(/\[!/g, "[^");
-  try {
-    return new RegExp(`^${source}$`).test(target);
-  } catch {
-    // An unmatched `[` isn't a glob; the shell keeps the word as it is.
-    return lower === target;
+  const source = globSource(lower);
+  // A glob too unusual to convert, such as one with a POSIX class, is assumed to match: fail closed.
+  return source === undefined || new RegExp(`^${source}$`).test(target);
+}
+
+// A glob as a regular-expression source, or undefined when it uses bracket features this doesn't convert.
+// Inside `[…]`, `*` and `?` are ordinary characters; `[!…]` and `[^…]` negate; `]` right after the opening
+// bracket is a member; an unmatched `[` is an ordinary character, as in the shell.
+function globSource(glob: string): string | undefined {
+  let source = "";
+  for (let i = 0; i < glob.length; i++) {
+    const c = glob.charAt(i);
+    if (c === "*") source += "[^/]*";
+    else if (c === "?") source += "[^/]";
+    else if (c === "[") {
+      let j = i + 1;
+      const negated = glob.charAt(j) === "!" || glob.charAt(j) === "^";
+      if (negated) j++;
+      const start = j;
+      if (glob.charAt(j) === "]") j++;
+      while (j < glob.length && glob.charAt(j) !== "]") j++;
+      if (j >= glob.length) {
+        source += "\\[";
+        continue;
+      }
+      const members = glob.slice(start, j);
+      if (/\[[:=.]/.test(members)) return undefined;
+      source += `[${negated ? "^" : ""}${members.replace(/[\\\]^]/g, "\\$&")}]`;
+      i = j;
+    } else source += c.replace(/[.+^${}()|\\\]]/g, "\\$&");
   }
+  return source;
 }
 
 // The folder a glob could write in: the part before the first glob character, up to its last `/`.
