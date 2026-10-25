@@ -32,11 +32,13 @@ export type MinutesResult =
  *
  * @param content - The unlock file's text, or `undefined` when it doesn't exist.
  * @param now - The current time, in milliseconds since the epoch.
- * @returns `true` while the expiry in the file is in the future.
+ * @returns `true` while the expiry in the file is in the future, and no further ahead than the longest unlock
+ * (a later expiry can't have come from `pnpm guard:unlock`).
  */
 export function isUnlocked(content: string | undefined, now: number): boolean {
   if (content === undefined || !/^\d+$/.test(content.trim())) return false;
-  return now < Number(content.trim());
+  const expiry = Number(content.trim());
+  return now < expiry && expiry <= now + MAX_MINUTES * 60_000;
 }
 
 /**

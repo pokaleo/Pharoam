@@ -70,21 +70,30 @@ const MAX_REASON = 4000;
  * refused. Changing enforcement files, by edit or shell command, asks the user unless they have unlocked it
  * (`pnpm guard:unlock`). Commands that commit or publish always ask.
  * @param input - The hook payload.
- * @param deps - The project directory, a way to read a file's current text, and the current time.
+ * @param deps - The project directory, a way to read a file's current text, the current time, and optionally
+ * how to resolve symlinks, so a protected file can't be reached under another name.
  * @returns The decision, or `undefined` to let the call go ahead.
  */
 export function preToolUse(
   input: HookInput,
-  deps: { projectDir: string; readFile: (absolutePath: string) => string | undefined; now: () => number },
+  deps: {
+    projectDir: string;
+    readFile: (absolutePath: string) => string | undefined;
+    now: () => number;
+    resolve?: (absolutePath: string) => string;
+  },
 ): PreToolUseOutput | undefined {
   const toolName = input.tool_name ?? "";
   const unlocked = () => isUnlocked(deps.readFile(path.join(deps.projectDir, UNLOCK_FILE)), deps.now());
+  const context = deps.resolve
+    ? { projectDir: deps.projectDir, resolve: deps.resolve }
+    : { projectDir: deps.projectDir };
 
   if (toolName === "Bash") {
     const command = input.tool_input?.command ?? "";
-    const { decision, reason } = classifyCommand(command);
+    const { decision, reason } = classifyCommand(command, context);
     if (decision !== "allow") return permission(decision, reason);
-    if (writesProtectedPath(command, deps.projectDir) && !unlocked()) {
+    if (writesProtectedPath(command, context) && !unlocked()) {
       return permission(
         "ask",
         "This command may change hard-rule enforcement files. Changing them needs the user's approval (AGENTS.md).",
@@ -95,9 +104,9 @@ export function preToolUse(
 
   const filePath = input.tool_input?.file_path;
   if (!EDIT_TOOLS.has(toolName) || !filePath) return undefined;
-  const relative = projectRelative(deps.projectDir, filePath);
+  const relative = projectRelative(deps.projectDir, filePath, deps.resolve);
   if (relative === undefined) return undefined;
-  if (relative === UNLOCK_FILE) {
+  if (relative.toLowerCase() === UNLOCK_FILE) {
     return permission("deny", "Only the user can unlock enforcement edits (`pnpm guard:unlock`).");
   }
 
@@ -192,8 +201,14 @@ function permission(decision: "ask" | "deny", reason: string): PreToolUseOutput 
   };
 }
 
-function projectRelative(projectDir: string, filePath: string): string | undefined {
-  const relative = path.relative(projectDir, path.resolve(projectDir, filePath));
+// The file's path from the project root after resolving symlinks, or undefined when it's outside the project.
+function projectRelative(
+  projectDir: string,
+  filePath: string,
+  resolve: (absolutePath: string) => string = (p) => p,
+): string | undefined {
+  const root = resolve(path.resolve(projectDir));
+  const relative = path.relative(root, resolve(path.resolve(projectDir, filePath)));
   return relative.startsWith("..") || path.isAbsolute(relative)
     ? undefined
     : relative.split(path.sep).join("/");

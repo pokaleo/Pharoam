@@ -50,6 +50,30 @@ describe("PreToolUse hook", () => {
       expect(out?.permissionDecision).toBe("deny");
     });
 
+    it("asks when a protected file is reached through a symlink or another letter case", () => {
+      const resolve = (p: string) => p.replace(/^\/repo\/link(?=\/|$)/, "/repo/tooling/guard");
+      const decideWith = (filePath: string) =>
+        preToolUse(
+          { tool_name: "Write", tool_input: { file_path: filePath, content: "export {};" } },
+          { projectDir, readFile: files({}), now: () => NOW, resolve },
+        )?.hookSpecificOutput.permissionDecision;
+      expect(decideWith("/repo/link/hooks.ts")).toBe("ask");
+      expect(decideWith("/repo/Tooling/Guard/hooks.ts")).toBe("ask");
+    });
+
+    it("refuses an agent writing the unlock file under another letter case", () => {
+      expect(
+        decide({ tool_name: "Write", tool_input: { file_path: "/repo/.Claude/Guard-Unlock", content: "9" } })
+          ?.permissionDecision,
+      ).toBe("deny");
+    });
+
+    it("asks before a disguised commit", () => {
+      expect(
+        decide({ tool_name: "Bash", tool_input: { command: `git -C . "commit" -m x` } })?.permissionDecision,
+      ).toBe("ask");
+    });
+
     it("refuses an agent writing the unlock file", () => {
       expect(
         decide({ tool_name: "Write", tool_input: { file_path: "/repo/.claude/guard-unlock", content: "9" } })

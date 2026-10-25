@@ -26,6 +26,16 @@ describe("protected enforcement files", () => {
   });
 
   it.each([
+    "Tooling/Guard/hooks.ts",
+    "ESLint.config.ts",
+    "Package.json",
+    "TSCONFIG.json",
+    ".Husky/pre-commit",
+  ])("protects %s whatever the letter case, as case-insensitive file systems do", (path) => {
+    expect(isProtectedPath(path)).toBe(true);
+  });
+
+  it.each([
     "packages/core/src/profile.ts",
     "packages/core/package.json",
     "docs/PRD.md",
@@ -37,9 +47,12 @@ describe("protected enforcement files", () => {
 });
 
 describe("paths that contain protected files", () => {
-  it.each([".", "tooling", "tooling/eslint", ".github", ".husky", "packages/core"])("%s", (path) => {
-    expect(coversProtectedPath(path)).toBe(true);
-  });
+  it.each([".", "tooling", "Tooling", "tooling/eslint", ".github", ".husky", "packages/core"])(
+    "%s",
+    (path) => {
+      expect(coversProtectedPath(path)).toBe(true);
+    },
+  );
 
   it.each(["packages", "docs", "node_modules", "apps/web/src"])("not %s", (path) => {
     expect(coversProtectedPath(path)).toBe(false);

@@ -2,6 +2,9 @@
  * Files that implement the enforcement itself, or could quietly weaken it. Agents need the user's approval
  * to change them.
  *
+ * @remarks Paths are compared in lowercase: on case-insensitive file systems (the macOS and Windows defaults)
+ * `Tooling/Guard/hooks.ts` is the same file as `tooling/guard/hooks.ts`. On case-sensitive systems this only
+ * asks about a few extra look-alike files.
  * @packageDocumentation
  */
 
@@ -34,10 +37,11 @@ const TSCONFIG = /(?:^|\/)tsconfig[^/]*\.json$/;
  * @returns `true` when changing the file needs the user's approval.
  */
 export function isProtectedPath(relativePath: string): boolean {
+  const path = relativePath.toLowerCase();
   return (
-    PROTECTED_FILES.includes(relativePath) ||
-    PROTECTED_DIRS.some((dir) => relativePath.startsWith(dir)) ||
-    TSCONFIG.test(relativePath)
+    PROTECTED_FILES.includes(path) ||
+    PROTECTED_DIRS.some((dir) => path.startsWith(dir)) ||
+    TSCONFIG.test(path)
   );
 }
 
@@ -50,13 +54,14 @@ export function isProtectedPath(relativePath: string): boolean {
  * @returns `true` when writing to the path could change a protected file.
  */
 export function coversProtectedPath(relativePath: string): boolean {
-  if (relativePath === "." || relativePath === "") return true;
-  if (isProtectedPath(relativePath) || isProtectedPath(`${relativePath}/`)) return true;
-  const prefix = `${relativePath}/`;
+  const path = relativePath.toLowerCase();
+  if (path === "." || path === "") return true;
+  if (isProtectedPath(path) || isProtectedPath(`${path}/`)) return true;
+  const prefix = `${path}/`;
   return (
     PROTECTED_DIRS.some((dir) => dir.startsWith(prefix)) ||
     PROTECTED_FILES.some((file) => file.startsWith(prefix)) ||
-    isPackageRoot(relativePath)
+    isPackageRoot(path)
   );
 }
 

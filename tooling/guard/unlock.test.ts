@@ -15,6 +15,12 @@ describe("unlocking enforcement edits for a while", () => {
     expect(isUnlocked(content, NOW + 30 * MINUTE)).toBe(false);
   });
 
+  it("treats an expiry further ahead than the longest unlock as locked, since the user can't have set it", () => {
+    expect(isUnlocked(unlockFileContent(240, NOW), NOW)).toBe(true);
+    expect(isUnlocked(String(NOW + 241 * MINUTE), NOW)).toBe(false);
+    expect(isUnlocked("9999999999999", NOW)).toBe(false);
+  });
+
   it.each(["", "soon", "-5", "NaN"])("treats unreadable content as locked: %j", (content) => {
     expect(isUnlocked(content, NOW)).toBe(false);
   });
