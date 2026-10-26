@@ -574,27 +574,34 @@ function changesFiles(command: Unwrapped): boolean {
 const FIND_WRITES = new Set(["-delete", "-fprint", "-fprint0", "-fprintf", "-fls"]);
 const FIND_RUNS = new Set(["-exec", "-execdir", "-ok", "-okdir"]);
 
-// Whether `find` arguments may change files: an action that deletes or writes, or a command it runs that
-// changes files, as in `-exec rm {} +`. The run command ends at `;`, or at `+` only right after `{}`, as
-// find reads it. Fails closed when that command is missing, comes from a variable, or is `tee`.
-function findChangesFiles(args: readonly string[], dynamic: readonly boolean[]): boolean {
-  return args.some((arg, at) => {
-    if (FIND_WRITES.has(arg)) return true;
-    if (!FIND_RUNS.has(arg)) return false;
+// The commands `find` runs with `-exec` and the like. Each ends at `;`, or at `+` right after `{}`. Where an
+// `-ok` command ends only changes that program's arguments, and only a strict reader's arguments are trusted.
+function findRuns(args: readonly string[], dynamic: readonly boolean[]): Unwrapped[] {
+  return args.flatMap((arg, at) => {
+    if (!FIND_RUNS.has(arg)) return [];
     const stop = args.findIndex(
       (word, i) => i > at && (word === ";" || (word === "+" && args[i - 1] === "{}")),
     );
     const end = stop === -1 ? args.length : stop;
     const run = unwrap([], args.slice(at + 1, end), dynamic.slice(at + 1, end));
-    if (run.argv.length === 0 || run.dynamic[0] === true || program(run.argv) === "tee") return true;
-    return changesFiles({ ...run, redirects: [], heredocs: [] });
+    return [{ ...run, redirects: [], heredocs: [] }];
   });
+}
+
+// Whether `find` arguments may change files: an action that deletes or writes, or a command it runs that
+// isn't a strict reader. Fails closed, so unknown programs and ones named by a variable count.
+function findChangesFiles(args: readonly string[], dynamic: readonly boolean[]): boolean {
+  return (
+    args.some((arg) => FIND_WRITES.has(arg)) ||
+    findRuns(args, dynamic).some((run) => run.dynamic[0] === true || !STRICT_READERS.has(program(run.argv)))
+  );
 }
 
 function appliesPatch(command: Unwrapped): boolean {
   const name = program(command.argv);
   const args = command.argv.slice(1);
   if (name === "patch") return true;
+  if (name === "find") return findRuns(args, command.dynamic.slice(1)).some(appliesPatch);
   return name === "git" && gitSubcommand(args) === "apply" && !args.includes("--check");
 }
 

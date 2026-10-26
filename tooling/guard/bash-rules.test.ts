@@ -257,6 +257,8 @@ describe("shell commands that write enforcement files", () => {
     "find docs -exec tee tooling/guard/list.txt {} ;",
     "find tooling/guard -exec $CMD {} +",
     "find tooling/guard -exec sed + -i s/a/b/ {} +",
+    "find tooling/guard -exec mytool {} +",
+    "find /tmp -name x.patch -exec patch -p1 -i {} ;",
   ])("detects: %s", (cmd) => {
     expect(writes(cmd)).toBe(true);
   });
