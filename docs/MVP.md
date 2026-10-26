@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Version** | 0.1 (draft) |
-| **Date** | 25 October 2026 |
+| **Date** | 26 October 2026 |
 | **Source** | [PRD](PRD.md) (what the whole product does) · [Charter](CHARTER.md) (why) |
 | **Status** | Agreed scope for the first release. Stories and acceptance criteria are the definition of done: each criterion becomes a failing test first (ENGINEERING §1). §7 records everything the MVP leaves out, so later work can resume from it. |
 
@@ -19,9 +19,9 @@
 
 | Release | Adds | Main PRD areas |
 |---|---|---|
-| **v0.1 MVP** | Profile in a local folder, evidence by forms, skill records, capability view, 4 pathways, gap view | A, B, C, F (part), I (part) |
-| **v0.2** | AI-assisted mode: model settings, normalising pasted text, proposed observations, overall level, AI view in gaps; attachments | D, B3, B5, C4, J1 |
-| **v0.3** | Assessments: multiple-choice, open-answer and practical (AI review) | E |
+| **v0.1 MVP** | Profile in a local folder, evidence by forms, skill records, skill view, 4 pathways, gap view | A, B, C, F (part), I (part) |
+| **v0.2** | AI-assisted mode: model settings, normalising pasted text, AI judgements of levels and skill links from evidence; attachments | D, B2, B3, B5, B6, J1, J3 |
+| **v0.3** | Diagnostics: adaptive question bank (no AI) and AI-led diagnostics with open answers and practical tasks | E |
 | **v0.4** | Learning plans and aspirations; pathway comparison | G, F2 |
 | **Later** | Career readiness, more connectors and browsers, offline app, sharing, operator toolkit | H, A3, K, L |
 
@@ -34,25 +34,25 @@ Order after v0.1 can change as v0.1 teaches us; §7 keeps the full list.
 - **Desktop Chromium browsers only** (Chrome, Edge, Brave, Arc). Other browsers see a clear "not supported yet" page.
 - **Profile records:** `pharoam.md`, evidence, skill records and stored gap analyses, in the folder layout of [data model](design/data-model.md) §8.
 - **Evidence by structured forms** for five kinds: project, job, course or module, certificate, other. Links, no attachments.
-- **Observations** labelled `self-reported` or `evidenced` only. Corrections and retractions are appended, never edited.
+- **Observations** labelled `self-reported` only, optionally citing evidence records. Corrections and retractions are appended, never edited.
 - **Skill vocabulary:** a curated subset (about 200–300 skills) of the MIND Tech Ontology fork, with stable Pharoam slugs. One shared description of levels 0–4, plus skill-specific descriptions for the skills the 4 pathways require. **Custom skills** for anything missing, marked as the person's own.
 - **4 pathways:** frontend engineer, backend engineer, machine-learning engineer, applied AI engineer. Each has a summary, requirements (skill, level, core or helpful), a source for every requirement, and a review record. AI-drafted, founder-reviewed (PRD I3), stored in `content/` and compiled into the built-in bundle (AD16).
 - **Gap view** for any one pathway, saved as `gaps/<pathway>.md` and updated automatically.
 - **Safety rules from day one:** edits made outside Pharoam are detected and never overwritten (AD10); invalid files go to "Needs attention"; sanitised Markdown rendering; all interface text translatable; WCAG 2.2 AA.
 - **Deployment:** the static app on GitHub Pages (Personal model).
 
-**Gap grouping (PRD F3)**, for a requirement of skill S at level L, using the latest level from each source:
+**Gap grouping (PRD F3)**, for a requirement of skill S at level L, using S's shown level (PRD C4):
 
 | Group | Rule |
 |---|---|
-| **supported** | an `evidenced` (later also `demonstrated`) level ≥ L |
-| **claimed** | not supported, but a `self-reported` (later also accepted AI) level ≥ L |
-| **below** | S has observations, but none reach L |
-| **unknown** | no observations for S |
+| **supported** | the shown level is tested (`demonstrated` or `ai-correlated`) and ≥ L |
+| **claimed** | the shown level is a claim (`self-reported` or accepted `ai-judged`) and ≥ L |
+| **below** | the shown level is < L |
+| **unknown** | S has no shown level |
 
-The rules are checked from the top; the first that applies decides the group. So evidenced 2 and self-reported 3 against L = 3 is *claimed*, and the view shows both levels. Related skills never count for each other (no hidden inference, R4 and R6). Requirements show as core or helpful. There is no score or total (R1).
+Related skills never count for each other (no hidden inference, R4 and R6). Requirements show as core or helpful. There is no score or total (R1).
 
-**In v0.1, *supported* is still the user's own claim.** Both labels available in v0.1 come from the user: `evidenced` means they linked evidence, not that anyone checked the evidence shows that level. So the interface names the group for what it is ("evidence linked"), says Pharoam hasn't checked it, and never uses "verified" (R6). From v0.3, `demonstrated` levels are shown apart from `evidenced` ones, so recorded performance is never mixed up with linked evidence.
+**v0.1 has only `self-reported` levels**, so every requirement is *claimed*, *below* or *unknown*. *Supported* first appears with diagnostics in v0.3.
 
 ## 4. Exit criteria
 
@@ -93,7 +93,7 @@ Each story lists the PRD requirements it implements. Criteria use Given/When/The
 - **S3.3** Given the overview section, when evidence or skills change, then it is regenerated with counts of evidence and skills and the date of the last change.
 
 ### S4. Record evidence with a form
-*As a user, I want to record what I've studied and done in a structured form, so that it's stored the same way every time.* Implements B1, B4, B5 (forms only).
+*As a user, I want to record what I've studied and done in a structured form, so that it's stored the same way every time.* Implements B1, B4, B5 (forms only), B6 (skill links by hand).
 
 - **S4.1** Given the evidence form, when I pick a kind (project, job, course or module, certificate, other), then the form shows the common fields plus that kind's extra fields (data model §7).
 - **S4.2** Given a filled form, when I continue, then I see a **preview** of the record exactly as it will be stored, and nothing is written until I confirm.
@@ -110,20 +110,20 @@ Each story lists the PRD requirements it implements. Criteria use Given/When/The
 - **S5.3** Given I delete evidence, then Pharoam asks me to confirm first and says which observations refer to it.
 
 ### S6. Say what I can do
-*As a user, I want to record my level in a skill, either from my own judgement or backed by evidence, so that every claim says where it came from.* Implements C1, C2, C5.
+*As a user, I want to record my own rating of a skill, optionally citing evidence, so that every level says where it came from.* Implements C1, C2, C5.
 
-- **S6.1** Given a skill from the vocabulary, when I record a level 0–4 as my own judgement, then an observation with `provenance: self-reported` is **appended** to `skills/<slug>.md`, creating the file if needed.
-- **S6.2** Given I link one or more evidence records, when I record a level, then the observation has `provenance: evidenced` and lists the evidence IDs. An `evidenced` observation without evidence can't be saved. The form says that Pharoam doesn't check whether the evidence shows the level I chose.
+- **S6.1** Given a skill from the vocabulary, when I record a level 0–4, then an observation with `provenance: self-reported` is **appended** to `skills/<slug>.md`, creating the file if needed.
+- **S6.2** Given I cite one or more evidence records, when I record a level, then the observation lists the evidence IDs and is still `self-reported`. The form says the level is my own rating and that citing evidence doesn't test it.
 - **S6.3** Given levels, then the form shows the shared description of each level, or the skill-specific one where it exists.
 - **S6.4** Given any new observation, then it carries `id`, `level`, `provenance`, `observed_at` and an `integrity` fingerprint, and existing entries in the file are byte-for-byte unchanged.
-- **S6.5** Given the skill list, then only `self-reported` and `evidenced` can be chosen; `demonstrated` and `ai-inferred` aren't offered in v0.1.
+- **S6.5** Given the form, then it offers no choice of provenance: a level recorded by hand is always `self-reported`.
 
 ### S7. Correct or retract what I said
 *As a user, I want to correct or withdraw a level I recorded, so that mistakes are fixed without erasing history.* Implements C3.
 
 - **S7.1** Given an observation, when I correct the level, then a new observation is appended with `supersedes` pointing to the old one, and the old entry is unchanged.
-- **S7.2** Given an observation, when I retract it, then a review entry with `decision: retract` is appended, and the observation stops counting in the capability and gap views.
-- **S7.3** Given a skill's history, when I view it, then every entry is shown in time order, including superseded and retracted ones, clearly marked.
+- **S7.2** Given an observation, when I retract it, then a review entry with `decision: retract` is appended, and the observation stops counting in the skill and gap views.
+- **S7.3** Given a skill's history, when I view it, then every entry is shown newest first, including superseded and retracted ones, clearly marked, with the entry behind the shown level marked (PRD C6).
 
 ### S8. Add a skill that isn't in the vocabulary
 *As a user, I want to add a skill the vocabulary is missing, so that my profile isn't limited by Pharoam's list.* Implements C5.
@@ -133,9 +133,9 @@ Each story lists the PRD requirements it implements. Criteria use Given/When/The
 - **S8.3** Given a custom skill, then it never matches a pathway requirement, which always names inventory skills.
 
 ### S9. See what I can do
-*As a user, I want one view of my skills and what each source says, so that I can see my profile at a glance.* Implements C4 (without the AI overall level).
+*As a user, I want one view of my skills, each with one level and where it came from, so that I can see my profile at a glance.* Implements C4, C6.
 
-- **S9.1** Given skills with observations, when I open the capability view, then each skill shows its latest level **for each source** and since when, with no combined or overall level.
+- **S9.1** Given skills with observations, when I open the skill view, then each skill shows **one level**, its source and since when, chosen by the order in PRD C4. In v0.1 that is the latest self-reported level.
 - **S9.2** Given a skill file changes, then its `proficiency` block (data model §6) is regenerated so the summary is readable in Obsidian.
 - **S9.3** Given the view, when I filter by domain or search by name, then the list narrows accordingly.
 
@@ -150,12 +150,12 @@ Each story lists the PRD requirements it implements. Criteria use Given/When/The
 *As a user, I want to see how my profile compares to a pathway's requirements, so that I know where I stand and what to work on.* Implements F3, F4.
 
 - **S11.1** Given a pathway and my observations, when I open the gap view, then each requirement is grouped as *supported*, *claimed*, *below* or *unknown* by the rules in §3.
-- **S11.2** Given sources that disagree, then the view shows every source's level for that skill next to the group.
+- **S11.2** Given a requirement, then the view shows the skill's shown level and its source next to the group, with a link to the skill's history.
 - **S11.3** Given the gap view, then there is **no score, percentage, total or ranking** anywhere (R1).
 - **S11.4** Given I open a gap view, then `gaps/<pathway>.md` is written with the pathway pinned to its version and a readable summary in the body.
 - **S11.5** Given my observations change, then the stored gap is regenerated and the view shows "Updated just now"; a refresh button does the same by hand.
 - **S11.6** Given any pathway, including one where most requirements are *below* or *unknown*, then I can still choose to explore it (R2).
-- **S11.7** Given a requirement grouped as *supported*, then the view and `gaps/<pathway>.md` label it "evidence linked", list the linked evidence, and say Pharoam hasn't checked that it shows the level; the word "verified" appears nowhere (R6).
+- **S11.7** Given a requirement grouped as *claimed*, then the view and `gaps/<pathway>.md` label the level by its source (in v0.1, my own rating) and list any evidence it cites; the word "verified" appears nowhere (R6).
 
 ### S12. Never lose an edit made outside Pharoam
 *As a user who also edits these files in Obsidian, I want Pharoam to notice my changes, so that it never overwrites them.* Implements AD10, hard rule 3.
@@ -184,12 +184,11 @@ Everything here is part of the product (PRD) but left out of v0.1 on purpose. Ea
 |---|---|---|---|
 | AI-assisted mode: model settings and keys | D5, J1, AD11 | v0.2 | Session-only keys by default; strict CSP; the provider interface already exists in the design |
 | Normalising pasted text (CVs, module lists) | B3, B4, B5 | v0.2 | Registered task `normalise-evidence`; keep the original input as an attachment; preview and confirm already exist from S4.2 |
-| Proposed observations (`ai-inferred`) | D1, D2, C1 | v0.2 | Accept, correct or reject as review entries; the S6 append logic already supports new provenance labels |
-| AI overall level per skill | C4, ADR-0016 | v0.2 | AI-only, batched auto-refresh, dismiss or "I disagree"; add to S9 and the gap view's "AI view" |
-| Transparency view (what was read, sent, written) | D4, J3 | v0.2 | Mostly meaningful once data is sent to a model |
+| AI judgements from evidence (`ai-judged`) and proposed skill links | B6, D1, D2, C1 | v0.2 | Accept, adjust or skip, one by one or in a batch, from a readable review session; accepting appends the observation, which the S6 append logic and the C4 order already cover. In v0.2, adjusting means recording my own level; the diagnostic option arrives with v0.3 |
+| Transparency view (what was read, sent, written) and the whole-profile send notice | D4, J3 | v0.2 | Mostly meaningful once data is sent to a model |
 | File attachments on evidence | B2 | v0.2 | `evidence/_attachments/<id>/`; needed for the original input of pasted text |
 | Importers (LinkedIn export, GitHub, transcripts) | B3 | Later | Each one normalises into the standard evidence shape |
-| Assessments: multiple-choice, open-answer, practical | E1–E7 | v0.3 | `demonstrated` observations; assessment evidence is never edited; sessions with readable logs (spike S2) |
+| Diagnostics: adaptive question bank (`demonstrated`) and AI-led with open answers and practical tasks (`ai-correlated`) | E1–E9, ADR-0019 | v0.3 | The question bank first (it needs no AI); diagnostic records are never edited; sessions with readable logs (spike S2) |
 | Learning plans | G1–G4 | v0.4 | Progress comes from new observations, not checkboxes |
 | Aspirations (interests, goals, constraints) | Data model §10 | v0.4 | With learning plans |
 | Pathway comparison side by side | F2 | v0.4 | The gap logic from S11 is reused per pathway |
@@ -203,7 +202,7 @@ Everything here is part of the product (PRD) but left out of v0.1 on purpose. Ea
 | Encrypted local cache, offline app, app lock | AD9, AD20, security §8 | Later | v0.1 reads the folder directly; the cache is never the master copy |
 | Career readiness: job-search literacy, CV guidance, job analysis, interview practice, jobs bank, generated CVs | H1–H7 | Later | Only from real evidence (R9); never bulk applications (R8) |
 | Self-hosted and operator-hosted deployments, relay | N4, L1–L5, ADR-0013 | Later | v0.1 is the Personal model on GitHub Pages only |
-| Sharing | K1–K2 | Future | Depends on verifiable assessment results |
-| Signed assessment results | Charter §6 | Future | `signature: null` is reserved in the format |
+| Sharing | K1–K2 | Future | Depends on verifiable diagnostic results |
+| Signed diagnostic results | Charter §6 | Future | `signature: null` is reserved in the format |
 | Translations beyond English | N9 | Later | All text is already in translation files |
 | Discovery with users beyond the founder | Charter §2, §9 | Before v0.2 or later audiences | v1 validation is the founder's own use (§4) |

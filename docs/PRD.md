@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Version** | 0.1 (draft) |
-| **Date** | 24 October 2026 |
+| **Date** | 26 October 2026 |
 | **Source** | [Charter](CHARTER.md) |
 | **Status** | Blueprint of the whole product. It records what Pharoam does, not how it is built. The order of delivery, the MVP's stories and acceptance criteria, and what the MVP leaves out are in [MVP and release plan](MVP.md). Items marked **[Q]** are open. |
 
@@ -33,14 +33,14 @@ All three are first-class. The core product behaves the same in each.
 
 | Mode | Includes |
 |---|---|
-| **Minimal** (no AI; also covers offline) | Reading the existing profile and evidence through connectors · manual entry of evidence and observations · capability and gap views · browsing and comparing pathways · multiple-choice assessments (and, in future, automatically checked practical tasks) · learning plans |
-| **AI-assisted** | Everything in Minimal, plus: normalising new free-form input into the standard shape and storing it · proposed observations · judging open-answer assessments · pathway explanations · resource suggestions |
+| **Minimal** (no AI; also covers offline) | Reading the existing profile and evidence through connectors · manual entry of evidence and self-reported levels · skill and gap views · browsing and comparing pathways · question-bank diagnostics (and, in future, automatically checked practical tasks) · learning plans |
+| **AI-assisted** | Everything in Minimal, plus: normalising new free-form input into the standard shape and storing it · AI judgements of levels and skill links from evidence · AI-led diagnostics with open answers and practical tasks · pathway explanations · resource suggestions |
 
 The user can switch modes at any time. AI-assisted mode is available whenever a model is configured, either the user's own key or one provided by the operator. An operator may run a deployment as minimal-only.
 
 ## 3. Principles
 
-Every requirement must satisfy the Charter's design rules **R1–R16**. In short: the person chooses (R1–R3); evidence and inference are kept apart (R4–R7); Pharoam teaches understanding, not application volume (R8–R10); the profile belongs to the person (R11–R14); the profile is lifelong and incremental (R15–R16).
+Every requirement must satisfy the Charter's design rules **R1–R16**. In short: the person chooses (R1–R3); claims and shown performance are kept apart (R4–R7); Pharoam teaches understanding, not application volume (R8–R10); the profile belongs to the person (R11–R14); the profile is lifelong and incremental (R15–R16).
 
 ## 4. Product map
 
@@ -48,9 +48,9 @@ Every requirement must satisfy the Charter's design rules **R1–R16**. In short
 |---|---|---|---|
 | A. Profile and storage | — | The user-owned profile and how Pharoam reaches it | v0.1 (local folder) |
 | B. Evidence | Map | What the person has studied and done | v0.1 (forms); v0.2 (pasted text, attachments) |
-| C. Observations and capabilities | Map | What there is reason to believe about their skills, and from which source | v0.1; v0.2 (AI overall level) |
-| D. AI assistance | all steps | Proposals, explanations and suggestions, always gated by the user | v0.2 |
-| E. Assessments | Assess | Turn claims into demonstrated evidence | v0.3 |
+| C. Observations and skill levels | Map | What level each skill is at, and where that level came from | v0.1; v0.2 (AI judgements) |
+| D. AI assistance | all steps | AI judgements, explanations and suggestions, each labelled and inspectable | v0.2 |
+| E. Diagnostics | Assess | Turn claims into tested levels | v0.3 |
 | F. Pathways and gaps | Explore | Career directions and how the person compares to them | v0.1 (gap view); v0.4 (comparison, full detail) |
 | G. Learning plans | Learn | Steps toward a chosen pathway, with progress tracking | v0.4 |
 | H. Career readiness | Prepare | CV, job analysis and interview practice, built only on real evidence | Later |
@@ -80,41 +80,59 @@ Every requirement must satisfy the Charter's design rules **R1–R16**. In short
   - AI is needed only for free-form input (pasted CVs, messy text).
   - *Exact form design: to be detailed at implementation.*
 - **B5** The user previews and confirms normalised evidence before it is stored. The original input is kept, attached as the record's source, unless the user chooses to discard it.
+- **B6** Evidence is linked to the skills it involved and **carries no level** (R4). The user links skills by hand; in AI-assisted mode, AI proposes the links (D1), and the user confirms them before they are stored in the evidence record.
 
-### C. Observations and capabilities (Map)
-- **C1** An observation records one skill, at one level, from one source, with exactly one provenance label: `self-reported`, `evidenced`, `demonstrated` or `ai-inferred` (R4).
+### C. Observations and skill levels (Map)
+- **C1** An observation records one skill, at one level, from one source, with exactly one provenance label (R4):
+  - `self-reported`: the person's own rating;
+  - `ai-judged`: a level AI gave by scanning the person's evidence (D1);
+  - `demonstrated`: the result of a question-bank diagnostic (E2);
+  - `ai-correlated`: the result of an AI-led diagnostic (E3).
+
+  Any observation can cite evidence records. `self-reported` and `ai-judged` levels are **claims**; `demonstrated` and `ai-correlated` levels are **tested**.
 - **C2** Levels use a single scale: 0 aware · 1 beginner · 2 working · 3 proficient · 4 expert.
 - **C3** Observations are never silently changed. Corrections and retractions are recorded as history.
-- **C4** A capability view shows, for each skill, what each provenance label says and when. In AI-assisted mode, an optional **overall level** judged by AI is also shown. It is labelled and explained, recalculated visibly when the skill changes, and can be dismissed or marked "I disagree". It is never calculated by a hidden formula (R4, R6).
+- **C4** Each skill shows **one level** with its source and date, chosen by this order:
+  1. the latest diagnostic result (`demonstrated` or `ai-correlated`);
+  2. otherwise, the latest accepted `ai-judged` level;
+  3. otherwise, the latest `self-reported` level.
+
+  A claim newer than a tested level that differs from it is shown as a note on the level ("You've since rated yourself 4. Check it?"), never as the level. An `ai-judged` level not yet accepted is shown as a prompt to review it. There is no blended or calculated level (R4).
 - **C5** Skills come from a shared vocabulary (see I1).
+- **C6** Each skill has a **history**: every observation and review from every source, newest first, with the entry behind the shown level marked.
 
 ### D. AI assistance (all steps)
-- **D1** AI can propose observations from evidence. Each proposal comes with an explanation, its limits and the AI disclaimer (D6). **There are no confidence levels anywhere in Pharoam**: the user's decision is the only gate.
-- **D2** Proposals count only after the user accepts them. The user can also correct or reject them (R5).
-- **D3** AI can explain pathways, suggest learning resources and draft assessment feedback. All of it is advisory and labelled as AI output.
-- **D4** Only the data a task needs is sent to the model (R12). The user can inspect what was sent and what came back.
+- **D1** AI can scan the person's evidence and give a level for each skill it finds (`ai-judged`), and propose which skills each evidence record involves (B6). Each AI judgement comes with an explanation, its limits and the AI disclaimer (D6). **There are no confidence levels anywhere in Pharoam.**
+- **D2** AI judgements and proposed skill links wait in a readable review session (data model §10) until the user decides. For each one, or for all at once, the user can accept, adjust or skip. Accepting writes the `ai-judged` observation or the link. Adjusting means running a diagnostic (E) or recording their own level, and the AI judgement is then dropped; if the diagnostic is abandoned, the judgement stays pending. Skipped items stay pending in the session and never count (R5).
+- **D3** AI can explain pathways, suggest learning resources and explain diagnostic results. All of it is advisory and labelled as AI output.
+- **D4** Each AI task declares the data it reads (R12). That may be one skill's evidence or, where the task needs it, the whole profile; the user is told before a whole-profile send. Skill links the user confirms from a whole-profile scan are stored in the evidence records, so later tasks find a skill's evidence without sending everything again. The user can inspect what every call sent and what came back.
 - **D5** The user chooses the model provider, including self-hosted models.
-- **D6** Everything AI generates or judges (proposals, normalised evidence, assessment judgements, explanations) is **labelled as AI-made, names the model used, and carries a clear disclaimer**.
+- **D6** Everything AI generates or judges (AI judgements, normalised evidence, diagnostic marking, explanations) is **labelled as AI-made, names the model used, and carries a clear disclaimer**.
 
-### E. Assessments (Assess)
-- **E1** Three formats: multiple-choice knowledge checks, practical tasks (for example coding exercises) and open-answer questions judged by AI. Practical tasks start with **AI review**. Automatic checking by running code in a sandbox is a future feature.
-- **E2** **Every assessment attempt is recorded as evidence**, in the standard evidence shape (B4). The record holds the questions, the answers, the judgement and what made the judgement, so the result can be checked later.
-- **E3** For open answers, the AI analyses the answer first. Its judgement is stored in the evidence record together with the full questions and answers.
-- **E4** Results from all three formats are **treated equally**, with no confidence weighting. Every AI judgement is labelled and disclaimed (D6).
-- **E5** Assessment results produce `demonstrated` observations that link to the assessment evidence.
-- **E6** Assessments complement what the user has declared rather than repeating it back (R7).
-- **E7** Results can't be verified independently at first (honour system).
+### E. Diagnostics (Assess)
+- **E1** A diagnostic is an **adaptive** assessment of one skill: questions get harder after right answers and easier after wrong ones, until the level is clear. It tests what the person has declared rather than repeating it back (R7).
+- **E2** **Question-bank diagnostic** (minimal mode): multiple-choice items from the reviewed question bank (I3), starting at the skill's shown level (level 2 when there is none) and marked by a fixed, published rule. The result is a `demonstrated` level, shown with the note "Based on this session only. Your evidence wasn't considered." A retake draws different items where the bank allows.
+- **E3** **AI-led diagnostic** (AI-assisted mode): starts where the person's evidence points, probes where it is thin or conflicts with their claims, and mixes multiple-choice, open answers and practical tasks. Practical tasks are marked by AI review (ADR-0014); automatic checking by running code in a sandbox is a future feature. Earlier question-bank results are part of its input. The result is an `ai-correlated` level.
+- **E4** **A diagnostic's level rests only on what the person shows.** Claims and evidence shape the questions and the explanation, never the level.
+- **E5** An AI-led result comes with an **explanation**: what the session showed; how it compares with the person's claims and evidence, in either direction; the likely reasons for any difference, offered as possibilities; and a next step, such as a practical task or a resource. It lists what it considered and is labelled and disclaimed (D6).
+- **E6** **Every diagnostic is recorded as evidence**, in the standard evidence shape (B4): the items, the answers, the marking and its reasons, the adaptive path and the result, so the result can be checked later. Its observation links to this record.
+- **E7** A diagnostic result is written when the diagnostic ends and needs no acceptance; the person can run the diagnostic again. **The latest result counts**, and every attempt stays in the skill's history (C6).
+- **E8** Next steps are always offered:
+  - after a self-reported level: check it with a question-bank diagnostic, an AI-led diagnostic (when a model is configured), or skip;
+  - after a `demonstrated` result: "Get a more accurate result with AI", with an explanation of why (tailored questions, open answers and practical tasks, use of the person's evidence, an explained result);
+  - after an `ai-correlated` result: run the diagnostic again.
+- **E9** Results can't be verified independently at first (honour system).
 
 ### F. Pathways and gaps (Explore)
 - **F1** Browse career pathways. Each has requirements (skill, level, importance), prerequisites, an estimated time and cost investment with cited sources, known uncertainties, and transferable skills.
 - **F2** Compare two or more pathways side by side.
-- **F3** The gap view shows each requirement as *supported* (demonstrated or evidenced), *claimed* (self-reported or accepted AI inference only), *below* or *unknown*. *Supported* never means verified (R6): the view says what it rests on, either evidence the user linked themselves or an assessment Pharoam recorded, and keeps the two apart. There is never a fit score (R1).
+- **F3** The gap view groups each requirement by the skill's shown level (C4): *supported* (a tested level that meets it), *claimed* (a claimed level that meets it), *below* or *unknown*. Each requirement shows the level it rests on and that level's source. *Supported* means shown in a Pharoam diagnostic, never verified (R6). There is never a fit score (R1).
 - **F4** The user can choose any pathway, including a low-fit or demanding one (R2).
 
 ### G. Learning plans (Learn)
 - **G1** Create a plan toward a chosen pathway, with target levels per skill and steps.
 - **G2** Steps link to materials, exercises and reviews.
-- **G3** Progress comes from new observations (ideally demonstrated ones), not checkboxes alone.
+- **G3** Progress comes from new observations (ideally diagnostic results), not checkboxes alone.
 - **G4** Plans can be revised, abandoned or switched to another pathway at any time.
 
 ### H. Career readiness (Prepare)
@@ -134,7 +152,7 @@ Every requirement must satisfy the Charter's design rules **R1–R16**. In short
   - **refreshed on a regular cycle** (for example quarterly) by comparing against GitHub Explore topics, with additions accepted through reviewed changes;
   - **data licences kept separate from the AGPL code**, in a `data/` area with its own LICENSE and NOTICE files and the required ESCO attribution.
 - **I2** Pathway content, versioned and reviewable, with sources for every figure.
-- **I3** Pathways and assessment items are AI-drafted, human-reviewed and founder-curated, and later open to community contributions. Each has a clear licence.
+- **I3** Pathways and question-bank items are AI-drafted, human-reviewed and founder-curated, and later open to community contributions. Each has a clear licence. Each question-bank item is tagged with its skill and the level it tests.
 - **I4** Learning resources may come from many channels. **[Q] Sources to be explored later.**
 
 ### J. Settings and trust
@@ -154,7 +172,7 @@ Every requirement must satisfy the Charter's design rules **R1–R16**. In short
 - **L5** Templates for an acceptable-use policy, terms of service and a privacy notice. Legal compliance remains the operator's responsibility; Pharoam provides tools and templates, not legal advice.
 
 ### K. Sharing (future)
-- **K1** The user can selectively share parts of their profile with people they choose, such as mentors or employers, as an export they control or a time-limited link. This depends on verifiable assessment results.
+- **K1** The user can selectively share parts of their profile with people they choose, such as mentors or employers, as an export they control or a time-limited link. This depends on verifiable diagnostic results.
 - **K2** There is never a public profile directory or a searchable database of people.
 
 ## 6. Non-functional requirements

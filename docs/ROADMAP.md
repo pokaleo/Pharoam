@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Version** | 0.1 (draft) |
-| **Date** | 25 October 2026 |
+| **Date** | 26 October 2026 |
 | **Source** | [MVP and release plan](MVP.md) (what each release contains) · [Architecture](ARCHITECTURE.md) (how it's built) |
 | **Status** | The order of work. MVP.md says *what*; this says *in what order* and *what depends on what*. No dates or estimates: a phase is done when its checks pass. Work is tracked in the GitHub project; this file is the plan it follows. |
 
@@ -51,8 +51,8 @@ Moved into GitHub when v0.1 is nearly done. Details and what each resumes from a
 
 | Release | First steps | Then |
 |---|---|---|
-| **v0.2** AI assistance | **Spike S2** (LangGraph in the browser, resuming from the readable log) and **spike S3** (WebAuthn PRF for the app lock); model provider settings | Normalising pasted text, proposed observations, the AI overall level, attachments, the transparency view |
-| **v0.3** Assessments | The `assessment-item` schema and the first items | Multiple-choice, open-answer and practical tasks; `demonstrated` observations; sessions |
+| **v0.2** AI assistance | **Spike S2** (LangGraph in the browser, resuming from the readable log) and **spike S3** (WebAuthn PRF for the app lock); model provider settings | Normalising pasted text, AI judgements of levels and skill links from evidence (`ai-judged`), attachments, the transparency view |
+| **v0.3** Diagnostics | The `assessment-item` schema and the first question-bank items | Adaptive question-bank diagnostics (`demonstrated`); AI-led diagnostics with open answers and practical tasks (`ai-correlated`); sessions |
 | **v0.4** Learning | Aspirations | Learning plans, pathway comparison, full pathway detail |
 | **Later** | **Spike S1** (CORS) before any connector that calls an outside service | More connectors and browsers, the offline app, career readiness, the relay |
 

@@ -1,14 +1,14 @@
-# ADR-0014: Practical tasks judged by AI review first
+# ADR-0014: Practical tasks marked by AI review first
 
 - **Status:** Accepted
 - **Date:** 2026-10-24
 - **Covers:** AD13
 
 ## Context
-Practical tasks (for example code) need judging. Automatic checking requires sandboxed code execution in the browser or on a server.
+Practical tasks (for example code) in AI-led diagnostics (ADR-0019) need marking. Automatic checking requires sandboxed code execution in the browser or on a server.
 
 ## Decision
-Start small: practical tasks are **judged by an AI review task** against the item's rubric, labelled and disclaimed as AI judgement. **Sandboxed execution for automatic checks is a future feature.**
+Start small: practical tasks are **marked by an AI review task** against the item's rubric, labelled and disclaimed as AI marking. **Sandboxed execution for automatic checks is a future feature.**
 
 ## Alternatives rejected (for now)
 - **In-browser runtimes** (Web Workers, Pyodide): feasible, but not needed to start.

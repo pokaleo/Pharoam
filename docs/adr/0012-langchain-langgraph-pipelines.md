@@ -5,7 +5,7 @@
 - **Covers:** AD11a
 
 ## Context
-Pharoam needs adaptive, multi-step pipelines: diagnostics, profile updates, and later CVs and interview practice. They need user approval points (R5), every AI judgement recorded as evidence (PRD E2), and a relay restricted to known tasks (L3).
+Pharoam needs adaptive, multi-step pipelines: diagnostics, profile updates, and later CVs and interview practice. They need user approval points (R5), every diagnostic recorded as evidence (PRD E6), and a relay restricted to known tasks (L3).
 
 ## Decision
 - **LangChain.js** (core + browser-safe provider packages) and **LangGraph.js**, behind Pharoam's own provider interface.

@@ -28,7 +28,7 @@ Pharoam is an open-source, browser-first web app. It helps people build an evide
 3. **Never silently overwrite** a record changed outside Pharoam. Never delete or rewrite invalid records; list them under "Needs attention".
 4. **Pharoam never edits** observation or review entries or assessment evidence. It only appends.
 5. **Every AI call goes through a registered task** (ADR-0004). No inline prompts in UI or connector code. Validate AI output against the task's schema.
-6. **All AI output is labelled and disclaimed**, records its task and model, and is written only after the user approves (except the overall level, ADR-0016).
+6. **All AI output is labelled and disclaimed**, records its task and model, and is written only after the user approves (except the result of a diagnostic the user took, ADR-0019).
 7. **No telemetry, no analytics, no third-party scripts.** LangSmith tracing stays off and blocked.
 8. **Never store names, photos or contact details** in `pharoam.md`.
 9. **No confidence scores and no hidden scoring formulas** (Charter R1, R4–R6).

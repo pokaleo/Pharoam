@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Version** | 0.1 (in discussion) |
-| **Date** | 24 October 2026 |
+| **Date** | 26 October 2026 |
 | **Source** | [Charter](CHARTER.md) · [PRD](PRD.md) |
 | **Status** | Architecture decisions are recorded here once they are decided. Implementation planning starts only after the open decisions are settled. |
 
@@ -28,11 +28,12 @@
 | [0011](adr/0011-model-providers-and-keys.md) | Model providers and keys | AD11 |
 | [0012](adr/0012-langchain-langgraph-pipelines.md) | LangChain.js + LangGraph.js for AI pipelines | AD11a |
 | [0013](adr/0013-connectors-and-relay.md) | Connectors in the repo; a relay that stores nothing | AD12, AD21 |
-| [0014](adr/0014-practical-tasks-ai-review-first.md) | Practical tasks judged by AI review first | AD13 |
+| [0014](adr/0014-practical-tasks-ai-review-first.md) | Practical tasks marked by AI review first | AD13 |
 | [0015](adr/0015-translation-and-ui-components.md) | Translation and UI components | AD14 |
-| [0016](adr/0016-skill-records-and-overall-level.md) | One file per skill; overall level by AI only | Data model §6 |
+| [0016](adr/0016-skill-records-and-shown-level.md) | One file per skill; one shown level by a written order | Data model §6 |
 | [0017](adr/0017-human-readable-user-data.md) | Everything in the user's storage is human-readable | Data model §0 |
 | [0018](adr/0018-tsdoc-api-reference-and-typed-results.md) | TSDoc on every export, a generated API reference, and typed results | AD23 |
+| [0019](adr/0019-adaptive-diagnostics.md) | Adaptive diagnostics; a tested level rests only on shown performance | PRD E, data model §6–§7 |
 
 ## Principle: no server where possible, a relay where necessary
 
@@ -57,7 +58,7 @@ The core runs entirely in the browser. Some outside services don't allow direct 
 |---|---|---|---|
 | AD1 | **App shape** | A **web app** for now. A desktop wrapper is not planned. | Opening a real local folder works only in Chromium browsers; other browsers rely on other connectors. |
 | AD2 | **Language** | **TypeScript** everywhere: core, UI, relay and shared schemas. | Gives up the extra speed of a compiled core, which personal-scale use doesn't need. |
-| AD3 | **Code structure** | A **pure core package** (profile model, evidence shape, validation, capability and gap calculation, AI task definitions) with no browser or UI dependencies. Storage connectors, model providers and content sources plug in through small interfaces. The UI and the relay are separate packages in one monorepo. | More structure up front than a single app folder. |
+| AD3 | **Code structure** | A **pure core package** (profile model, evidence shape, validation, shown-level and gap calculation, AI task definitions) with no browser or UI dependencies. Storage connectors, model providers and content sources plug in through small interfaces. The UI and the relay are separate packages in one monorepo. | More structure up front than a single app folder. |
 | AD4 | **AI task model** | Every AI feature is a **named, versioned task definition**: an input schema, a prompt template, an output schema, and label and disclaimer text. App and relay share the definitions. Output is validated against its schema before the user sees it. The relay runs only registered tasks (PRD L3). | Every AI feature takes more up-front work than writing a prompt directly in UI code. |
 | AD5 | **Content distribution** | A **default content bundle** ships with the app and works offline. **Additional versioned packs** can be loaded from a URL or a connector, for operator content and newer inventory releases. | Packs need version management and a compatibility check against the app. |
 | AD6 | **Record format** | **One standard data shape per record type** (exact fields plus free text); the core only ever sees this shape. **File connectors** (local folder, Obsidian, Git) store each record as **one Markdown file with a YAML block (front matter) at the top**: the fields go in the YAML and the text in the Markdown body. The **Notion connector** maps the same shape to database properties and page content. | YAML needs strict parsing and schema validation; every connector must map faithfully both ways. |
@@ -69,7 +70,7 @@ The core runs entirely in the browser. Some outside services don't allow direct 
 | AD11 | **Model providers and keys** | Adapters for **Anthropic** and **any OpenAI-compatible API** (OpenAI, OpenRouter, Ollama, LM Studio). More can be added through the same interface. API keys are kept **for the session only** by default, with an opt-in "remember on this device" and a warning. A strict content security policy. | Users with session-only keys re-enter them each session. |
 | AD11a | **AI library and pipelines** | **LangChain.js** (core + browser-safe provider packages) and **LangGraph.js**, behind Pharoam's own provider interface. Adaptive pipelines (diagnostics, profile updates, CVs, interview practice) are **LangGraph graphs whose AI nodes are registered tasks** (AD4). User approval uses **interrupts**. **Engine checkpoints live only in the local cache.** The user's storage holds a readable session log, from which Pharoam rebuilds the checkpoint ([data model](design/data-model.md) §0, §10). Never on a server. **LangSmith tracing is off and blocked** by the content security policy. LangChain memory, agents and retrievers are not used. AI code is **loaded only when AI-assisted mode is on**. The Vercel AI SDK is not adopted. Subject to spike S2. | A larger download than lighter libraries; a dependency on how LangChain evolves; a small custom checkpoint store and React streaming hook to write. |
 | AD12 | **Connectors and relay** | **All connectors live in Pharoam's repo** as standalone, open-source components. Each has a browser part, plus a relay part only where a service requires one. **The relay processes data in memory and records nothing.** It runs wherever the deployment runs it: the user's own machine (`npx`/Docker on localhost), a self-hosted server, or an operator's server. **The Pharoam project never runs a relay.** Operators must publish modified relay code to their users (AGPL §13), and the privacy notice template states honestly that users are trusting the operator. One TypeScript codebase deploys as a Cloudflare Worker or a Docker image. | Personal users who want Notion or web fetching must run the relay themselves. Users of an operator's deployment can't verify the code it runs. |
-| AD13 | **Practical tasks** | Start small: practical tasks (for example code) are **judged by an AI review task**, labelled and disclaimed as AI judgement (PRD D6, E4). **Running code in a sandbox for automatic checks is a future feature.** | No automatic code checks at first, so minimal mode can't check practical tasks. |
+| AD13 | **Practical tasks** | Start small: practical tasks (for example code) in AI-led diagnostics are **marked by an AI review task**, labelled and disclaimed as AI marking (PRD D6, E3). **Running code in a sandbox for automatic checks is a future feature.** | No automatic code checks at first, so minimal mode can't check practical tasks. |
 | AD14 | **Translation, UI and accessibility** | **react-i18next**, with all interface text in translation files from day one, loaded per language on demand. Content packs carry their own translations. **shadcn/ui** (Radix + Tailwind) is the preferred component base; the **design system and theming will be decided later** with dedicated design tools. Automated accessibility checks (axe) for WCAG 2.2 AA. | — |
 | AD15 | **Repo and tooling** *(details revisited during implementation planning)* | pnpm monorepo: `packages/core`, `packages/connector-*`, `packages/provider-*`, `apps/web`, `apps/relay`, `site/`, `content/`, `data/` (with its own licences), `docs/`. Vitest and Playwright for tests; GitHub Actions for CI; GitHub Pages for the official app and the landing page. | — |
 | AD16 | **Content pack format** | Pathways, assessment items and skill-inventory entries are written in the **same Markdown + YAML format** (AD6) and checked by the **same Zod schemas** (AD7), in `content/` and `data/`. At build time they are **compiled into a versioned JSON bundle** with a manifest (pack version and minimum app version). Packs loaded at runtime (AD5) use the same compiled format. | A build step for content. |

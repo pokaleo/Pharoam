@@ -42,6 +42,8 @@ defineTask({
 })
 ```
 
+`dataUsed` says exactly what the task reads: for example one skill's evidence, found through the evidence records' skill links, or the whole profile. A task that reads the whole profile makes the app tell the user before it sends anything (PRD D4).
+
 Validation, labelling, transparency and the relay's allow-list all come from this one definition.
 
 ## 3. Model providers
@@ -62,9 +64,9 @@ interface ModelProvider {
 
 ## 4. Workflows
 
-Workflows (adaptive assessment, profile update, later CVs and interview practice) are LangGraph graphs defined in the core. Each declares:
+Workflows (AI-led diagnostic, profile update, later CVs and interview practice) are LangGraph graphs defined in the core. The question-bank diagnostic runs the same way with plain-logic nodes only, so it needs no AI. Each workflow declares:
 - `name@version`, with nodes that are either **plain logic** or **registered tasks** (§2);
-- **approval points** where the user must confirm before anything is written (interrupts, R5);
+- **approval points** where the user must confirm before anything is written (interrupts, R5). A diagnostic writes its result when it ends, without an approval point (ADR-0019);
 - **every step appends an entry to the readable session log** ([data model](data-model.md) §10);
 - **resuming means replaying the log** to rebuild the working state;
 - **records are written only through the core service** (§5), at approval points or when the workflow finishes.
@@ -75,7 +77,7 @@ The UI never calls connectors or providers directly. One core service layer:
 - **loads and queries** the profile, upgrading old formats when reading;
 - **saves records**: validate → encode → connector → handle conflicts (AD10);
 - runs **integrity checks** and keeps the **"Needs attention"** list;
-- emits **change events**. A batched **regeneration step** listens to them and updates proficiency summaries, overall levels, gaps and the `pharoam.md` overview, always showing the "recalculating" status;
+- emits **change events**. A batched **regeneration step** listens to them and updates proficiency summaries (the shown level), gaps and the `pharoam.md` overview, always showing the "recalculating" status;
 - manages the **local cache** and the **offline queue** (AD9).
 
 ## 6. Content sources

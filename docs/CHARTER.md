@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Version** | 0.2 (draft) |
-| **Date** | 25 October 2026 |
+| **Date** | 26 October 2026 |
 | **Licence** | AGPL-3.0-only for the code. The brand and design system are not open source ([LICENSING.md](../LICENSING.md)) |
 | **Status labels** | **Agreed**: direction chosen. **Proposed**: working position, open to change. **Open**: not yet decided. |
 
@@ -29,7 +29,7 @@ Its centre is a **personal knowledge profile**. The profile grows over a person'
 
 1. **An honest picture.** Give each person an evidence-based, portable picture of their skills, where every claim says where it came from.
 2. **Honest options.** Show the real gap to any pathway the person chooses, without scores, rankings or promises.
-3. **Learning that shows.** Help them learn toward a chosen pathway, with progress shown in evidence and assessments rather than ticked off.
+3. **Learning that shows.** Help them learn toward a chosen pathway, with progress shown in diagnostics rather than ticked off.
 4. **Ownership without compromise.** Prove that this works with the person's data only in storage they control, and no server holding it.
 
 ---
@@ -61,16 +61,16 @@ Each principle comes with rules that a design or a pull request can be checked a
 - **R2.** A user can pick any path, including one Pharoam rates as a weak fit or demanding. Pharoam's job is then to make clear what lies ahead, not to discourage them.
 - **R3.** A recommendation is always advisory and shown with its reasoning and limits.
 
-### 3.2 Evidence and inference are kept apart
-- **R4.** Every observation in a profile has exactly one **provenance** label:
-  - `self-reported`: the user said so;
-  - `evidenced`: the user linked it to one or more evidence records (a certificate, transcript, repository, job or work sample). The level is still the user's claim; Pharoam doesn't check that the evidence shows it;
-  - `demonstrated`: shown in a Pharoam assessment or practical task;
-  - `ai-inferred`: proposed by a model from other evidence.
-  A capability shown to the user is built from its observations and always shows the breakdown by provenance. A blended overall level may exist **only as an AI judgement**: labelled, explained, dated and based on stated inputs, and never calculated silently by a hidden formula or required. Without AI, only the breakdown is shown.
-- **R5.** Every `ai-inferred` observation carries an explanation, its known limits and a clear AI disclaimer. There are no confidence scores. It counts only after the user accepts it, and the user can also correct or reject it.
-- **R6.** Nothing is presented as independent verification unless someone independent checked it: not model output, and not a user's own link between a claim and evidence. The interface keeps evidence the user linked apart from performance Pharoam recorded.
-- **R7.** Assessments complement what the user has declared rather than repeating it back. They test, they don't echo.
+### 3.2 Claims and shown performance are kept apart
+- **R4.** **Evidence** records what a person has done (a job, project, repository, degree or certificate). It is linked to skills and carries no level. A **level** is held by an observation, and every observation has exactly one **provenance** label:
+  - `self-reported`: the person's own rating. It may cite evidence. Untested;
+  - `ai-judged`: a level an AI task gave by scanning the person's evidence. Untested;
+  - `demonstrated`: shown in a question-bank diagnostic, marked by a fixed, published rule;
+  - `ai-correlated`: shown in an AI-led diagnostic and explained against the person's evidence.
+  **A tested level rests only on what the person shows in a diagnostic.** Claims and evidence shape the diagnostic's questions and its explanation, never its level. Each skill shows **one level** with its source, chosen by a written order (data model §6), and its full history is always available. There is no blended or calculated level.
+- **R5.** Every AI level carries a clear AI disclaimer and an explanation, and there are no confidence scores. An `ai-judged` level also states its known limits; it is written to the profile and counts only when the person accepts it; the person can instead skip it or adjust it (run a diagnostic or record their own level). An `ai-correlated` result explains what the session showed, how that compares with the person's claims and evidence in either direction, the likely reasons for any difference (offered as possibilities), and a next step.
+- **R6.** Nothing is presented as independent verification unless someone independent checked it. A diagnostic records performance; it doesn't verify it. The interface keeps tested levels (`demonstrated`, `ai-correlated`) apart from claims (`self-reported`, `ai-judged`).
+- **R7.** Diagnostics test what the person has declared rather than repeating it back. They are adaptive: they start from the claimed level or from what the evidence suggests, and probe where the claim is least certain.
 
 ### 3.3 Teach understanding, not application volume
 - **R8.** No one-click bulk job applications, now or later.
@@ -96,16 +96,17 @@ Each principle comes with rules that a design or a pull request can be checked a
 ```
 Profile (user-owned files)
  ├─ Evidence ───────────────┐   artefacts: degree, module, certificate, job,
- │                           │   project, repository, reflection
+ │    · linked to skills     │   project, repository, reflection, diagnostic record
+ │    · no level             │
  ├─ Observation ◀────────────┘   "at time T, from source S: skill K at level L"
- │    · one provenance (R4) · immutable · may supersede earlier observations
- ├─ Review                       accept / reject / retract an observation
+ │    · one provenance (R4) · immutable · may cite evidence
+ ├─ Review                       retract an observation
  ├─ Aspiration                   interests, goals, constraints
  └─ Learning plan ───▶ steps toward a chosen Pathway
 
 Generated (stored for readability, regenerated by Pharoam)
- ├─ Capability   per skill: latest effective level for each provenance
- └─ Gap          pathway requirement vs capability, grouped by how well supported
+ ├─ Shown level  per skill: one level and its source, by a written order
+ └─ Gap          pathway requirement vs shown level, grouped by whether it was tested
 
 Pathway (versioned content packs, not personal data)
    requirements · prerequisites · learning investment ·
@@ -113,9 +114,9 @@ Pathway (versioned content packs, not personal data)
 ```
 
 Key relationships:
-- **Observations** link to the **evidence** behind them. One piece of evidence can support many observations.
+- **Evidence** is linked to the skills it involved. **Observations** may cite evidence, and diagnostic observations link to the diagnostic's full record.
 - **Levels** use one five-step scale: 0 aware · 1 beginner · 2 working · 3 proficient · 4 expert.
-- A **gap** is always shown with the provenance of the observations involved. It is never shown as a single score.
+- A **gap** is always shown with the source of the level it rests on. It is never shown as a single score.
 - A **skill inventory** (the shared vocabulary linking modules, evidence, observations and pathways) is a foundational dependency. **Agreed:** Pharoam keeps its own inventory, forked from the MIND Tech Ontology and cross-referenced to ESCO, Wikidata and GitHub topics (PRD I1). Profiles reference skills by Pharoam slug only; people can add custom skills of their own.
 
 ---
@@ -124,7 +125,7 @@ Key relationships:
 
 ### The user journey
 1. **Map**: bring in what you've studied and done (degree modules, projects, jobs, certificates) and state your interests.
-2. **Assess**: knowledge checks, structured self-assessment and practical tasks that turn claims into demonstrated evidence.
+2. **Assess**: adaptive diagnostics that turn claims into tested levels: a question bank that works without AI, and an AI-led session with open answers and practical tasks that explains the result against the person's evidence.
 3. **Explore**: compare two or more plausible pathways, with their prerequisites, gaps, learning investment and trade-offs, without suitability ever presented as certain.
 4. **Learn**: a personal learning plan with materials, exercises and reviews, and progress tracked against real outcomes.
 5. **Prepare** *(later)*: job-search literacy, evidence-based CV guidance and interview practice.
@@ -132,7 +133,7 @@ Key relationships:
 ### First version (Agreed)
 Steps 1–4, narrowed to computer-science and adjacent technical pathways, running as a browser-based web app over a profile in the user's own storage. It is delivered in small releases ([MVP and release plan](MVP.md)):
 - **v0.1, the MVP:** Map plus the gap view of Explore, with no AI, over a local folder;
-- **v0.2:** AI assistance; **v0.3:** assessments (Assess); **v0.4:** learning plans and pathway comparison (Learn, the rest of Explore).
+- **v0.2:** AI assistance; **v0.3:** diagnostics (Assess); **v0.4:** learning plans and pathway comparison (Learn, the rest of Explore).
 
 What each release leaves out is recorded in MVP §7, so nothing is dropped silently.
 
@@ -164,12 +165,12 @@ Step 5, more fields, multi-language support, more connectors and browsers, and l
 
 - **No profile data on any infrastructure running Pharoam** (Agreed): the profile lives in storage the user chooses and is reached through connectors (R11, R14). Pharoam has no profile database. Operator-hosted deployments may hold only minimal account data.
 - **Form** (Agreed): a web application whose core **runs entirely in the browser** and can be served as a static site. Self-hosting it is as simple as hosting static files.
-- **Optional relay** (Agreed): a small, self-hostable service that **stores nothing between requests**. It can be added later for things a browser can't do alone, such as OAuth sign-in to some connectors, passing model calls through, and signing assessment results.
+- **Optional relay** (Agreed): a small, self-hostable service that **stores nothing between requests**. It can be added later for things a browser can't do alone, such as OAuth sign-in to some connectors, passing model calls through, and signing diagnostic results.
 - **Canonical data format** (Agreed): the profile is human-readable files (Markdown first) in the user's storage. They are the master copy, not an export.
 - **Model-agnostic** (Agreed): model calls go through an abstraction layer. The user (or a relay operator) chooses the provider and supplies the key, including self-hosted models. Model calls can be inspected by the user.
-- **Inference behind a gate** (Agreed): model output enters the profile only as `ai-inferred` observations awaiting the user's review (R5). It never directly changes `evidenced` or `demonstrated` observations.
-- **Assessment integrity** (Agreed for v1): honour system. `demonstrated` means "recorded by a Pharoam assessment" and is not tamper-proof. The format reserves a signature field for later.
-- **Data minimisation** (Agreed): features declare which data they read, and nothing is sent to a model provider beyond what the feature needs.
+- **AI levels** (Agreed): a level AI gives from evidence waits in a readable review session and enters the profile as an `ai-judged` observation only when the person accepts it (R5). A level from an AI-led diagnostic is written as an `ai-correlated` observation together with the diagnostic's full record ([ADR-0019](adr/0019-adaptive-diagnostics.md)).
+- **Diagnostic integrity** (Agreed for v1): honour system. `demonstrated` and `ai-correlated` mean "recorded by a Pharoam diagnostic" and are not tamper-proof. The format reserves a signature field for later.
+- **Data sent to models** (Agreed): each AI task declares the data it reads, which may be one skill's evidence or, where the task needs it, the whole profile. The person is told before a whole-profile send, and can inspect what every call sent and received (R12).
 - **Accessibility** (Agreed): WCAG 2.2 AA as the baseline for the web interface.
 - **Decided since:** TypeScript throughout, React + Vite, LangChain.js + LangGraph.js behind Pharoam's own interfaces (ADR-0002, 0008, 0012); the **local folder connector first**, the others tracked as issues (MVP §7); the relay's scope (ADR-0013).
 
@@ -194,7 +195,7 @@ Pharoam succeeds when people understand themselves and their options better, not
 
 **Signals we care about:**
 - users can name their strengths and gaps, and say where each claim came from;
-- learning progress shown in assessments, not just claimed;
+- learning progress shown in diagnostics, not just claimed;
 - awareness of more than one viable pathway and its trade-offs;
 - confidence in a self-chosen plan;
 - accessibility and satisfaction.
@@ -204,8 +205,8 @@ Outcomes are reported only in aggregate, with their uncertainty and possible bia
 **v1 success criteria** (Agreed). Checkable, and none of them counts usage (R10):
 1. **The MVP exit criteria are met** ([MVP](MVP.md) §4): the founder keeps their real profile in Pharoam for 2 weeks, and judges the gap view to a pathway accurate.
 2. **The profile stands on its own:** every file is readable and editable without Pharoam, and no edit made outside it is ever lost.
-3. **Every claim has a source:** for each skill in the profile, the founder can say where each level came from, from the capability view alone.
-4. **Each later release adds its own check**, written into the MVP plan before it's built (for example: v0.3 shows progress in assessments, not just claims).
+3. **Every level has a source:** for each skill in the profile, the founder can say where its shown level came from, from the skill view and its history alone.
+4. **Each later release adds its own check**, written into the MVP plan before it's built (for example: v0.3 shows progress in diagnostics, not just claims).
 5. **No user data on any server**, confirmed by the app making no requests in v0.1 beyond loading itself.
 
 ---
@@ -218,7 +219,7 @@ Outcomes are reported only in aggregate, with their uncertainty and possible bia
 | 2 | `README.md` derived from the charter | Done |
 | 3 | [PRD](PRD.md): the whole product blueprint | Draft |
 | 3a | [MVP and release plan](MVP.md): stories, acceptance criteria, what's deferred | Done |
-| 4 | [Architecture](ARCHITECTURE.md): decisions AD1–AD23, ADRs 0001–0018, data model, interfaces, security | Decided; design system deferred; spikes S1–S3 pending (none needed for v0.1) |
+| 4 | [Architecture](ARCHITECTURE.md): decisions AD1–AD23, ADRs 0001–0019, data model, interfaces, security | Decided; design system deferred; spikes S1–S3 pending (none needed for v0.1) |
 | 4c | [Engineering standards](ENGINEERING.md) and agent instructions, enforced by hooks and CI | Done; waiting to be merged |
 | 4b | [Implementation plan](ROADMAP.md) and GitHub project | Plan done; GitHub project next |
 | 4a | Storage connectors: one issue per connector | Local folder in v0.1; the rest after |
@@ -237,7 +238,7 @@ Outcomes are reported only in aggregate, with their uncertainty and possible bia
 | P02 | Licence: AGPL-3.0-only | Agreed and applied in `LICENSE` |
 | P03 | Outside pull requests not accepted yet; DCO/CLA before any are | Agreed |
 | P04 | Form: web app whose core runs in the browser (static site), plus an optional relay that stores nothing | Agreed |
-| P05 | Provenance labels on every observation (R4) | Agreed |
+| P05 | Provenance labels on every observation: `self-reported`, `ai-judged`, `demonstrated`, `ai-correlated`; evidence carries no level (R4) | Agreed |
 | P06 | No bulk applications, rankings or outcome promises (§5 non-goals) | Agreed |
 | P07 | Model-provider agnostic; no training on user data by default | Agreed |
 | P08 | v1 users: technical, self-directed people like the founder. CS students and early-career learners come next. | Agreed |
@@ -245,10 +246,11 @@ Outcomes are reported only in aggregate, with their uncertainty and possible bia
 | P10 | Landing page: static Astro site on GitHub Pages | Proposed |
 | P11 | Stack, connector order, relay scope, skill inventory | Agreed: see §4, §6 and [Architecture](ARCHITECTURE.md) |
 | P12 | No profile data on any infrastructure running Pharoam; the profile lives in user-chosen storage via connectors. Operators may hold only minimal account data. | Agreed |
-| P13 | Two-layer model: immutable observations with one provenance each → derived capability views | Agreed |
+| P13 | Two-layer model: immutable observations with one provenance each → one shown level per skill by a written order, with the full history available ([ADR-0016](adr/0016-skill-records-and-shown-level.md)) | Agreed |
 | P14 | One five-step level scale (0 aware … 4 expert) | Agreed |
-| P15 | `demonstrated` uses the honour system in v1; signature field reserved | Agreed |
+| P15 | Diagnostic results (`demonstrated`, `ai-correlated`) use the honour system in v1; signature field reserved | Agreed |
 | P16 | Goals (§1), constraints (§5) and v1 success criteria (§8) | Agreed |
 | P17 | v1 validation is the founder's own use; each new audience gets its own discovery first | Agreed |
 | P18 | Contributor terms: DCO or CLA, who holds any granted rights, terms for funded or commissioned work (§7) | Open. Decide before the first outside PR or funded work |
 | P19 | Brand and design system are the founder's own, not open source; kept outside the repository except finished files in `brand/`; the app runs without `brand/` (§7) | Agreed |
+| P20 | A tested level rests only on shown performance. Adaptive diagnostics: a question bank without AI, and AI-led sessions that weigh the evidence in their explanation, never in the level ([ADR-0019](adr/0019-adaptive-diagnostics.md)) | Agreed |
