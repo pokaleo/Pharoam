@@ -19,6 +19,7 @@ Pharoam is an open-source, browser-first web app. It helps people build an evide
 | Contracts between parts | [docs/design/interfaces.md](docs/design/interfaces.md) |
 | Security rules | [docs/design/security.md](docs/design/security.md) |
 | Coding, testing, commits, PRs | [docs/ENGINEERING.md](docs/ENGINEERING.md) |
+| Which licence covers what; the code–brand boundary | [LICENSING.md](LICENSING.md) and [TRADEMARKS.md](TRADEMARKS.md) |
 
 ## Hard rules: never break these
 

@@ -67,6 +67,8 @@ Pharoam is at an early stage and **does not accept outside pull requests yet**. 
 
 ## Licence
 
-[GNU Affero General Public License v3.0 only](LICENSE) (`AGPL-3.0-only`).
+- **Code:** [GNU Affero General Public License v3.0 only](LICENSE) (`AGPL-3.0-only`).
+- **Name, logo and design system:** the founder's own assets. They are not open source and not covered by the code licence; the design system is kept outside this repository. See the [trademark and brand policy](TRADEMARKS.md).
+- **Third-party libraries, fonts, icons and data:** their own licences.
 
-The Pharoam name and logo are not covered by the code licence.
+Which licence covers what, and where the boundary between the code and the brand lies: [LICENSING.md](LICENSING.md).

@@ -18,3 +18,5 @@ English first, but built for translation (PRD N9) and accessibility (N5).
 
 ## Consequences
 Until the design system exists, the default shadcn theme is used.
+
+The design system is the founder's own asset, kept outside this repository and not under the AGPL ([LICENSING.md](../../LICENSING.md)). The app takes the Pharoam theme and artwork from `brand/` and must still build and run without that folder, falling back to the default shadcn theme and neutral artwork, so that forks can follow the AGPL without the Pharoam brand.
