@@ -64,8 +64,8 @@ Practices (ADR-0018). Those marked *lint* are checked by ESLint (`tooling/eslint
 | Layer | Tool | Rule |
 |---|---|---|
 | Core | Vitest | Test-first; target **90%+ coverage** for `packages/core` |
-| File format | Vitest | **Round-trip tests**: read → write keeps unknown fields, comments and field order |
-| Connectors | Vitest | Every connector passes the **shared connector test suite** (conflicts, change listing, attachments) |
+| File format | Vitest | **Round-trip tests**: read → write keeps unknown fields, comments and field order, over a **corpus of real-world files**, not just clean ones: edited in Obsidian, exported from Notion, CRLF line endings, a byte-order mark, tabs, a missing closing `---`, duplicate keys, anchors, YAML 1.1 values like `yes`. Malformed files must land in "Needs attention" and never be rewritten. **Fingerprint tests** pin the canonical form with fixed examples (data model §4). |
+| Connectors | Vitest | Every connector passes the **shared connector test suite**: conflicts, including a file changed **between Pharoam's read and its write**; change listing; attachments |
 | AI tasks | Vitest | **Recorded responses**; CI never calls a live model. An optional evaluation set runs before a task's version is bumped. |
 | UI | Vitest + Testing Library | Behaviour-level component tests |
 | End to end | Playwright | Key journeys, with **axe** accessibility checks (WCAG 2.2 AA) |
@@ -129,10 +129,12 @@ The hard rules in `AGENTS.md` are enforced at three layers that share the same c
 The shared checks are:
 - **ESLint rules** in `tooling/eslint/`;
 - **content rules** in `tooling/guard/`, such as the telemetry deny-list and the LangSmith, third-party-script and raw-HTML checks;
-- the **TDD check**: a changed source file must come with a changed or existing test;
+- the **TDD check**: a changed source file must come with a changed or existing test. It is a reminder, not proof (below);
 - **command rules**: verification can't be skipped, and committing and publishing need the user's approval.
 
 The enforcement code is itself built test-first (`tooling/**/*.test.ts`). Some rules can't be detected by scanning code; those are enforced by tests.
+
+**What the checks can't prove.** The TDD check only sees that a test file exists or changed. Once a source file has a test, later changes to it pass even if the test is untouched, and the check can't tell whether a test failed first or exercises the new behaviour at all. It is a development aid, **not a correctness or security guarantee**. TDD is shown by the evidence in the PR (§7: the failing run, then the passing one) and checked in review.
 
 **Enforcement files** (listed in `tooling/guard/protected.ts` and AGENTS.md) change only with the user's approval. These are the checks themselves, when they run, and the settings that could quietly weaken them: the root `package.json`, any `tsconfig*.json`, `vitest.config.ts`, `typedoc.json` and `knip.json`. Agents are asked before an edit to them, and before a shell command that writes them. The user can pause the prompts with `pnpm guard:unlock <minutes>`, which agents are refused. Commits, pushes and PRs still ask, and hard-rule violations are still refused.
 

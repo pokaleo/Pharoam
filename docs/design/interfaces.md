@@ -23,6 +23,7 @@ interface StorageConnector {
 ```
 
 - The **version token** detects conflicts: a file's modified time or content hash, or Notion's last-edited time.
+- **A local folder has no atomic compare-and-swap.** The connector checks the token again just before writing, and the browser commits the new content in one step, but an edit landing between that check and the write can still be lost. The window is kept as short as possible, and the connector suite tests it.
 - A connector may have a **relay part** where its service blocks browsers (AD12). The interface is the same either way.
 
 ## 2. AI task definitions

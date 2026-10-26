@@ -64,12 +64,12 @@ Each principle comes with rules that a design or a pull request can be checked a
 ### 3.2 Evidence and inference are kept apart
 - **R4.** Every observation in a profile has exactly one **provenance** label:
   - `self-reported`: the user said so;
-  - `evidenced`: backed by an evidence record (a certificate, transcript, repository, job or work sample);
+  - `evidenced`: the user linked it to one or more evidence records (a certificate, transcript, repository, job or work sample). The level is still the user's claim; Pharoam doesn't check that the evidence shows it;
   - `demonstrated`: shown in a Pharoam assessment or practical task;
   - `ai-inferred`: proposed by a model from other evidence.
   A capability shown to the user is built from its observations and always shows the breakdown by provenance. A blended overall level may exist **only as an AI judgement**: labelled, explained, dated and based on stated inputs, and never calculated silently by a hidden formula or required. Without AI, only the breakdown is shown.
 - **R5.** Every `ai-inferred` observation carries an explanation, its known limits and a clear AI disclaimer. There are no confidence scores. It counts only after the user accepts it, and the user can also correct or reject it.
-- **R6.** Model output is never presented as independent verification.
+- **R6.** Nothing is presented as independent verification unless someone independent checked it: not model output, and not a user's own link between a claim and evidence. The interface keeps evidence the user linked apart from performance Pharoam recorded.
 - **R7.** Assessments complement what the user has declared rather than repeating it back. They test, they don't echo.
 
 ### 3.3 Teach understanding, not application volume
@@ -141,7 +141,7 @@ Step 5, more fields, multi-language support, more connectors and browsers, and l
 
 ### Constraints
 *Agreed. The limits every plan has to fit.*
-- **One developer**, the founder, working with AI coding agents. Scope stays small (R16), and machine-checked standards replace review by a team ([Engineering standards](ENGINEERING.md)).
+- **One developer**, the founder, working with AI coding agents. Scope stays small (R16), and machine-checked standards take the place of much of the review a team would do ([Engineering standards](ENGINEERING.md)). What a machine can't check, such as whether tests were written first, is still the founder's review (ENGINEERING §10).
 - **No servers holding user data, and none run by the project** (R11). The official app is a static site on GitHub Pages, so running costs stay near zero.
 - **No AI cost to the project.** Users bring their own model key, or an operator pays for its own users.
 - **Browser limits.** Storage reached directly from the browser depends on browser support; the first connector (a local folder) works in desktop Chromium browsers only.
@@ -179,9 +179,12 @@ Step 5, more fields, multi-language support, more connectors and browsers, and l
 
 - **Licence** (Agreed): GNU Affero General Public License v3.0 only (SPDX `AGPL-3.0-only`), using the unmodified official text in `LICENSE`. Commercial use is allowed. Anyone running a modified version as a network service must offer its source code to that service's users.
 - **Copyright** (Agreed): held by the original author(s). Contributors would keep copyright in their own contributions unless they explicitly agree otherwise.
-- **Contributions** (Agreed): **closed to outside pull requests for now.** Issues, ideas and discussion are welcome. Before outside code is accepted, the project will adopt written contributor terms: a Developer Certificate of Origin (DCO) at minimum, or a Contributor Licence Agreement (CLA) if dual licensing ever becomes realistic.
+- **Contributions** (Agreed): **closed to outside pull requests for now.** Issues, ideas and discussion are welcome. Before outside code is accepted, the project will adopt written contributor terms.
+- **DCO or CLA** (Open, decide before the first outside contribution): a Developer Certificate of Origin (DCO) only confirms that a contributor may submit their code under AGPL-3.0-only. It gives no one the right to relicense it, so a proprietary or dual-licensed version would then need every contributor's agreement. Keeping that option needs a Contributor Licence Agreement (CLA) or another written licence grant **from the first outside contribution**, because rights are hard to collect afterwards. Forking an AGPL repository does not remove its obligations.
+- **Who would hold the rights** (Open): if a CLA is chosen, who receives the grant (the founder personally, a company or a charity), and how conflicts of interest are handled when these are different people or organisations.
+- **Funded or commissioned work** (Open): before any organisation funds or commissions work on Pharoam, a written agreement says who owns the copyright, that the work is released under AGPL-3.0-only and the project's contributor terms, and how conflicts of interest are declared.
 - **Name and logo** (Proposed): the code licence does not cover the Pharoam name or logo. A short trademark-use policy will be written before the project is promoted publicly.
-- **Pending:** confirm that no employment contract or third-party agreement claims rights in the founder's work on Pharoam.
+- **Pending, first:** confirm that no employment contract or third-party agreement claims rights in the founder's work on Pharoam. This affects code that already exists, so it comes before the other open points.
 
 ---
 
@@ -222,7 +225,7 @@ Outcomes are reported only in aggregate, with their uncertainty and possible bia
 | 5 | Skill-inventory decision (§4) | Decided (PRD I1) |
 | 6 | Discovery: a [comparison with existing tools](research/discovery.md), then talking to target users before each new audience | Comparison done; v1 validation is the founder's own use |
 | 7 | Landing page: a static site (Astro) in `site/`, deployed to GitHub Pages. It starts as a manifesto-style page and grows into a full product page once something ships | Proposed |
-| 8 | Trademark-use policy and contributor terms (§7) | Before promotion / before outside PRs |
+| 8 | Trademark-use policy and contributor terms (§7) | Trademark policy before promotion; employment-rights check now; DCO or CLA, rights holder and funded-work terms before the first outside PR or funded work |
 
 ---
 
@@ -247,3 +250,4 @@ Outcomes are reported only in aggregate, with their uncertainty and possible bia
 | P15 | `demonstrated` uses the honour system in v1; signature field reserved | Agreed |
 | P16 | Goals (§1), constraints (§5) and v1 success criteria (§8) | Agreed |
 | P17 | v1 validation is the founder's own use; each new audience gets its own discovery first | Agreed |
+| P18 | Contributor terms: DCO or CLA, who holds any granted rights, terms for funded or commissioned work (§7) | Open. Decide before the first outside PR or funded work |
