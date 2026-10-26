@@ -4,7 +4,7 @@
 |---|---|
 | **Version** | 0.2 (draft) |
 | **Date** | 25 October 2026 |
-| **Licence** | AGPL-3.0-only |
+| **Licence** | AGPL-3.0-only for the code. The brand and design system are not open source ([LICENSING.md](../LICENSING.md)) |
 | **Status labels** | **Agreed**: direction chosen. **Proposed**: working position, open to change. **Open**: not yet decided. |
 
 This is Pharoam's founding document. It says what Pharoam is, what it refuses to be, the idea at its centre, and how the project is run. The README, design records, roadmap and website are all derived from it. When they disagree with it, either fix them or change this document deliberately.
@@ -145,7 +145,7 @@ Step 5, more fields, multi-language support, more connectors and browsers, and l
 - **No servers holding user data, and none run by the project** (R11). The official app is a static site on GitHub Pages, so running costs stay near zero.
 - **No AI cost to the project.** Users bring their own model key, or an operator pays for its own users.
 - **Browser limits.** Storage reached directly from the browser depends on browser support; the first connector (a local folder) works in desktop Chromium browsers only.
-- **Licences.** Code is AGPL-3.0-only. Skill and occupation data keep their own licences (MIT for the MIND fork, ESCO's attribution terms), kept apart in `data/`.
+- **Licences.** Code is AGPL-3.0-only. Skill and occupation data keep their own licences (MIT for the MIND fork, ESCO's attribution terms), kept apart in `data/`. The brand and design system are the founder's own, not open source, kept apart in `brand/` and outside the repository (§7).
 - **Closed to outside pull requests** until contributor terms exist (§7).
 - **Accessible and translatable from the start:** WCAG 2.2 AA and English first, with no hard-coded interface text.
 
@@ -183,7 +183,7 @@ Step 5, more fields, multi-language support, more connectors and browsers, and l
 - **DCO or CLA** (Open, decide before the first outside contribution): a Developer Certificate of Origin (DCO) only confirms that a contributor may submit their code under AGPL-3.0-only. It gives no one the right to relicense it, so a proprietary or dual-licensed version would then need every contributor's agreement. Keeping that option needs a Contributor Licence Agreement (CLA) or another written licence grant **from the first outside contribution**, because rights are hard to collect afterwards. Forking an AGPL repository does not remove its obligations.
 - **Who would hold the rights** (Open): if a CLA is chosen, who receives the grant (the founder personally, a company or a charity), and how conflicts of interest are handled when these are different people or organisations.
 - **Funded or commissioned work** (Open): before any organisation funds or commissions work on Pharoam, a written agreement says who owns the copyright, that the work is released under AGPL-3.0-only and the project's contributor terms, and how conflicts of interest are declared.
-- **Name and logo** (Proposed): the code licence does not cover the Pharoam name or logo. A short trademark-use policy will be written before the project is promoted publicly.
+- **Brand and design system** (Agreed): the Pharoam name, logo and design system are the founder's own assets. They are not open source and the code licence does not cover them; AGPL section 7(e) lets us grant no trademark rights. The design system is kept outside this repository. The only design-system files in it are the finished ones the app or website uses, kept in `brand/` under an all-rights-reserved notice, and the app must build and run without `brand/`, so that forks can follow the AGPL without our brand. Third-party fonts and icons the design system chooses stay under their own open licences and are never presented as ours. Details: [LICENSING.md](../LICENSING.md) and the [trademark and brand policy](../TRADEMARKS.md).
 - **Pending, first:** confirm that no employment contract or third-party agreement claims rights in the founder's work on Pharoam. This affects code that already exists, so it comes before the other open points.
 
 ---
@@ -225,7 +225,7 @@ Outcomes are reported only in aggregate, with their uncertainty and possible bia
 | 5 | Skill-inventory decision (§4) | Decided (PRD I1) |
 | 6 | Discovery: a [comparison with existing tools](research/discovery.md), then talking to target users before each new audience | Comparison done; v1 validation is the founder's own use |
 | 7 | Landing page: a static site (Astro) in `site/`, deployed to GitHub Pages. It starts as a manifesto-style page and grows into a full product page once something ships | Proposed |
-| 8 | Trademark-use policy and contributor terms (§7) | Trademark policy before promotion; employment-rights check now; DCO or CLA, rights holder and funded-work terms before the first outside PR or funded work |
+| 8 | Trademark-use policy and contributor terms (§7) | Trademark and brand policy written ([TRADEMARKS.md](../TRADEMARKS.md)); employment-rights check now; DCO or CLA, rights holder and funded-work terms before the first outside PR or funded work |
 
 ---
 
@@ -251,3 +251,4 @@ Outcomes are reported only in aggregate, with their uncertainty and possible bia
 | P16 | Goals (§1), constraints (§5) and v1 success criteria (§8) | Agreed |
 | P17 | v1 validation is the founder's own use; each new audience gets its own discovery first | Agreed |
 | P18 | Contributor terms: DCO or CLA, who holds any granted rights, terms for funded or commissioned work (§7) | Open. Decide before the first outside PR or funded work |
+| P19 | Brand and design system are the founder's own, not open source; kept outside the repository except finished files in `brand/`; the app runs without `brand/` (§7) | Agreed |

@@ -16,4 +16,4 @@ Thanks for your interest! Pharoam is in early development.
 
 ## Licence
 
-Pharoam is licensed under [AGPL-3.0-only](LICENSE).
+Pharoam's code is licensed under [AGPL-3.0-only](LICENSE). The Pharoam name, logo and design system are the founder's own assets and are not open source ([TRADEMARKS.md](TRADEMARKS.md)). Please don't send design or brand files: changes to `brand/` and to the design system come only from the founder. Which licence covers what: [LICENSING.md](LICENSING.md).
