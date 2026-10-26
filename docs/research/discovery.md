@@ -25,7 +25,7 @@
 - **Scores and rankings are the norm.** LinkedIn (% match), CareerOneStop (ranked occupations), Teal (match score) and the AI coaches (ranked gaps) all reduce the person to a number or an order.
 - **Evidence and judgement are blurred.** Self-ratings, AI analysis and verified results are mixed, or only one kind is used. No tool shown here keeps them apart for each claim.
 - **The data belongs to the service.** Only the LER wallets and Reactive Resume let the person hold their own data, and neither builds a skills picture.
-- **Verification is hard to sustain.** LinkedIn dropped its skill assessments. Workera's verification serves employers and needs proctoring. Pharoam's honour-system `demonstrated` (P15) is the realistic start.
+- **Verification is hard to sustain.** LinkedIn dropped its skill assessments. Workera's verification serves employers and needs proctoring. Pharoam's honour-system diagnostics (P15) are the realistic start.
 - **The gap-report idea is validated.** The AAAI 2026 Steve paper builds role gap reports and learning plans, which supports the PRD's direction. Pharoam's difference is in *how*: evidence per claim, no ranking, user-held data.
 
 ## Pharoam's differentiation
@@ -36,11 +36,11 @@ In detail, against the tools above:
 
 | Pharoam | Instead of |
 |---|---|
-| Every claim has one provenance label: self-reported, evidenced, demonstrated or AI-inferred (R4) | Self-ratings, AI analysis and verified results mixed together |
+| Every level has one provenance label: self-reported, AI-judged, demonstrated or AI-correlated; claims are kept apart from tested levels (R4) | Self-ratings, AI analysis and verified results mixed together |
 | Gaps grouped as supported, claimed, below or unknown; no score (R1) | % matches, ranked occupations, match scores |
 | A living record with history (R15) | One-off analyses of a resume |
 | Markdown files in the person's own storage, readable without Pharoam (R11) | Data held in the service's account |
-| AI optional, labelled, with the user's own key and the user as the only gate (R5) | AI judgement presented as fact |
+| AI optional and labelled, with the user's own key; AI levels from evidence count only once the user accepts them (R5) | AI judgement presented as fact |
 | Understanding over volume (R8) | Optimising applications and keywords |
 | Open source, AGPL, self-hostable | Closed commercial platforms |
 

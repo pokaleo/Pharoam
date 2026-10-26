@@ -14,5 +14,5 @@ Particularly relevant:
 - anything that could send profile data to a server, or store it there;
 - leaks of API keys or OAuth tokens;
 - unsafe rendering of Markdown (XSS) or remote content;
-- prompt injection that bypasses user approval;
+- prompt injection that bypasses user approval or steers a diagnostic's marking;
 - relay weaknesses (SSRF, missing pairing, logging of request bodies).

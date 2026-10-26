@@ -14,19 +14,21 @@ Pharoam helps people understand what they know, what they can show, which paths 
 
 ## The idea
 
-At Pharoam's centre is a **personal knowledge profile**, not a static CV. It grows with your studies, work, projects and reflection, and it records *where each claim about you came from*:
+At Pharoam's centre is a **personal knowledge profile**, not a static CV. It grows with your studies, work, projects and reflection. Your evidence (jobs, projects, repositories, certificates) is linked to skills, and each skill shows one level that says *where it came from*:
 
 | Label | Meaning |
 |---|---|
-| `self-reported` | You said so |
-| `evidenced` | Backed by an evidence record such as a certificate, transcript, job or repository |
-| `demonstrated` | Shown in a Pharoam assessment or practical task |
-| `ai-inferred` | Suggested by a model, with an explanation, its limits and a clear AI disclaimer; you accept, correct or reject it |
+| `self-reported` | Your own rating |
+| `ai-judged` | A level AI gave from your evidence, with an explanation, its limits and a clear AI disclaimer; it counts once you accept it |
+| `demonstrated` | Shown in a question-bank diagnostic |
+| `ai-correlated` | Shown in an AI-led diagnostic, with an explanation that compares the result with your evidence |
+
+A tested level rests only on what you show: claims and evidence shape a diagnostic's questions and its explanation, never the level itself.
 
 Pharoam builds on that profile in four steps:
 
 1. **Map**: bring in what you've studied and done.
-2. **Assess**: turn claims into demonstrated evidence through knowledge checks and practical tasks.
+2. **Assess**: turn claims into tested levels through adaptive diagnostics, with or without AI.
 3. **Explore**: compare several plausible career pathways, with their prerequisites, gaps, learning investment and trade-offs.
 4. **Learn**: follow a personal learning plan and track real progress.
 
@@ -45,7 +47,7 @@ v1 is built for technical, self-directed people, starting with its founder. Comp
 Every design decision is checked against the rules in the [Charter](docs/CHARTER.md#3-principles-and-design-rules). In brief:
 
 - **The person chooses.**
-- **Evidence and inference are kept apart.**
+- **Claims and shown performance are kept apart.**
 - **Teach understanding, not application volume.**
 - **The profile belongs to the person.**
 - **Lifelong and incremental.**

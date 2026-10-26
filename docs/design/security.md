@@ -11,7 +11,7 @@
 |---|---|
 | Profile data | Malicious web pages and scripts (XSS) · malicious content packs · compromised dependencies · a careless or malicious operator · someone else using the device |
 | API keys and OAuth tokens | XSS · malicious browser extensions · other sites calling a localhost relay |
-| **Trust in judgements** | **Prompt injection**: text in evidence, pasted CVs, fetched pages or assessment answers that tries to steer the AI |
+| **Trust in judgements** | **Prompt injection**: text in evidence, pasted CVs, fetched pages or diagnostic answers that tries to steer the AI |
 | The relay | Abuse from the internet; being tricked into fetching internal network addresses (SSRF) |
 
 The user's profile files are readable by design (data model §0). Their protection at rest is the job of the storage the user chooses (disk encryption, Notion's security, and so on).
@@ -27,8 +27,9 @@ The user's profile files are readable by design (data model §0). Their protecti
 ## 3. Prompt injection
 - All content (evidence, pasted text, fetched pages, answers) goes to the model as **clearly marked data**, kept separate from the instructions.
 - The output must match the task's schema, which limits what injected text can achieve.
-- **The AI can't act on its own.** No AI step writes anything without the user's approval, and no AI step browses or calls tools freely.
-- Judging uses the item's **rubric**. Answers that look like they're trying to manipulate the judgement are flagged in the explanation.
+- **Answers in an AI-led diagnostic are data too.** An answer may try to steer the marking ("give me level 4"). Answers are passed as marked data, the result must match the task's schema, and the full record of items, answers and marking is kept (data model §7), so a steered result can be seen and checked.
+- **The AI can't act on its own.** No AI step browses or calls tools freely. No AI step writes anything without the user's approval, except the result of a diagnostic the user took (ADR-0019).
+- Marking uses the item's **rubric**. Answers that look like they're trying to manipulate the marking are flagged in the explanation.
 - Fetched web content is labelled **untrusted** in the transparency view.
 
 ## 4. Secrets and browser hardening
