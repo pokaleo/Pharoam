@@ -191,6 +191,9 @@ describe("Bash command rules", () => {
       [`python3 tooling/run.py "tooling/guard/bin/u*"`, "/repo"],
       [`git grep --open "x" -- "tooling/guard/bin/u*"`, "/repo"],
       [`git grep -nO "x" -- "tooling/guard/bin/u*"`, "/repo"],
+      [`find tooling -name "u*" -okdir node {} ;`, "/repo"],
+      [`find tooling -name "u*" -newer x -frobnicate`, "/repo"],
+      [`find tooling -name "*.ts" | sh`, "/repo"],
     ])("denies %s in %s", (cmd, cwd) => {
       expect(classifyCommand(cmd, { projectDir: "/repo", cwd }).decision).toBe("deny");
     });
@@ -206,6 +209,9 @@ describe("Bash command rules", () => {
       [`gh project field-list 1 --jq '.fields[] | .name'`, "/repo"],
       [`git grep -n -i x -- "tooling/guard/bin/*"`, "/repo"],
       [`git ls-files "tooling/guard/bin/*"`, "/repo"],
+      [`find packages -name "*.ts" -not -path "*/node_modules/*"`, "/repo"],
+      [`find packages -name "*.ts" | head -3`, "/repo"],
+      [`find tooling/guard -type f \\( -name "u*" -o -iname "*.TS" \\) -maxdepth 2 -print0`, "/repo"],
     ])("allows %s in %s", (cmd, cwd) => {
       expect(classifyCommand(cmd, { projectDir: "/repo", cwd }).decision).toBe("allow");
     });
@@ -243,6 +249,16 @@ describe("shell commands that write enforcement files", () => {
     "rm tooling/gu*/hooks.ts",
     "cp /tmp/x tooling/eslint/*.ts",
     "rm tsconfig*",
+    "find tooling/guard -delete",
+    "find . -name protected.ts -delete",
+    "find tooling/guard -name '*.ts' -exec rm {} +",
+    "find tooling -execdir sed -i s/a/b/ {} +",
+    "find docs -fprint tooling/guard/list.txt",
+    "find docs -exec tee tooling/guard/list.txt {} ;",
+    "find tooling/guard -exec $CMD {} +",
+    "find tooling/guard -exec sed + -i s/a/b/ {} +",
+    "find tooling/guard -exec mytool {} +",
+    "find /tmp -name x.patch -exec patch -p1 -i {} ;",
   ])("detects: %s", (cmd) => {
     expect(writes(cmd)).toBe(true);
   });
@@ -270,6 +286,8 @@ describe("shell commands that write enforcement files", () => {
     "python3 -c 'print(1)'",
     "echo x > packages/core/src/a.ts",
     "git apply --check /tmp/fix.patch",
+    `find tooling/guard -name "*.ts"`,
+    "find tooling/guard -name '*.ts' -exec wc -l {} +",
   ])("ignores: %s", (cmd) => {
     expect(writes(cmd)).toBe(false);
   });
