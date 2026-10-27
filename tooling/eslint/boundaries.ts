@@ -40,7 +40,8 @@ export const boundariesConfig: Linter.Config[] = [
           default: "disallow",
           policies: [
             allow("core", ["core"]),
-            allow("connector", ["core", "connector"]),
+            // Shared file handling, such as the Markdown codec, lives in the core, not in another connector.
+            allow("connector", ["core"]),
             allow("provider", ["core", "provider"]),
             allow("web", ["core", "web"]),
             allow("web-composition", ["core", "connector", "provider", "web", "web-composition"]),

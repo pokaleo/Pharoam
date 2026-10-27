@@ -27,14 +27,14 @@ async function violations(fromFile: string, importPath: string): Promise<string[
   return (result?.messages ?? []).map((m) => m.ruleId ?? `fatal: ${m.message}`);
 }
 
-// Type errors for a file in packages/core, checked with the package's real tsconfig.
-function coreTypeErrors(code: string): string[] {
-  const configPath = path.join(repoRoot, "packages", "core", "tsconfig.json");
+// Type errors for a file in a package, checked with the package's real tsconfig.
+function typeErrors(pkg: string, code: string): string[] {
+  const configPath = path.join(repoRoot, "packages", pkg, "tsconfig.json");
   const read = ts.readConfigFile(configPath, (file) => ts.sys.readFile(file));
   if (read.error) throw new Error(ts.flattenDiagnosticMessageText(read.error.messageText, "\n"));
   const config: unknown = read.config;
   const { options } = ts.parseJsonConfigFileContent(config, ts.sys, path.dirname(configPath));
-  const probe = path.join(repoRoot, "packages", "core", "src", "probe.ts");
+  const probe = path.join(repoRoot, "packages", pkg, "src", "probe.ts");
   const host = ts.createCompilerHost(options);
   const readFile = host.readFile.bind(host);
   host.readFile = (file) => (file === probe ? code : readFile(file));
@@ -65,13 +65,13 @@ describe("architecture boundaries", () => {
     // The core runs in the browser and in Node, so it may use neither's globals; I/O is passed in.
     it.each(["document", "window", "localStorage", "fetch", "process"])("has no `%s` global", (name) => {
       // TypeScript may add a hint after the message, such as which lib or types would declare the name.
-      expect(coreTypeErrors(`export const probe = ${name};\n`).join("\n")).toContain(
+      expect(typeErrors("core", `export const probe = ${name};\n`).join("\n")).toContain(
         `Cannot find name '${name}'.`,
       );
     });
 
     it("allows standard JavaScript", () => {
-      expect(coreTypeErrors("export const probe = [3, 1, 2].toSorted((a, b) => a - b);\n")).toEqual([]);
+      expect(typeErrors("core", "export const probe = [3, 1, 2].toSorted((a, b) => a - b);\n")).toEqual([]);
     });
   });
 
@@ -80,10 +80,32 @@ describe("architecture boundaries", () => {
       expect(await violations("packages/connector-folder/src/probe.ts", "../../core/src/index")).toEqual([]);
     });
 
-    it("rejects a connector importing the web app", async () => {
-      expect(
-        await violations("packages/connector-folder/src/probe.ts", "../../../apps/web/src/ui/index"),
-      ).toContain("boundaries/dependencies");
+    it.each([
+      "../../../apps/web/src/ui/index",
+      "../../../apps/relay/src/index",
+      "../../provider-anthropic/src/index",
+      "../../connector-notion/src/index",
+    ])("rejects a connector importing %s", async (target) => {
+      expect(await violations("packages/connector-folder/src/probe.ts", target)).toContain(
+        "boundaries/dependencies",
+      );
+    });
+
+    // The folder connector runs in the browser: it gets the File System Access API but no Node globals.
+    it("lets the folder connector use the File System Access API", () => {
+      const code =
+        "export async function probe(folder: FileSystemDirectoryHandle): Promise<string[]> {\n" +
+        "  const names: string[] = [];\n" +
+        "  for await (const entry of folder.values()) names.push(entry.name);\n" +
+        "  return names;\n" +
+        "}\n";
+      expect(typeErrors("connector-folder", code)).toEqual([]);
+    });
+
+    it.each(["process", "Buffer", "require"])("gives the folder connector no `%s` global", (name) => {
+      expect(typeErrors("connector-folder", `export const probe = ${name};\n`).join("\n")).toContain(
+        `Cannot find name '${name}'.`,
+      );
     });
 
     it("rejects a provider importing a connector", async () => {
