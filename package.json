@@ -11,7 +11,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p packages/core --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p packages/core --noEmit && tsc -p packages/connector-folder --noEmit",
     "docs:api": "typedoc",
     "knip": "knip",
     "test": "vitest run",

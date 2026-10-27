@@ -261,6 +261,10 @@ importers:
         specifier: 5.0.5
         version: 5.0.5(@types/node@26.6.5)(vite@8.3.5(@types/node@26.6.5)(jiti@2.7.0)(yaml@2.9.1))
 
+  packages/connector-folder: {}
+
+  packages/core: {}
+
 packages:
 
   '@babel/code-frame@7.29.7':

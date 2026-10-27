@@ -1,0 +1,11 @@
+{
+  "name": "@pharoam/connector-folder",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pharoam's local folder connector: profile records as Markdown files in a folder the user picks.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}
