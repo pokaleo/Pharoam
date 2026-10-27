@@ -1,0 +1,11 @@
+{
+  "name": "@pharoam/core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pharoam's pure core: profile model, schemas, shown-level and gap logic, and the core service.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}
