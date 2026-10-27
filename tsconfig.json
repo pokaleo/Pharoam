@@ -8,6 +8,6 @@
     "allowImportingTsExtensions": true,
     "erasableSyntaxOnly": true
   },
-  "include": ["tooling/**/*", "*.config.ts"],
+  "include": ["tooling/**/*", "*.config.ts", "packages/*/src/**/*"],
   "exclude": ["tooling/**/__fixtures__/**"]
 }

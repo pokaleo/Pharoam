@@ -186,7 +186,7 @@ export function checkStaged(...)
 **Checks:**
 - `eslint-plugin-jsdoc` runs while editing, at commit and in CI.
 - `pnpm docs:api` builds the reference with TypeDoc. It fails on any undocumented export or broken link, including what lint can't see, such as members of inline types.
-- The output (`api-docs/`) is not committed. Until `packages/` exist, the reference covers `tooling/`.
+- The output (`api-docs/`) is not committed. The reference covers `packages/*/src` and `tooling/`; each new package is added to `typedoc.json` and to the `typecheck` script.
 
 ## 12. Documentation
 

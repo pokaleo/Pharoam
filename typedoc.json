@@ -2,7 +2,7 @@
   "$schema": "https://typedoc.org/schema.json",
   "name": "Pharoam",
   "entryPointStrategy": "expand",
-  "entryPoints": ["tooling/guard", "tooling/eslint"],
+  "entryPoints": ["packages/core/src", "tooling/guard", "tooling/eslint"],
   "exclude": ["**/*.test.ts", "**/__fixtures__/**"],
   "tsconfig": "tsconfig.json",
   "out": "api-docs",

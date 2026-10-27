@@ -1,11 +1,13 @@
 import path from "node:path";
 import { ESLint } from "eslint";
+import ts from "typescript";
 import tseslint from "typescript-eslint";
 import { describe, expect, it } from "vitest";
 import { boundariesConfig } from "./boundaries.ts";
 
 // Architecture boundaries from ADR-0003 and ENGINEERING §3.
 const fixtureRoot = path.join(import.meta.dirname, "__fixtures__", "boundaries");
+const repoRoot = path.join(import.meta.dirname, "..", "..");
 
 const eslint = new ESLint({
   cwd: fixtureRoot,
@@ -25,6 +27,23 @@ async function violations(fromFile: string, importPath: string): Promise<string[
   return (result?.messages ?? []).map((m) => m.ruleId ?? `fatal: ${m.message}`);
 }
 
+// Type errors for a file in packages/core, checked with the package's real tsconfig.
+function coreTypeErrors(code: string): string[] {
+  const configPath = path.join(repoRoot, "packages", "core", "tsconfig.json");
+  const read = ts.readConfigFile(configPath, (file) => ts.sys.readFile(file));
+  if (read.error) throw new Error(ts.flattenDiagnosticMessageText(read.error.messageText, "\n"));
+  const config: unknown = read.config;
+  const { options } = ts.parseJsonConfigFileContent(config, ts.sys, path.dirname(configPath));
+  const probe = path.join(repoRoot, "packages", "core", "src", "probe.ts");
+  const host = ts.createCompilerHost(options);
+  const readFile = host.readFile.bind(host);
+  host.readFile = (file) => (file === probe ? code : readFile(file));
+  const fileExists = host.fileExists.bind(host);
+  host.fileExists = (file) => file === probe || fileExists(file);
+  const program = ts.createProgram([probe], options, host);
+  return ts.getPreEmitDiagnostics(program).map((d) => ts.flattenDiagnosticMessageText(d.messageText, "\n"));
+}
+
 describe("architecture boundaries", () => {
   describe("packages/core stays pure", () => {
     it("rejects importing a connector", async () => {
@@ -41,6 +60,18 @@ describe("architecture boundaries", () => {
 
     it("allows importing itself", async () => {
       expect(await violations("packages/core/src/probe.ts", "./index")).toEqual([]);
+    });
+
+    // The core runs in the browser and in Node, so it may use neither's globals; I/O is passed in.
+    it.each(["document", "window", "localStorage", "fetch", "process"])("has no `%s` global", (name) => {
+      // TypeScript may add a hint after the message, such as which lib or types would declare the name.
+      expect(coreTypeErrors(`export const probe = ${name};\n`).join("\n")).toContain(
+        `Cannot find name '${name}'.`,
+      );
+    });
+
+    it("allows standard JavaScript", () => {
+      expect(coreTypeErrors("export const probe = [3, 1, 2].toSorted((a, b) => a - b);\n")).toEqual([]);
     });
   });
 
