@@ -70,6 +70,20 @@ describe("content and data", () => {
     expect(references.filter((reference) => !slugs.has(reference.split(" → ")[1] ?? ""))).toEqual([]);
   });
 
+  it("names each pathway file after its slug, and requires only skills in the vocabulary (MVP S8.3)", () => {
+    const slugs = new Set<string>(skills.map((skill) => skill.slug));
+    const pathwayFiles = files.filter((file) => file.startsWith("content/pathways/"));
+    for (const file of pathwayFiles) {
+      const pathway = PathwayRecord.parse(top(file));
+      expect(file).toBe(`content/pathways/${pathway.slug}.md`);
+      const skillsUsed = [...pathway.requirements.map((r) => r.skill), ...pathway.transferable];
+      expect(
+        skillsUsed.filter((skill) => !slugs.has(skill)),
+        file,
+      ).toEqual([]);
+    }
+  });
+
   it("credits every skill's source and licence (PRD I1)", () => {
     expect(
       skills.filter((skill) => !["MIND Tech Ontology", "Pharoam"].includes(skill.origin.source)),
