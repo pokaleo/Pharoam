@@ -5,4 +5,9 @@
  * so the core never knows which backend it is using (ADR-0003, ADR-0013, MVP §3).
  * @packageDocumentation
  */
-export {};
+export {
+  createFolderConnector,
+  requestAccess,
+  type FileHandle,
+  type FolderHandle,
+} from "./folder-connector.ts";

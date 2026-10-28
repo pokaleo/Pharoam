@@ -110,7 +110,8 @@ export const CONNECTOR_CHECKS: readonly ConnectorCheck[] = [
   check("never creates a record over one already at its location", async (setup) => {
     const { connector, readOutside } = await setup();
     const created = value(await connector.create(RECORD), "Creating");
-    const again = await connector.create(withTopField(RECORD, "title", "Overwritten"));
+    // Same record, so the same location in any layout, but different content.
+    const again = await connector.create(withTopField(RECORD, "skills", ["rust"]));
     same(errorKind(again, "Creating over an existing record"), "exists", "The error");
     same(await readOutside(created.location), printRecordFile(RECORD), "The stored text");
   }),
