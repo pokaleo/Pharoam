@@ -28,6 +28,20 @@ export {
   type NotCanonicalError,
 } from "./integrity.ts";
 export {
+  createCoreService,
+  type AttentionItem,
+  type CoreService,
+  type CoreServiceOptions,
+  type CreateError,
+  type LoadedRecord,
+  type ReadError,
+  type SaveError,
+  type StorageConnector,
+  type StorageError,
+  type StoredRef,
+  type WriteError,
+} from "./core-service.ts";
+export {
   createRecordFile,
   parseRecordFile,
   printRecordFile,
