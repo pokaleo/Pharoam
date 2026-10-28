@@ -63,7 +63,7 @@ Practices (ADR-0018). Those marked *lint* are checked by ESLint (`tooling/eslint
 
 | Layer | Tool | Rule |
 |---|---|---|
-| Core | Vitest | Test-first; target **90%+ coverage** for `packages/core` |
+| Core | Vitest | Test-first; **90%+ coverage** for `packages/core` on lines, branches, functions and statements. `pnpm test:coverage` fails below it and runs in `pnpm check` and CI; plain `pnpm test` skips coverage, so one test file can run on its own |
 | File format | Vitest | **Round-trip tests**: read → write keeps unknown fields, comments and field order, over a **corpus of real-world files**, not just clean ones: edited in Obsidian, exported from Notion, CRLF line endings, a byte-order mark, tabs, a missing closing `---`, duplicate keys, anchors, YAML 1.1 values like `yes`. Malformed files must land in "Needs attention" and never be rewritten. **Fingerprint tests** pin the canonical form with fixed examples (data model §4). |
 | Connectors | Vitest | Every connector passes the **shared connector test suite**: conflicts, including a file changed **between Pharoam's read and its write**; change listing; attachments |
 | AI tasks | Vitest | **Recorded responses**; CI never calls a live model. An optional evaluation set runs before a task's version is bumped. |

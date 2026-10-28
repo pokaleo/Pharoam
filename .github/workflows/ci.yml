@@ -32,8 +32,8 @@ jobs:
         run: pnpm format:check
       - name: Type check
         run: pnpm typecheck
-      - name: Tests
-        run: pnpm test
+      - name: Tests and core coverage
+        run: pnpm test:coverage
       - name: Hard rules (content checks)
         run: pnpm guard
       - name: Unused files, exports and dependencies

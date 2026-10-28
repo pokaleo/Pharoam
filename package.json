@@ -16,7 +16,8 @@
     "knip": "knip",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm guard && pnpm knip && pnpm docs:api",
+    "test:coverage": "vitest run --coverage",
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test:coverage && pnpm guard && pnpm knip && pnpm docs:api",
     "prepare": "husky",
     "guard": "node tooling/guard/bin/check-repo.ts",
     "guard:unlock": "node tooling/guard/bin/unlock.ts"
@@ -27,6 +28,7 @@
     "@commitlint/types": "21.2.3",
     "@eslint/js": "10.0.1",
     "@types/node": "26.6.5",
+    "@vitest/coverage-v8": "5.0.5",
     "eslint": "10.13.0",
     "eslint-config-prettier": "10.1.8",
     "eslint-import-resolver-typescript": "4.4.5",

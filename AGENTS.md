@@ -83,6 +83,7 @@ Node 26 (`.nvmrc`), pnpm 12 (exact version pinned in `package.json`; pnpm switch
 |---|---|
 | `pnpm install` | Install dependencies (build scripts are denied unless listed in `pnpm-workspace.yaml`) |
 | `pnpm test` / `pnpm test:watch` | Vitest |
+| `pnpm test:coverage` | Vitest with coverage; fails if `packages/core` drops below 90% |
 | `pnpm lint` | ESLint, including the architecture boundary rules |
 | `pnpm format` / `pnpm format:check` | Prettier (code, JSON, YAML; not Markdown) |
 | `pnpm typecheck` | TypeScript |
