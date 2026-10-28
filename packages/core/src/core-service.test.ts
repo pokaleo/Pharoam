@@ -82,6 +82,21 @@ describe("opening a profile", () => {
     expect(service.needsAttention()).toHaveLength(3);
   });
 
+  it("puts a file that isn't text under Needs attention", async () => {
+    const storage = createMemoryConnector({ "evidence/latin1.md": "x" });
+    const service = createCoreService({
+      storage: {
+        ...storage.connector,
+        read: () =>
+          Promise.resolve({ ok: false, error: { kind: "unreadable", error: { kind: "not-utf8" } } }),
+      },
+    });
+    await service.open();
+    expect(service.needsAttention()).toEqual([
+      { location: "evidence/latin1.md", problem: { kind: "unreadable", error: { kind: "not-utf8" } } },
+    ]);
+  });
+
   it("keeps only the first of two records with the same ID, and says which", async () => {
     const { service } = await opened({ "evidence/a.md": EVIDENCE_FILE, "evidence/a-copy.md": EVIDENCE_FILE });
     expect(service.records().map((r) => r.location)).toEqual(["evidence/a.md"]);

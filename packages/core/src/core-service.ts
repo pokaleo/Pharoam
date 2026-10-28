@@ -28,11 +28,18 @@ export interface StoredRef {
   readonly version: string;
 }
 
+/**
+ * Why stored content isn't a record file: the codec's reason, or `not-utf8` for bytes that aren't UTF-8 text.
+ *
+ * @remarks Decoding such bytes would replace characters, and a later save would write the damage back.
+ */
+export type UnreadableError = RecordFileError | { readonly kind: "not-utf8" };
+
 /** Why a connector couldn't read a record. */
 export type ReadError =
   | StorageError
   | { readonly kind: "not-found" }
-  | { readonly kind: "unreadable"; readonly error: RecordFileError };
+  | { readonly kind: "unreadable"; readonly error: UnreadableError };
 
 /** Why a connector couldn't replace or delete a record; `conflict` means it changed since it was read. */
 export type WriteError = StorageError | { readonly kind: "not-found" } | { readonly kind: "conflict" };
@@ -87,7 +94,7 @@ export interface LoadedRecord {
 /**
  * A record the person needs to look at; it is left out of every calculation and never rewritten (MVP S12.2).
  *
- * @remarks `unreadable`: the file isn't a record file; `invalid`: its fields don't match its schema;
+ * @remarks `unreadable`: the file isn't a record file, or isn't UTF-8 text; `invalid`: its fields don't match its schema;
  * `duplicate-id`: another record already has its ID; `unavailable`: storage failed while reading it.
  */
 export interface AttentionItem {
@@ -95,7 +102,7 @@ export interface AttentionItem {
   readonly location: string;
   /** What is wrong with it. */
   readonly problem:
-    | { readonly kind: "unreadable"; readonly error: RecordFileError }
+    | { readonly kind: "unreadable"; readonly error: UnreadableError }
     | { readonly kind: "invalid"; readonly error: ProfileRecordError }
     | { readonly kind: "duplicate-id"; readonly id: string; readonly keptAt: string }
     | StorageError;

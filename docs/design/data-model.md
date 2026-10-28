@@ -189,8 +189,8 @@ Pharoam/                              ← the folder the user chooses
 │   ├── python.md                     ← history + proficiency for one skill
 │   └── postgres.md
 ├── evidence/
-│   ├── backend-engineer-example-co--0192f3a1.md
-│   ├── diagnostic-python-2026-10--0192f3c2.md
+│   ├── backend-engineer-example-co--6a7b8c9d.md
+│   ├── diagnostic-python-2026-10--4e1b9a07.md
 │   └── _attachments/0192f3a1/original-input.txt
 ├── aspirations/
 ├── plans/
@@ -198,7 +198,8 @@ Pharoam/                              ← the folder the user chooses
 └── sessions/                         ← unfinished workflows (e.g. a paused diagnostic)
 ```
 
-- Skill files are named by skill slug. Other files are named by a readable title plus a short ID. Pharoam relies only on the IDs inside the files.
+- Skill files are named by skill slug, and gaps by pathway. Other files are named by a readable title plus a short ID: the last 8 hex digits of the record's UUIDv7, its random part (the first digits are a timestamp that records made within a minute share). Pharoam relies only on the IDs inside the files.
+- Records are found anywhere in the folder. Hidden folders (such as `.obsidian` or `.git`) and `_attachments` are skipped.
 - The layout is open to new folders for future features, for example generated CVs and a saved jobs bank (PRD H).
 
 ## 9. Skill references

@@ -39,6 +39,7 @@ export {
   type StorageConnector,
   type StorageError,
   type StoredRef,
+  type UnreadableError,
   type WriteError,
 } from "./core-service.ts";
 export {
