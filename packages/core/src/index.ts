@@ -31,6 +31,8 @@ export { err, ok, type Result } from "./result.ts";
 export { AiSkillLink, EvidenceRecord } from "./schemas/evidence.ts";
 export { AiProvenance, ConfirmedAiProvenance, Provenance } from "./schemas/fields.ts";
 export { GapRecord, GapRequirement } from "./schemas/gap.ts";
+export { PackManifest } from "./schemas/pack.ts";
+export { PathwayRecord, PathwayRequirement, SourceRef } from "./schemas/pathway.ts";
 export { PharoamRecord } from "./schemas/pharoam.ts";
 export {
   parseProfileRecord,
@@ -40,4 +42,6 @@ export {
   type ProfileRecordError,
   type ProfileRecordType,
 } from "./schemas/profile-record.ts";
+export { publishedJsonSchemas } from "./schemas/published.ts";
 export { Observation, Proficiency, Review, SkillRecord } from "./schemas/skill-record.ts";
+export { SkillEntry } from "./schemas/skill.ts";

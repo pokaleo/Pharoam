@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pharoam profile record (pharoam.md), format 1",
+  "description": "The top block of a Pharoam file whose `schema` is `pharoam/1`.",
+  "type": "object",
+  "properties": {
+    "schema": { "type": "string", "const": "pharoam/1" },
+    "id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "created": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+    },
+    "updated": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+    },
+    "ai": {
+      "default": null,
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "task": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*@[1-9]\\d*$" },
+            "model": { "type": "string", "minLength": 1 },
+            "at": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+            },
+            "confirmed_by_user": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+            }
+          },
+          "required": ["task", "model", "at"]
+        },
+        { "type": "null" }
+      ]
+    },
+    "headline": { "type": "string" },
+    "situation": {
+      "type": "object",
+      "properties": {
+        "stage": { "type": "string", "enum": ["studying", "working", "between-roles", "changing-career"] },
+        "field": { "type": ["string", "number"] }
+      },
+      "required": ["stage"]
+    },
+    "region": { "type": "string", "pattern": "^[A-Z]{2}$" },
+    "focus": {
+      "type": "object",
+      "properties": {
+        "pathways": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^(?=.{1,64}$)[a-z0-9]+(?:-[a-z0-9]+)*$" }
+        },
+        "skills": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^(?=.{1,64}$)[a-z0-9]+(?:-[a-z0-9]+)*$" }
+        }
+      }
+    },
+    "preferences": {
+      "type": "object",
+      "properties": {
+        "mode": { "default": "minimal", "type": "string", "enum": ["minimal", "ai-assisted"] },
+        "language": { "type": "string", "pattern": "^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$" },
+        "model_provider": { "type": "string", "minLength": 1 }
+      }
+    }
+  },
+  "required": ["schema", "id", "created"]
+}

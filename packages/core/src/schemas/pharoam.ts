@@ -6,7 +6,7 @@
  * @packageDocumentation
  */
 import { z } from "zod";
-import { ENVELOPE_FIELDS, PathwaySlugField, SkillSlugField, TextField } from "./fields.ts";
+import { ENVELOPE_FIELDS, LanguageTagField, PathwaySlugField, SkillSlugField, TextField } from "./fields.ts";
 
 /** The `pharoam/1` record's top block. */
 export const PharoamRecord = z.object({
@@ -38,10 +38,7 @@ export const PharoamRecord = z.object({
     .object({
       mode: z.literal(["minimal", "ai-assisted"]).default("minimal"),
       /** The interface language as a BCP 47 tag, such as `en-GB`. */
-      language: z
-        .string()
-        .regex(/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/)
-        .optional(),
+      language: LanguageTagField.optional(),
       /** The chosen model provider, such as `anthropic`. */
       model_provider: z.string().min(1).optional(),
     })

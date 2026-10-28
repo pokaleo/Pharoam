@@ -26,6 +26,18 @@ export const SkillSlugField = z
   .regex(SLUG_PATTERN)
   .transform((value) => value as SkillSlug);
 
+/**
+ * A skill in Pharoam's inventory, named by its slug.
+ *
+ * @remarks Slugs starting with `custom-` are kept for the person's own skills, which never match a pathway
+ * requirement (MVP S8.3).
+ */
+export const InventorySkillSlugField = z
+  .string()
+  .regex(SLUG_PATTERN)
+  .regex(/^(?!custom-)/, "Slugs starting with custom- are for the person's own skills.")
+  .transform((value) => value as SkillSlug);
+
 /** A pathway named by its slug, such as `ml-engineer`. */
 export const PathwaySlugField = z
   .string()
@@ -53,6 +65,12 @@ export const PartialDateField = z
 
 /** A web link: an absolute `http` or `https` URL, so a link can never run script (hard rule 10). */
 export const HttpUrlField = z.url({ protocol: /^https?$/ });
+
+/** A language as a BCP 47 tag, such as `en` or `en-GB`. */
+export const LanguageTagField = z.string().regex(/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/);
+
+/** A licence named by its SPDX identifier, such as `MIT` or `CC-BY-SA-4.0`, or a `LicenseRef-` of its own. */
+export const SpdxIdField = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9.+-]*$/);
 
 /** An integrity fingerprint: `sha256-` and the rule name, then 64 lowercase hex digits (data model §4). */
 export const IntegrityField = z.string().regex(/^sha256-[a-z0-9]+:[0-9a-f]{64}$/);

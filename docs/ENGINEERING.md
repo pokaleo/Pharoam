@@ -115,7 +115,7 @@ Every PR runs:
 6. end-to-end tests with accessibility checks;
 7. commit message check (commitlint);
 8. dependency vulnerability scan and secret scanning;
-9. a check that the published JSON Schemas match the Zod definitions.
+9. a check that the published JSON Schemas in `schemas/` match the Zod definitions (`tooling/json-schemas.test.ts`; regenerate them with `pnpm test -u`).
 
 **Renovate** keeps dependencies updated. Every action is pinned to an exact commit SHA ([Security](design/security.md) §7).
 

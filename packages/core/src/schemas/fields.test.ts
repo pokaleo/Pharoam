@@ -4,10 +4,13 @@ import {
   CalendarDateField,
   HttpUrlField,
   IntegrityField,
+  InventorySkillSlugField,
+  LanguageTagField,
   LevelField,
   PartialDateField,
   ProfileRecordIdField,
   SkillSlugField,
+  SpdxIdField,
   TextField,
   TimestampField,
 } from "./fields.ts";
@@ -67,6 +70,24 @@ describe("record fields", () => {
     expect(ProfileRecordIdField.safeParse("0192F3A1-7C2E-7B44-9A1D-3E5F6A7B8C9D").success).toBe(false);
     expect(SkillSlugField.safeParse("custom-kdb-q").success).toBe(true);
     expect(SkillSlugField.safeParse("C++").success).toBe(false);
+  });
+
+  it("keeps custom- slugs out of the inventory (MVP S8.3)", () => {
+    expect(InventorySkillSlugField.safeParse("python").success).toBe(true);
+    expect(InventorySkillSlugField.safeParse("custom-kdb-q").success).toBe(false);
+  });
+
+  it.each(["en", "en-GB", "zh-Hant-TW"])("accepts the language tag %s", (value) => {
+    expect(LanguageTagField.safeParse(value).success).toBe(true);
+  });
+
+  it.each(["EN", "english", "en_GB"])("rejects the language tag %s", (value) => {
+    expect(LanguageTagField.safeParse(value).success).toBe(false);
+  });
+
+  it("names licences by SPDX identifier", () => {
+    expect(SpdxIdField.safeParse("CC-BY-SA-4.0").success).toBe(true);
+    expect(SpdxIdField.safeParse("CC BY-SA 4.0").success).toBe(false);
   });
 
   it("accepts an integrity fingerprint under any rule name", () => {

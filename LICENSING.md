@@ -2,16 +2,17 @@
 
 Pharoam's **code is open source**. Pharoam's **brand and design system are not**: they are the founder's own assets. This page says which is which, so that nobody (us included) mixes them up.
 
-This page explains the licences. Where it and a licence text differ, the licence text wins: [LICENSE](LICENSE) for the code, [content/LICENSE](content/LICENSE) for the content, [data/LICENSE](data/LICENSE) for the skill vocabulary, the brand notice (below) for the brand files, and each third-party licence for its own files.
+This page explains the licences. Where it and a licence text differ, the licence text wins: [LICENSE](LICENSE) for the code, [content/LICENSE](content/LICENSE) for the content, [data/LICENSE](data/LICENSE) for the skill vocabulary, [schemas/LICENSE](schemas/LICENSE) for the published JSON Schemas, the brand notice (below) for the brand files, and each third-party licence for its own files.
 
 ## At a glance
 
 | What | Owner | Licence | Where |
 |---|---|---|---|
-| Source code, tests, tooling and configuration | The Pharoam authors | [AGPL-3.0-only](LICENSE) | This repository, outside `brand/`, `content/` and `data/` |
+| Source code, tests, tooling and configuration | The Pharoam authors | [AGPL-3.0-only](LICENSE) | This repository, outside `brand/`, `content/`, `data/` and `schemas/` |
 | Documentation (`docs/`, the README files) | The Pharoam authors | AGPL-3.0-only, as part of this repository | This repository |
 | Pathways and other content Pharoam writes | The Pharoam authors | [CC BY-SA 4.0](content/LICENSE) | `content/` |
 | The skill vocabulary (forked from the MIND Tech Ontology) | The MIND authors and the Pharoam authors | [MIT](data/LICENSE) | `data/` |
+| The published JSON Schemas for Pharoam's file formats | The Pharoam authors | [CC0 1.0](schemas/LICENSE): no conditions | `schemas/` |
 | The Pharoam name, logo and wordmark | The Pharoam founder | **Not licensed.** See [TRADEMARKS.md](TRADEMARKS.md) | `brand/` |
 | **The Pharoam design system** | The Pharoam founder | **All rights reserved. Not open source, not licensed** | **Outside this repository** |
 | Brand files the app or website uses (artwork, theme) | The Pharoam founder | All rights reserved, under the brand notice | `brand/` only |
@@ -21,7 +22,7 @@ This page explains the licences. Where it and a licence text differ, the licence
 
 ## The code: AGPL-3.0-only
 
-Everything in this repository outside `brand/`, `content/`, `data/` and the third-party folders is licensed under the GNU Affero General Public License v3.0 only. Anyone may use, study, change and share it, commercially too. Anyone who runs a modified version as a network service must offer that service's users its source code. Copyright stays with the original authors ([Charter](docs/CHARTER.md) §7).
+Everything in this repository outside `brand/`, `content/`, `data/`, `schemas/` and the third-party folders is licensed under the GNU Affero General Public License v3.0 only. Anyone may use, study, change and share it, commercially too. Anyone who runs a modified version as a network service must offer that service's users its source code. Copyright stays with the original authors ([Charter](docs/CHARTER.md) §7).
 
 ## Content and data: open, under their own licences
 
@@ -91,6 +92,7 @@ Outside pull requests are not accepted yet ([CONTRIBUTING](CONTRIBUTING.md)). Wh
 | A file from the design system | Only a finished file the app or website uses, only in `brand/` |
 | A third-party font, icon set, image or other asset | Check the licence is allowed; put it in its own folder with its licence text; list it in `THIRD_PARTY_NOTICES.md` |
 | Pathways or other content Pharoam writes | `content/`: it is CC BY-SA 4.0 |
+| A JSON Schema for a file format | Generated into `schemas/` from the Zod schemas; it is CC0 1.0 |
 | Skill or occupation data | `data/`, following [data/README.md](data/README.md): MIT data in `data/`, other licences in their own subfolder with LICENSE and NOTICE files and any required attribution |
 | Anything whose source or licence is unknown | Don't add it |
 
