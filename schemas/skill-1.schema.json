@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pharoam skill inventory entry, format 1",
+  "description": "The top block of a Pharoam file whose `schema` is `skill/1`.",
+  "type": "object",
+  "properties": {
+    "schema": { "type": "string", "const": "skill/1" },
+    "slug": {
+      "type": "string",
+      "allOf": [{ "pattern": "^(?=.{1,64}$)[a-z0-9]+(?:-[a-z0-9]+)*$" }, { "pattern": "^(?!custom-)" }]
+    },
+    "name": { "type": ["string", "number"] },
+    "aliases": { "type": "array", "items": { "type": ["string", "number"] } },
+    "description": { "type": "string" },
+    "domain": { "type": ["string", "number"] },
+    "relations": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "implies": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "allOf": [{ "pattern": "^(?=.{1,64}$)[a-z0-9]+(?:-[a-z0-9]+)*$" }, { "pattern": "^(?!custom-)" }]
+          }
+        },
+        "related": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "allOf": [{ "pattern": "^(?=.{1,64}$)[a-z0-9]+(?:-[a-z0-9]+)*$" }, { "pattern": "^(?!custom-)" }]
+          }
+        }
+      }
+    },
+    "levels": {
+      "type": "object",
+      "properties": {
+        "0": { "type": ["string", "number"] },
+        "1": { "type": ["string", "number"] },
+        "2": { "type": ["string", "number"] },
+        "3": { "type": ["string", "number"] },
+        "4": { "type": ["string", "number"] }
+      },
+      "required": ["0", "1", "2", "3", "4"]
+    },
+    "refs": {
+      "type": "object",
+      "properties": {
+        "esco": {
+          "type": "string",
+          "pattern": "^http:\\/\\/data\\.europa\\.eu\\/esco\\/skill\\/[0-9a-f-]+$"
+        },
+        "wikidata": { "type": "string", "pattern": "^Q[1-9]\\d*$" },
+        "github_topic": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,49}$" }
+      }
+    },
+    "origin": {
+      "type": "object",
+      "properties": {
+        "source": { "type": ["string", "number"] },
+        "url": { "type": "string", "format": "uri" },
+        "licence": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9.+-]*$" }
+      },
+      "required": ["source", "licence"]
+    },
+    "status": { "default": "active", "type": "string", "enum": ["active", "deprecated"] },
+    "replaced_by": {
+      "type": "string",
+      "allOf": [{ "pattern": "^(?=.{1,64}$)[a-z0-9]+(?:-[a-z0-9]+)*$" }, { "pattern": "^(?!custom-)" }]
+    }
+  },
+  "required": ["schema", "slug", "name", "domain", "origin"]
+}

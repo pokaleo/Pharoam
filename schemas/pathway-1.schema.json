@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pharoam pathway, format 1",
+  "description": "The top block of a Pharoam file whose `schema` is `pathway/1`.",
+  "type": "object",
+  "properties": {
+    "schema": { "type": "string", "const": "pathway/1" },
+    "slug": { "type": "string", "pattern": "^(?=.{1,64}$)[a-z0-9]+(?:-[a-z0-9]+)*$" },
+    "title": { "type": ["string", "number"] },
+    "summary": { "type": ["string", "number"] },
+    "requirements": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "skill": {
+            "type": "string",
+            "allOf": [{ "pattern": "^(?=.{1,64}$)[a-z0-9]+(?:-[a-z0-9]+)*$" }, { "pattern": "^(?!custom-)" }]
+          },
+          "level": { "type": "integer", "minimum": 0, "maximum": 4 },
+          "importance": { "type": "string", "enum": ["core", "helpful"] },
+          "sources": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": { "type": ["string", "number"] },
+                "url": { "type": "string", "format": "uri" },
+                "accessed": {
+                  "type": "string",
+                  "format": "date",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                }
+              },
+              "required": ["title"]
+            }
+          }
+        },
+        "required": ["skill", "level", "importance", "sources"]
+      }
+    },
+    "prerequisites": { "type": "array", "items": { "type": ["string", "number"] } },
+    "transferable": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "allOf": [{ "pattern": "^(?=.{1,64}$)[a-z0-9]+(?:-[a-z0-9]+)*$" }, { "pattern": "^(?!custom-)" }]
+      }
+    },
+    "uncertainties": { "type": "array", "items": { "type": ["string", "number"] } },
+    "investment": {
+      "type": "object",
+      "properties": {
+        "time": {
+          "type": "object",
+          "properties": {
+            "min": { "type": "number", "minimum": 0 },
+            "max": { "type": "number", "minimum": 0 },
+            "unit": { "type": "string", "enum": ["hours", "weeks", "months", "years"] },
+            "sources": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": ["string", "number"] },
+                  "url": { "type": "string", "format": "uri" },
+                  "accessed": {
+                    "type": "string",
+                    "format": "date",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                  }
+                },
+                "required": ["title"]
+              }
+            }
+          },
+          "required": ["min", "max", "unit", "sources"]
+        },
+        "cost": {
+          "type": "object",
+          "properties": {
+            "min": { "type": "number", "minimum": 0 },
+            "max": { "type": "number", "minimum": 0 },
+            "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+            "region": { "type": "string", "pattern": "^[A-Z]{2}$" },
+            "sources": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": ["string", "number"] },
+                  "url": { "type": "string", "format": "uri" },
+                  "accessed": {
+                    "type": "string",
+                    "format": "date",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                  }
+                },
+                "required": ["title"]
+              }
+            }
+          },
+          "required": ["min", "max", "currency", "sources"]
+        }
+      }
+    },
+    "occupations": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^http:\\/\\/data\\.europa\\.eu\\/esco\\/occupation\\/[0-9a-f-]+$"
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": { "type": ["string", "number"] },
+          "url": { "type": "string", "format": "uri" },
+          "accessed": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          }
+        },
+        "required": ["title"]
+      }
+    },
+    "review": {
+      "type": "object",
+      "properties": {
+        "by": { "type": ["string", "number"] },
+        "at": {
+          "type": "string",
+          "format": "date",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+        }
+      },
+      "required": ["by", "at"]
+    },
+    "ai": {
+      "default": null,
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "task": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*@[1-9]\\d*$" },
+            "model": { "type": "string", "minLength": 1 },
+            "at": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+            },
+            "confirmed_by_user": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+            }
+          },
+          "required": ["task", "model", "at"]
+        },
+        { "type": "null" }
+      ]
+    }
+  },
+  "required": ["schema", "slug", "title", "summary", "requirements", "review"]
+}
