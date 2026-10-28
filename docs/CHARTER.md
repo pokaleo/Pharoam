@@ -146,7 +146,7 @@ Step 5, more fields, multi-language support, more connectors and browsers, and l
 - **No servers holding user data, and none run by the project** (R11). The official app is a static site on GitHub Pages, so running costs stay near zero.
 - **No AI cost to the project.** Users bring their own model key, or an operator pays for its own users.
 - **Browser limits.** Storage reached directly from the browser depends on browser support; the first connector (a local folder) works in desktop Chromium browsers only.
-- **Licences.** Code is AGPL-3.0-only. Skill and occupation data keep their own licences (MIT for the MIND fork, ESCO's attribution terms), kept apart in `data/`. The brand and design system are the founder's own, not open source, kept apart in `brand/` and outside the repository (§7).
+- **Licences.** Code is AGPL-3.0-only. Content Pharoam writes, such as pathways, is CC BY-SA 4.0, kept in `content/`. Skill and occupation data keep their own licences (MIT for the MIND fork, ESCO's attribution terms), kept apart in `data/`. The brand and design system are the founder's own, not open source, kept apart in `brand/` and outside the repository (§7).
 - **Closed to outside pull requests** until contributor terms exist (§7).
 - **Accessible and translatable from the start:** WCAG 2.2 AA and English first, with no hard-coded interface text.
 

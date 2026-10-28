@@ -1,0 +1,16 @@
+Pharoam skill vocabulary
+Copyright (c) 2026 The Pharoam authors
+
+The files in this folder are licensed under the MIT License (see LICENSE),
+except any subfolder that holds its own LICENSE file.
+
+This folder contains material from the following work:
+
+MIND Tech Ontology
+Copyright (c) 2025 or-mihai-or-gheorghe
+Licensed under the MIT License
+https://github.com/MIND-TechAI/MIND-tech-ontology
+
+Pharoam has changed this material: it selects a subset of the skills, gives
+each one a stable Pharoam slug, and adds level descriptions and
+cross-references. Each file's `origin` field names the source it came from.
