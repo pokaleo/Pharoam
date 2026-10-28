@@ -11,16 +11,17 @@
 **Connectors exchange records in the standard shape, not raw files.** File-based connectors (local folder, Obsidian, Git) share one **Markdown codec** that turns a record into a `.md` file (top block plus body) and back. The Notion connector maps records to database properties and page content. The core never knows which backend it is using.
 
 ```ts
-interface StorageConnector {
-  capabilities: { attachments: boolean; watch: boolean; offlineQueue: boolean }
-  list(type?: RecordType): RecordSummary[]           // id, type, version token
-  read(id): Record
-  write(record, expectedVersion?): VersionToken      // fails if changed since read → conflict (AD10)
-  delete(id, expectedVersion?)
-  readAttachment(ref) / writeAttachment(ownerId, file)
-  changesSince(cursor): Change[]                     // for automatic refresh (AD10a)
+interface StorageConnector {                         // packages/core/src/core-service.ts; every call is async
+  list(): Result<StoredRef[]>                         // every record, valid or not: location + version token
+  read(location): Result<{ file, version }>           // not-found, or unreadable with the codec's error
+  create(file): Result<StoredRef>                     // where the layout puts it; never over an existing record
+  write(location, file, expectedVersion): Result<VersionToken>  // conflict if changed since read (AD10)
+  delete(location, expectedVersion): Result<void>     // conflict if changed since read
+  // Later: capabilities, readAttachment / writeAttachment, changesSince(cursor) for automatic refresh (AD10a)
 }
 ```
+
+- **Records are addressed by location, not by ID.** A location is a path for file connectors and a page for Notion, and the core treats it as opaque. A broken record has no readable ID but must still be listed under "Needs attention", so the core maps IDs to locations only after reading. Records are passed as record files: the top block's fields and the body, with what Pharoam doesn't know kept.
 
 - The **version token** detects conflicts: a file's modified time or content hash, or Notion's last-edited time.
 - **A local folder has no atomic compare-and-swap.** The connector checks the token again just before writing, and the browser commits the new content in one step, but an edit landing between that check and the write can still be lost. The window is kept as short as possible, and the connector suite tests it.

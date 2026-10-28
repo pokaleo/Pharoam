@@ -10,11 +10,11 @@ const read = (file: string): string => readFileSync(path.join(repoRoot, file), "
 describe("core coverage", () => {
   const coverage = config.test?.coverage;
 
-  it("measures only the core's source, not its tests", () => {
+  it("measures only the core's source, not its tests or test fixtures", () => {
     expect(coverage).toMatchObject({
       provider: "v8",
       include: ["packages/core/src/**/*.ts"],
-      exclude: ["**/*.test.ts"],
+      exclude: ["**/*.test.ts", "**/__fixtures__/**"],
     });
   });
 
