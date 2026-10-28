@@ -28,3 +28,16 @@ export {
   type YamlProblem,
 } from "./record-file.ts";
 export { err, ok, type Result } from "./result.ts";
+export { AiSkillLink, EvidenceRecord } from "./schemas/evidence.ts";
+export { AiProvenance, ConfirmedAiProvenance, Provenance } from "./schemas/fields.ts";
+export { GapRecord, GapRequirement } from "./schemas/gap.ts";
+export { PharoamRecord } from "./schemas/pharoam.ts";
+export {
+  parseProfileRecord,
+  PROFILE_RECORD_SCHEMAS,
+  type FieldIssue,
+  type ProfileRecord,
+  type ProfileRecordError,
+  type ProfileRecordType,
+} from "./schemas/profile-record.ts";
+export { Observation, Proficiency, Review, SkillRecord } from "./schemas/skill-record.ts";

@@ -46,9 +46,13 @@ export interface IdSource {
   readonly fillRandom: (bytes: Uint8Array) => void;
 }
 
-const UUIDV7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const MAX_SLUG_LENGTH = 64;
+/** The form of a profile record ID: a lowercase UUIDv7 (RFC 9562). */
+export const PROFILE_RECORD_ID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+/** The form of a content slug: lowercase letters and digits joined by single hyphens, at most 64 characters. */
+export const SLUG_PATTERN = /^(?=.{1,64}$)[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 const MAX_TIMESTAMP = 2 ** 48 - 1;
 const RANDOM_BITS = 74n;
 const RANDOM_LIMIT = 1n << RANDOM_BITS;
@@ -93,7 +97,7 @@ export function createProfileRecordIdGenerator(source: IdSource): () => ProfileR
  * @returns The ID, or an error when it isn't a lowercase UUIDv7.
  */
 export function parseProfileRecordId(value: string): Result<ProfileRecordId, InvalidIdError> {
-  return UUIDV7.test(value)
+  return PROFILE_RECORD_ID_PATTERN.test(value)
     ? ok(value as ProfileRecordId)
     : err({ kind: "invalid-id", expected: "uuidv7", value });
 }
@@ -107,7 +111,9 @@ export function parseProfileRecordId(value: string): Result<ProfileRecordId, Inv
  * @returns The slug, or an error when it isn't one.
  */
 export function parseSkillSlug(value: string): Result<SkillSlug, InvalidIdError> {
-  return isSlug(value) ? ok(value as SkillSlug) : err({ kind: "invalid-id", expected: "slug", value });
+  return SLUG_PATTERN.test(value)
+    ? ok(value as SkillSlug)
+    : err({ kind: "invalid-id", expected: "slug", value });
 }
 
 /**
@@ -118,11 +124,9 @@ export function parseSkillSlug(value: string): Result<SkillSlug, InvalidIdError>
  * @returns The slug, or an error when it isn't one.
  */
 export function parsePathwaySlug(value: string): Result<PathwaySlug, InvalidIdError> {
-  return isSlug(value) ? ok(value as PathwaySlug) : err({ kind: "invalid-id", expected: "slug", value });
-}
-
-function isSlug(value: string): boolean {
-  return value.length <= MAX_SLUG_LENGTH && SLUG.test(value);
+  return SLUG_PATTERN.test(value)
+    ? ok(value as PathwaySlug)
+    : err({ kind: "invalid-id", expected: "slug", value });
 }
 
 // 74 random bits from 10 random bytes.

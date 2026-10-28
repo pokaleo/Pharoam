@@ -103,7 +103,7 @@ Built and ran the payments API…
 
 ## 6. Skill records (one file per skill)
 
-Each skill the person has is **one `.md` file** (`skill-record`). Its top block holds an **append-only list** of that skill's observations and reviews, and its body shows a readable summary of the skill's history. Pharoam appends entries and never changes existing ones. Each entry carries its own `integrity` fingerprint (§4).
+Each skill the person has is **one `.md` file** (`skill-record`). Its top block holds the skill (`skill`, its inventory slug) and an **append-only list** of its observations and reviews (`entries`), and its body shows a readable summary of the skill's history. Pharoam appends entries and never changes existing ones. Each entry carries its own `integrity` fingerprint (§4).
 
 ### Provenance
 
@@ -125,7 +125,7 @@ Observation entry fields:
 - `supersedes`, `integrity`
 - `signature: null` (reserved)
 
-Review entries hold `target` (an observation ID), `decision: retract` and an optional note. AI judgements awaiting a decision are not entries; they wait in a review `session` (§10).
+Review entries hold `id`, `target` (an observation ID), `decision: retract`, `reviewed_at` and an optional `note`. AI judgements awaiting a decision are not entries; they wait in a review `session` (§10).
 
 ### Shown level
 
@@ -167,7 +167,7 @@ What each level means for a specific skill comes from that skill's **level descr
 ## 7. Evidence
 
 Each evidence item is **one `.md` file**. Evidence records what the person did; it **carries no level** (Charter R4).
-- **Common fields:** `kind`, `title`, `organisation`, `start`/`end` or `date`, `links`, `skills`, `attachments`, and `source` (manual, paste or import, plus where the original input is kept).
+- **Common fields:** `kind`, `title`, `organisation`, `start`/`end` or `date` (to the year, month or day: `2024`, `2024-09` or `2024-09-30`), `links` (`http` or `https` only), `skills`, `attachments`, and `source` (`manual`, `paste` or `import`; where the original input is kept goes in `original_input`).
 - **`skills`** lists the skills the item involved. They are entered by hand or proposed by AI and confirmed by the person (PRD B6). Confirmed AI-proposed links are also listed under `ai-skill-links` with the task, model, time and `confirmed_by_user`, so the record shows which links came from AI without labelling the whole record AI-made. AI tasks use these links to find a skill's evidence locally, without sending the whole profile (PRD D4).
 - **Extra fields per kind:** for example a module's course code, credits and grade; a certificate's issuer, credential ID and expiry; a repository's URL and the person's role.
 - **`assessment` evidence** is the full record of one diagnostic, in the top block for exact proof:
@@ -209,8 +209,8 @@ Profile records reference skills by **Pharoam inventory slug only** (for example
 
 ### `pharoam` (the central record, `pharoam.md`)
 - `headline`: the person's own one-line summary.
-- `situation`: studying, working, between roles or changing career, plus field.
-- `region`: optional, **country only** (pathway costs, salaries and qualifications vary by country).
+- `situation`: `stage` (`studying`, `working`, `between-roles` or `changing-career`), plus `field`.
+- `region`: optional, **country only**, as an ISO 3166-1 two-letter code such as `GB` (pathway costs, salaries and qualifications vary by country).
 - `focus`: pathways or skills currently being explored.
 - `preferences`: mode, language, chosen model provider (never the key).
 - **Never:** name, photo, contact details or exact location.
@@ -232,7 +232,7 @@ Profile records reference skills by **Pharoam inventory slug only** (for example
 
 ### `gap` (generated)
 - One per pathway being explored, with the pathway pinned to a version.
-- For each requirement: required level, the skill's shown level and its provenance, and the group (*supported*, *claimed*, *below* or *unknown*; PRD F3).
+- `requirements`, one per pathway requirement: `skill`, the `required` level, the skill's `shown` level and its provenance (or `null`), the `group` (*supported*, *claimed*, *below* or *unknown*; PRD F3), and the `evidence` a claimed level cites.
 - **Regenerated automatically** when the profile or the pathway changes, always shown to the user ("Updated just now"), with a manual refresh button. It needs no AI.
 - The body shows a readable summary, so the analysis is useful in Obsidian or Notion.
 
