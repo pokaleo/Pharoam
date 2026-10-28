@@ -17,4 +17,14 @@ export {
   type ProfileRecordId,
   type SkillSlug,
 } from "./ids.ts";
+export {
+  createRecordFile,
+  parseRecordFile,
+  printRecordFile,
+  withTopField,
+  type RecordFile,
+  type RecordFileError,
+  type RecordFileLayout,
+  type YamlProblem,
+} from "./record-file.ts";
 export { err, ok, type Result } from "./result.ts";
