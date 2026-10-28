@@ -85,7 +85,7 @@ describe("content and data", () => {
   });
 
   // Pathways whose required skills have their own level descriptions so far; #24 adds one pathway at a time.
-  const DESCRIBED_PATHWAYS = ["frontend-engineer", "backend-engineer"];
+  const DESCRIBED_PATHWAYS = ["frontend-engineer", "backend-engineer", "ml-engineer"];
 
   it.each(DESCRIBED_PATHWAYS)("describes each level of every skill %s requires (data model §6)", (slug) => {
     const pathway = PathwayRecord.parse(top(`content/pathways/${slug}.md`));
