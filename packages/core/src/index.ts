@@ -5,4 +5,16 @@
  * the relay and the tests share one implementation (ADR-0003).
  * @packageDocumentation
  */
-export {};
+export {
+  createProfileRecordIdGenerator,
+  parsePathwaySlug,
+  parseProfileRecordId,
+  parseSkillSlug,
+  type Brand,
+  type IdSource,
+  type InvalidIdError,
+  type PathwaySlug,
+  type ProfileRecordId,
+  type SkillSlug,
+} from "./ids.ts";
+export { err, ok, type Result } from "./result.ts";
