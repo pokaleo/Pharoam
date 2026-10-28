@@ -17,10 +17,11 @@ interface StorageConnector {                         // packages/core/src/core-s
   create(file): Result<StoredRef>                     // where the layout puts it; never over an existing record
   write(location, file, expectedVersion): Result<VersionToken>  // conflict if changed since read (AD10)
   delete(location, expectedVersion): Result<void>     // conflict if changed since read
-  // Later: capabilities, readAttachment / writeAttachment, changesSince(cursor) for automatic refresh (AD10a)
+  // Later: capabilities, readAttachment / writeAttachment
 }
 ```
 
+- **Changes are listed through version tokens** (AD10a): a token stays the same until its record changes, so comparing two listings shows what was added, changed or removed. This works for a folder, which has no change feed; a connector with one, such as Notion, may add a faster `changesSince` later.
 - **Records are addressed by location, not by ID.** A location is a path for file connectors and a page for Notion, and the core treats it as opaque. A broken record has no readable ID but must still be listed under "Needs attention", so the core maps IDs to locations only after reading. Records are passed as record files: the top block's fields and the body, with what Pharoam doesn't know kept.
 
 - The **version token** detects conflicts: a file's modified time or content hash, or Notion's last-edited time.
