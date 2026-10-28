@@ -34,8 +34,8 @@
 
 ## 2. IDs and references
 
-- **Profile records:** UUIDv7 (RFC 9562). Sorts by creation time and can be generated in the browser.
-- **Content records:** readable slugs (for example `python`, `ml-engineer`, `py-closures-01`).
+- **Profile records:** UUIDv7 (RFC 9562), written in lowercase. Sorts by creation time and can be generated in the browser. IDs made in the same millisecond still sort in the order they were made (RFC 9562 §6.2, method 2).
+- **Content records:** readable slugs (for example `python`, `ml-engineer`, `py-closures-01`): lowercase letters and digits joined by single hyphens, at most 64 characters, so a slug is also a safe file name.
 - **References always use IDs, never file names**, so renaming or moving a file breaks nothing.
 
 ## 3. Common envelope
