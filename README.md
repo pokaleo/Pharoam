@@ -70,6 +70,8 @@ Pharoam is at an early stage and **does not accept outside pull requests yet**. 
 ## Licence
 
 - **Code:** [GNU Affero General Public License v3.0 only](LICENSE) (`AGPL-3.0-only`).
+- **Content** (`content/`: pathways): [CC BY-SA 4.0](content/LICENSE).
+- **Skill vocabulary** (`data/`: forked from the MIND Tech Ontology): [MIT](data/LICENSE).
 - **Name, logo and design system:** the founder's own assets. They are not open source and not covered by the code licence; the design system is kept outside this repository. See the [trademark and brand policy](TRADEMARKS.md).
 - **Third-party libraries, fonts, icons and data:** their own licences.
 
