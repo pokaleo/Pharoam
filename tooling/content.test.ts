@@ -84,6 +84,17 @@ describe("content and data", () => {
     }
   });
 
+  // Pathways whose required skills have their own level descriptions so far; #24 adds one pathway at a time.
+  const DESCRIBED_PATHWAYS = ["frontend-engineer"];
+
+  it.each(DESCRIBED_PATHWAYS)("describes each level of every skill %s requires (data model §6)", (slug) => {
+    const pathway = PathwayRecord.parse(top(`content/pathways/${slug}.md`));
+    const undescribed = pathway.requirements
+      .map((requirement) => requirement.skill)
+      .filter((skill) => skills.find((s) => s.slug === skill)?.levels === undefined);
+    expect(undescribed).toEqual([]);
+  });
+
   it("credits every skill's source and licence (PRD I1)", () => {
     expect(
       skills.filter((skill) => !["MIND Tech Ontology", "Pharoam"].includes(skill.origin.source)),
