@@ -71,12 +71,14 @@ The user controls their storage, so **any file can be edited or deleted by hand*
 The value is `sha256-c1:` followed by 64 lowercase hex digits. `c1` names the rule below. A changed rule gets a new name; old values are still checked with the rule they name.
 
 1. **What is fingerprinted:** for a `skill-record` entry, that entry; for an assessment record, an object `{ "top": <top block>, "body": <body> }`.
-2. **Left out:** the `integrity` and `signature` fields at the top level of what is fingerprinted. A future signature signs the same form.
+2. **Left out:** the `integrity` and `signature` fields of the entry, or of the assessment record's top block. A future signature signs the same form.
 3. **Parsed values, not text:** YAML 1.2 core schema, so dates and times stay the strings written, and `yes` stays a string. Aliases are resolved. A duplicate key makes the record invalid (Needs attention), never fingerprinted.
 4. **Body text:** line endings become LF and trailing newlines at the end are removed. Nothing else changes; text is not Unicode-normalised.
 5. **Canonical form:** the result is serialised with the JSON Canonicalization Scheme (RFC 8785): keys sorted, no whitespace, one way to write each number. The fingerprint is the SHA-256 of its UTF-8 bytes.
 
 So **layout doesn't count as an edit**, but values do: quoting, indentation, comments, key order and line endings can change without a mismatch; changing any value, or adding or removing any field (including ones Pharoam doesn't know), is reported.
+
+An entry or record **without a valid fingerprint** was added outside Pharoam and is labelled the same way. A fingerprint naming a rule this Pharoam doesn't know, for example one written by a newer version, is reported as not checked rather than as edited.
 
 ## 5. AI provenance
 

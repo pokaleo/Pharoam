@@ -18,6 +18,16 @@ export {
   type SkillSlug,
 } from "./ids.ts";
 export {
+  canonicalJson,
+  checkEntry,
+  checkRecord,
+  entryFingerprint,
+  recordFingerprint,
+  sealEntry,
+  type IntegrityStatus,
+  type NotCanonicalError,
+} from "./integrity.ts";
+export {
   createRecordFile,
   parseRecordFile,
   printRecordFile,
