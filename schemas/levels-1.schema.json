@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pharoam shared level scale, format 1",
+  "description": "The top block of a Pharoam file whose `schema` is `levels/1`.",
+  "type": "object",
+  "properties": {
+    "schema": { "type": "string", "const": "levels/1" },
+    "levels": {
+      "type": "object",
+      "properties": {
+        "0": {
+          "type": "object",
+          "properties": {
+            "name": { "type": ["string", "number"] },
+            "description": { "type": ["string", "number"] }
+          },
+          "required": ["name", "description"]
+        },
+        "1": {
+          "type": "object",
+          "properties": {
+            "name": { "type": ["string", "number"] },
+            "description": { "type": ["string", "number"] }
+          },
+          "required": ["name", "description"]
+        },
+        "2": {
+          "type": "object",
+          "properties": {
+            "name": { "type": ["string", "number"] },
+            "description": { "type": ["string", "number"] }
+          },
+          "required": ["name", "description"]
+        },
+        "3": {
+          "type": "object",
+          "properties": {
+            "name": { "type": ["string", "number"] },
+            "description": { "type": ["string", "number"] }
+          },
+          "required": ["name", "description"]
+        },
+        "4": {
+          "type": "object",
+          "properties": {
+            "name": { "type": ["string", "number"] },
+            "description": { "type": ["string", "number"] }
+          },
+          "required": ["name", "description"]
+        }
+      },
+      "required": ["0", "1", "2", "3", "4"]
+    }
+  },
+  "required": ["schema", "levels"]
+}

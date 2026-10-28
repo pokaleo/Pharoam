@@ -13,6 +13,7 @@ Each record file names its format in its top block, for example `schema: evidenc
 | `skill/1` | [skill-1.schema.json](skill-1.schema.json) | An entry in the skill inventory |
 | `pathway/1` | [pathway-1.schema.json](pathway-1.schema.json) | A career pathway |
 | `pack/1` | [pack-1.schema.json](pack-1.schema.json) | A content pack's manifest |
+| `levels/1` | [levels-1.schema.json](levels-1.schema.json) | The shared level scale, 0 to 4 |
 
 ## What they check
 

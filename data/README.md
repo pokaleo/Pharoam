@@ -10,6 +10,23 @@ Files are Markdown with a YAML top block, checked by the `skill` schema and comp
 
 The vocabulary is forked from the [MIND Tech Ontology](https://github.com/MIND-TechAI/MIND-tech-ontology) (MIT). Pharoam's own changes and additions are MIT too, so the whole vocabulary stays under one licence.
 
+## What's here
+
+- **`levels.md`**: the shared level scale, 0 aware · 1 beginner · 2 working · 3 proficient · 4 expert (Charter P14), with what each level means.
+- **`skills/<slug>.md`**: one file per skill (`skill/1`). The file is named after the skill's slug, which never changes once published.
+
+The v0.1 vocabulary is about 300 skills chosen for the four v0.1 pathways (frontend, backend, machine-learning and applied AI engineer), from three sources. Each file's `origin` says which:
+
+| Source | What | `origin` |
+|---|---|---|
+| MIND Tech Ontology skills | Tools, languages, frameworks, databases and services, with MIND's synonyms as `aliases` and its "implies knowing" links as `relations` where both skills are here | MIND, linked to `__aggregated_skills.json` at the commit used |
+| MIND Tech Ontology concepts | Practices such as REST API design, test-driven development and retrieval-augmented generation, from MIND's concept files, under plain names (MIND's own label is kept as an alias) | MIND, linked to the concept file at the commit used |
+| Pharoam | Foundations MIND doesn't list (statistics, linear algebra, algorithms, system design, accessibility…) and current tools added after MIND's last update (Linux, Vitest, Zod, Ollama, the Model Context Protocol…) | `Pharoam` |
+
+Every skill sits in one of a few **domains** (Foundations, Programming languages, Frontend, Backend, Databases, Data and machine learning, AI and language models, Cloud and DevOps, Testing and quality, Architecture and design, Security), which the skill view can filter by (MVP S9.3).
+
+The MIND material comes from commit `2367527` (12 February 2025), MIND's latest. `tooling/content.test.ts` checks every file on each change: it validates against its schema, is named after its slug, and links only to skills that exist.
+
 ## Adding data from another source
 
 Data licences can't always be mixed. Before adding anything here:
