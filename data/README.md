@@ -14,6 +14,7 @@ The vocabulary is forked from the [MIND Tech Ontology](https://github.com/MIND-T
 
 - **`levels.md`**: the shared level scale, 0 aware · 1 beginner · 2 working · 3 proficient · 4 expert (Charter P14), with what each level means.
 - **`skills/<slug>.md`**: one file per skill (`skill/1`). The file is named after the skill's slug, which never changes once published.
+- **Skill-specific levels** (`levels` in a skill file): what each level 0–4 means for that skill, for the skills the pathways require (MVP §3). They are Pharoam's own, drafted with AI and reviewed by the founder before they are merged (PRD I3). Without them, the shared descriptions in `levels.md` apply.
 
 The v0.1 vocabulary is about 300 skills chosen for the four v0.1 pathways (frontend, backend, machine-learning and applied AI engineer), from three sources. Each file's `origin` says which:
 
