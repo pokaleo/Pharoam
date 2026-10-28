@@ -13,6 +13,7 @@ describe("published JSON Schemas", () => {
       "skill-1.schema.json",
       "pathway-1.schema.json",
       "pack-1.schema.json",
+      "levels-1.schema.json",
     ]);
   });
 

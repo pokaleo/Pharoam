@@ -8,6 +8,7 @@
  * @packageDocumentation
  */
 import { z } from "zod";
+import { LevelScale } from "./levels.ts";
 import { PackManifest } from "./pack.ts";
 import { PathwayRecord } from "./pathway.ts";
 import { PROFILE_RECORD_SCHEMAS } from "./profile-record.ts";
@@ -22,6 +23,7 @@ const PUBLISHED: readonly (readonly [type: string, label: string, schema: z.ZodT
   ["skill", "skill inventory entry", SkillEntry],
   ["pathway", "pathway", PathwayRecord],
   ["pack", "content pack manifest", PackManifest],
+  ["levels", "shared level scale", LevelScale],
 ];
 
 const VERSION = 1;

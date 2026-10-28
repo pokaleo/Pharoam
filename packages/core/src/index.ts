@@ -56,6 +56,7 @@ export { err, ok, type Result } from "./result.ts";
 export { AiSkillLink, EvidenceRecord } from "./schemas/evidence.ts";
 export { AiProvenance, ConfirmedAiProvenance, Provenance } from "./schemas/fields.ts";
 export { GapRecord, GapRequirement } from "./schemas/gap.ts";
+export { LevelScale } from "./schemas/levels.ts";
 export { PackManifest } from "./schemas/pack.ts";
 export { PathwayRecord, PathwayRequirement, SourceRef } from "./schemas/pathway.ts";
 export { PharoamRecord } from "./schemas/pharoam.ts";
