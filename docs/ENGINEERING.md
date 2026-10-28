@@ -65,7 +65,7 @@ Practices (ADR-0018). Those marked *lint* are checked by ESLint (`tooling/eslint
 |---|---|---|
 | Core | Vitest | Test-first; **90%+ coverage** for `packages/core` on lines, branches, functions and statements. `pnpm test:coverage` fails below it and runs in `pnpm check` and CI; plain `pnpm test` skips coverage, so one test file can run on its own |
 | File format | Vitest | **Round-trip tests**: read → write keeps unknown fields, comments and field order, over a **corpus of real-world files**, not just clean ones: edited in Obsidian, exported from Notion, CRLF line endings, a byte-order mark, tabs, a missing closing `---`, duplicate keys, anchors, YAML 1.1 values like `yes`. Malformed files must land in "Needs attention" and never be rewritten. **Fingerprint tests** pin the canonical form with fixed examples (data model §4). |
-| Connectors | Vitest | Every connector passes the **shared connector test suite**: conflicts, including a file changed **between Pharoam's read and its write**; change listing; attachments |
+| Connectors | Vitest | Every connector passes the **shared connector test suite** (`CONNECTOR_CHECKS` from `@pharoam/core/testing`, run with `it.each`): conflicts, including a file changed **between Pharoam's read and its write**; change listing; unknown fields and layout kept byte for byte; attachments when they arrive. The in-memory reference connector passes it, and each check is shown to fail on a broken connector |
 | AI tasks | Vitest | **Recorded responses**; CI never calls a live model. An optional evaluation set runs before a task's version is bumped. |
 | UI | Vitest + Testing Library | Behaviour-level component tests |
 | End to end | Playwright | Key journeys, with **axe** accessibility checks (WCAG 2.2 AA) |

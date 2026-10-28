@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { EVIDENCE_FILE, PHAROAM_FILE } from "./__fixtures__/profile-records.ts";
-import { memoryStorage } from "./__fixtures__/memory-storage.ts";
 import { createCoreService, type CoreService } from "./core-service.ts";
 import { sealEntry } from "./integrity.ts";
+import { createMemoryConnector, type MemoryConnector } from "./testing/memory-connector.ts";
 import {
   createRecordFile,
   parseRecordFile,
@@ -19,9 +19,9 @@ function file(text: string): RecordFile {
 
 async function opened(files: Readonly<Record<string, string>>): Promise<{
   service: CoreService;
-  storage: ReturnType<typeof memoryStorage>;
+  storage: MemoryConnector;
 }> {
-  const storage = memoryStorage(files);
+  const storage = createMemoryConnector(files);
   const service = createCoreService({ storage: storage.connector });
   const result = await service.open();
   if (!result.ok) throw new Error(result.error.kind);
@@ -118,10 +118,13 @@ describe("opening a profile", () => {
   });
 
   it("reports storage it can't reach", async () => {
-    const storage = memoryStorage({ "pharoam.md": PHAROAM_FILE });
+    const storage = createMemoryConnector({ "pharoam.md": PHAROAM_FILE });
     storage.loseAccess();
     const result = await createCoreService({ storage: storage.connector }).open();
-    expect(result).toEqual({ ok: false, error: { kind: "unavailable", reason: "Permission was revoked." } });
+    expect(result).toEqual({
+      ok: false,
+      error: { kind: "unavailable", reason: "Access to the storage was lost." },
+    });
   });
 });
 
@@ -131,7 +134,7 @@ describe("saving a record", () => {
     const changed = withTopField(file(EVIDENCE_WITH_EXTRAS), "title", "Senior Backend Engineer");
     const result = await service.update("evidence/a.md", changed);
     expect(result.ok).toBe(true);
-    expect(storage.files.get("evidence/a.md")?.text).toBe(
+    expect(storage.text("evidence/a.md")).toBe(
       EVIDENCE_WITH_EXTRAS.replace("title: Backend Engineer", "title: Senior Backend Engineer"),
     );
     expect(service.find("0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d")?.record).toMatchObject({
@@ -142,11 +145,11 @@ describe("saving a record", () => {
   it("returns a conflict, and writes nothing, after an outside change (AD10, MVP S12.1)", async () => {
     const { service, storage } = await opened({ "evidence/a.md": EVIDENCE_FILE });
     const outside = EVIDENCE_FILE.replace("Built and ran", "Designed and ran");
-    storage.editOutside("evidence/a.md", outside);
+    await storage.putOutside("evidence/a.md", outside);
 
     const result = await service.update("evidence/a.md", withTopField(file(EVIDENCE_FILE), "title", "Mine"));
     expect(result).toEqual({ ok: false, error: { kind: "conflict", location: "evidence/a.md" } });
-    expect(storage.files.get("evidence/a.md")?.text).toBe(outside);
+    expect(storage.text("evidence/a.md")).toBe(outside);
     expect(service.find("0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d")?.record).toMatchObject({
       title: "Backend Engineer",
     });
@@ -169,10 +172,10 @@ describe("saving a record", () => {
 
   it("reports a record deleted outside Pharoam since it was read", async () => {
     const { service, storage } = await opened({ "evidence/a.md": EVIDENCE_FILE });
-    storage.files.delete("evidence/a.md");
+    await storage.removeOutside("evidence/a.md");
     const result = await service.update("evidence/a.md", withTopField(file(EVIDENCE_FILE), "title", "Mine"));
     expect(result).toEqual({ ok: false, error: { kind: "not-found", location: "evidence/a.md" } });
-    expect(storage.files.has("evidence/a.md")).toBe(false);
+    expect(storage.text("evidence/a.md") !== undefined).toBe(false);
   });
 
   it("refuses to update a record it hasn't read", async () => {
@@ -210,7 +213,7 @@ describe("saving a record", () => {
       ok: false,
       error: { kind: "exists", location },
     });
-    expect(storage.files.get(location)?.text).toBe("# Not a record\n");
+    expect(storage.text(location)).toBe("# Not a record\n");
   });
 
   it("refuses to change a record's ID", async () => {
@@ -228,7 +231,7 @@ describe("saving a record", () => {
     storage.loseAccess();
     expect(await service.create(file(EVIDENCE_FILE))).toEqual({
       ok: false,
-      error: { kind: "unavailable", reason: "Permission was revoked." },
+      error: { kind: "unavailable", reason: "Access to the storage was lost." },
     });
     expect(service.records()).toEqual([]);
   });
@@ -237,6 +240,9 @@ describe("saving a record", () => {
     const { service, storage } = await opened({ "evidence/a.md": EVIDENCE_FILE });
     storage.loseAccess();
     const result = await service.update("evidence/a.md", withTopField(file(EVIDENCE_FILE), "title", "Mine"));
-    expect(result).toEqual({ ok: false, error: { kind: "unavailable", reason: "Permission was revoked." } });
+    expect(result).toEqual({
+      ok: false,
+      error: { kind: "unavailable", reason: "Access to the storage was lost." },
+    });
   });
 });
