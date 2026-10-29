@@ -84,6 +84,7 @@ Node 26 (`.nvmrc`), pnpm 12 (exact version pinned in `package.json`; pnpm switch
 | `pnpm install` | Install dependencies (build scripts are denied unless listed in `pnpm-workspace.yaml`) |
 | `pnpm test` / `pnpm test:watch` | Vitest |
 | `pnpm test:coverage` | Vitest with coverage; fails if `packages/core` drops below 90% |
+| `pnpm test:e2e` | Builds the web app and runs the Playwright journeys in Chromium, with axe in light and dark (needs `pnpm --filter @pharoam/web exec playwright install chromium` once). Runs in CI, not in `pnpm check` |
 | `pnpm lint` | ESLint, including the architecture boundary rules |
 | `pnpm format` / `pnpm format:check` | Prettier (code, JSON, YAML; not Markdown) |
 | `pnpm typecheck` | TypeScript |
