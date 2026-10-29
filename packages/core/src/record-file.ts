@@ -192,6 +192,20 @@ export function withTopField(file: RecordFile, key: string, value: unknown): Rec
   return { ...file, top: plainFields(document), document };
 }
 
+/**
+ * Returns a copy of a record file without one top-block field.
+ *
+ * @remarks Everything else in the file is unchanged, including fields Pharoam doesn't know (MVP S12.4).
+ * @param file - The record file to start from; it isn't changed.
+ * @param key - The field to remove; nothing is removed if the file doesn't have it.
+ * @returns The changed copy.
+ */
+export function withoutTopField(file: RecordFile, key: string): RecordFile {
+  const document = file.document.clone();
+  document.delete(key);
+  return { ...file, top: plainFields(document), document };
+}
+
 // Finds the top block between the opening `---` line and the next one.
 function splitTopBlock(content: string): Result<{ yaml: string; body: string }, RecordFileError> {
   const firstBreak = content.indexOf("\n");

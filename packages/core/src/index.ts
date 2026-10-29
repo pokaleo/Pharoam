@@ -34,7 +34,9 @@ export {
   type CoreServiceOptions,
   type CreateError,
   type CreateProfileError,
-  type NewProfile,
+  type OverviewError,
+  type ProfileChangeError,
+  type ProfileFields,
   type LoadedRecord,
   type ReadError,
   type SaveError,
@@ -44,6 +46,7 @@ export {
   type UnreadableError,
   type WriteError,
 } from "./core-service.ts";
+export { type OverviewFacts, type OverviewWriter } from "./overview.ts";
 export {
   compileContentPack,
   ContentPack,

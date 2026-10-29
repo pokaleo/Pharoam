@@ -218,6 +218,9 @@ Profile records reference skills by **Pharoam inventory slug only** (for example
 - `preferences`: mode, language, chosen model provider (never the key).
 - **Never:** name, photo, contact details or exact location.
 - Body: the person's "About me", plus a marked overview section that Pharoam regenerates.
+  - The section sits between `<!-- pharoam:overview -->` and `<!-- /pharoam:overview -->`, each starting a line. Most Markdown viewers, Obsidian included, don't show these comments; Pharoam's own renderer removes them (raw HTML stays off).
+  - Pharoam writes only between the markers, so the person's text before or after them is never changed. Without markers, it adds the section after the person's text. With broken markers (one missing, out of order or repeated), it changes nothing and says why.
+  - The overview gives the number of evidence records and skill records and the date of the last change to either, in the person's language. It is regenerated whenever evidence or skills change.
 
 ### `aspiration`
 - `kind`: interest, goal or constraint (for example "can study at most 5 hours a week").
