@@ -92,7 +92,7 @@ export async function requestAccess(
  * @example
  * ```ts
  * const folder = await showDirectoryPicker({ mode: "readwrite" });
- * const service = createCoreService({ storage: createFolderConnector(folder), ids: { now: Date.now, fillRandom: (b) => crypto.getRandomValues(b) } });
+ * const service = createCoreService({ storage: createFolderConnector(folder), ids: { now: Date.now, fillRandom: (b) => crypto.getRandomValues(b) }, overview: (facts) => t("overview", facts) });
  * ```
  */
 export function createFolderConnector(root: FolderHandle): StorageConnector {

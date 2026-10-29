@@ -8,8 +8,15 @@
  * @packageDocumentation
  */
 import { createProfileRecordIdGenerator, type IdSource } from "./ids.ts";
-import { checkEntry, type IntegrityStatus } from "./integrity.ts";
-import { createRecordFile, type RecordFile, type RecordFileError } from "./record-file.ts";
+import { canonicalJson, checkEntry, type IntegrityStatus } from "./integrity.ts";
+import { overviewFacts, withOverview, type OverviewWriter } from "./overview.ts";
+import {
+  createRecordFile,
+  withoutTopField,
+  withTopField,
+  type RecordFile,
+  type RecordFileError,
+} from "./record-file.ts";
 import { err, ok, type Result } from "./result.ts";
 import { parseProfileRecord, type ProfileRecord, type ProfileRecordError } from "./schemas/profile-record.ts";
 
@@ -127,12 +134,12 @@ export type SaveError =
   | { readonly kind: "duplicate-id"; readonly id: string; readonly keptAt: string };
 
 /**
- * What the person says about themselves when creating a profile (MVP S1.2).
+ * What the person says about themselves in `pharoam.md` (MVP S1.2, S3.1).
  *
  * @remarks There is no field for a name, photo, contact details or exact location, and any given are never written
  * (hard rule 8, data model §10).
  */
-export interface NewProfile {
+export interface ProfileFields {
   /** Their own one-line summary. */
   readonly headline?: string;
   /** What they are doing now, and in which field. */
@@ -148,6 +155,13 @@ export interface NewProfile {
 
 /** Why the service didn't create a profile. */
 export type CreateProfileError = SaveError | { readonly kind: "profile-exists"; readonly location: string };
+
+/** Why the service didn't change `pharoam.md`: the reasons a save fails, or there is no valid profile to change. */
+export type ProfileChangeError = SaveError | { readonly kind: "no-profile" };
+
+/** Why the overview in `pharoam.md` wasn't brought up to date. */
+export type OverviewError =
+  ProfileChangeError | { readonly kind: "overview-markers"; readonly location: string };
 
 /** The core service for one open profile. */
 export interface CoreService {
@@ -167,16 +181,43 @@ export interface CoreService {
   readonly profile: () => LoadedRecord | undefined;
   /** Forgets every record read, so no profile data is held once the profile is disconnected (MVP S2.4). */
   readonly close: () => void;
-  /** Saves a new record, after validating it. */
+  /**
+   * Saves a new record, after validating it.
+   *
+   * @remarks A new evidence or skill record also brings the overview up to date ({@link CoreService.refreshOverview}).
+   */
   readonly create: (file: RecordFile) => Promise<Result<LoadedRecord, SaveError>>;
-  /** Saves a change to a record read earlier, only if storage still has the version read (AD10). */
+  /**
+   * Saves a change to a record read earlier, only if storage still has the version read (AD10).
+   *
+   * @remarks A changed evidence or skill record also brings the overview up to date.
+   */
   readonly update: (location: string, file: RecordFile) => Promise<Result<LoadedRecord, SaveError>>;
+  /**
+   * Saves the person's headline, situation, country and focus, and the time of the change (MVP S3.1).
+   *
+   * @remarks The fields given replace those in `pharoam.md`; a field left out is removed. Unchanged fields, the
+   * preferences, fields Pharoam doesn't know and the body are kept as written.
+   */
+  readonly updateProfile: (fields: ProfileFields) => Promise<Result<LoadedRecord, ProfileChangeError>>;
+  /**
+   * Regenerates the overview section of `pharoam.md` from the evidence and skill records (MVP S3.2, S3.3).
+   *
+   * @remarks Writes only between the overview's markers, and nothing at all when the overview hasn't changed.
+   */
+  readonly refreshOverview: () => Promise<Result<LoadedRecord, OverviewError>>;
+  /**
+   * Why the overview couldn't be brought up to date after the last change to evidence or skills, if it couldn't.
+   *
+   * @remarks The change itself was saved. The app shows the problem and offers {@link CoreService.refreshOverview}.
+   */
+  readonly overviewProblem: () => OverviewError | undefined;
   /**
    * Creates the profile: prepares the storage and writes `pharoam.md` (MVP S1).
    *
    * @remarks Validates before writing anything, and refuses if the profile already has a `pharoam` record.
    */
-  readonly createProfile: (profile: NewProfile) => Promise<Result<LoadedRecord, CreateProfileError>>;
+  readonly createProfile: (profile: ProfileFields) => Promise<Result<LoadedRecord, CreateProfileError>>;
 }
 
 /** What the core service needs. */
@@ -185,6 +226,8 @@ export interface CoreServiceOptions {
   readonly storage: StorageConnector;
   /** The clock and randomness for new IDs and times, such as `Date.now` and `crypto.getRandomValues`. */
   readonly ids: IdSource;
+  /** Writes the overview in `pharoam.md` in the person's language, from the app's translation files. */
+  readonly overview: OverviewWriter;
 }
 
 /**
@@ -195,10 +238,11 @@ export interface CoreServiceOptions {
  * @returns The service, with nothing read yet.
  */
 export function createCoreService(options: CoreServiceOptions): CoreService {
-  const { storage, ids } = options;
+  const { storage, ids, overview } = options;
   const nextId = createProfileRecordIdGenerator(ids);
   let loaded: LoadedRecord[] = [];
   let attention: AttentionItem[] = [];
+  let overviewProblem: OverviewError | undefined;
 
   const byId = (id: string): LoadedRecord | undefined => loaded.find((r) => r.record.id === id);
   const profile = (): LoadedRecord | undefined => loaded.find((r) => r.record.schema === "pharoam/1");
@@ -212,7 +256,51 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
     if (!created.ok) return err(created.error);
     const result = toLoaded(created.value.location, created.value.version, file, record.value);
     loaded = [...loaded, result];
+    await afterChange(result);
     return ok(result);
+  }
+
+  async function updateRecord(location: string, file: RecordFile): Promise<Result<LoadedRecord, SaveError>> {
+    if (attention.some((item) => item.location === location))
+      return err({ kind: "needs-attention", location });
+    const current = loaded.find((r) => r.location === location);
+    if (current === undefined) return err({ kind: "not-found", location });
+    const record = parseProfileRecord(file.top);
+    if (!record.ok) return err({ kind: "invalid", error: record.error });
+    if (record.value.id !== current.record.id) return err({ kind: "id-changed", location });
+    const written = await storage.write(location, file, current.version);
+    if (!written.ok) return err(saveError(written.error, location));
+    const result = toLoaded(location, written.value, file, record.value);
+    loaded = loaded.map((r) => (r.location === location ? result : r));
+    await afterChange(result);
+    return ok(result);
+  }
+
+  // Saves a change to `pharoam.md`, marking the time of the change (data model §4).
+  function saveProfile(current: LoadedRecord, file: RecordFile): Promise<Result<LoadedRecord, SaveError>> {
+    return updateRecord(current.location, withTopField(file, "updated", timestamp(ids.now())));
+  }
+
+  async function regenerateOverview(): Promise<Result<LoadedRecord, OverviewError>> {
+    const current = profile();
+    if (current === undefined) return err({ kind: "no-profile" });
+    const body = withOverview(current.file.body, overview(overviewFacts(loaded.map((r) => r.record))));
+    if (!body.ok) return err({ kind: "overview-markers", location: current.location });
+    if (body.value === current.file.body) return ok(current);
+    return saveProfile(current, { ...current.file, body: body.value });
+  }
+
+  async function refreshOverview(): Promise<Result<LoadedRecord, OverviewError>> {
+    const result = await regenerateOverview();
+    overviewProblem = result.ok ? undefined : result.error;
+    return result;
+  }
+
+  // Evidence and skills feed the overview (MVP S3.3); a folder without a profile has none to refresh.
+  async function afterChange(saved: LoadedRecord): Promise<void> {
+    const { schema } = saved.record;
+    if ((schema === "evidence/1" || schema === "skill-record/1") && profile() !== undefined)
+      await refreshOverview();
   }
 
   return {
@@ -224,6 +312,7 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
       );
       loaded = [];
       attention = [];
+      overviewProblem = undefined;
       for (const { location, read } of reads) {
         if (!read.ok) {
           // A record deleted between listing and reading is simply gone.
@@ -257,14 +346,17 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
     close: () => {
       loaded = [];
       attention = [];
+      overviewProblem = undefined;
     },
 
     create: createRecord,
+    update: updateRecord,
 
     createProfile: async (fields) => {
       const existing = profile();
       if (existing !== undefined) return err({ kind: "profile-exists", location: existing.location });
-      const top = { schema: "pharoam/1", id: nextId(), created: timestamp(ids.now()), ai: null };
+      const created = timestamp(ids.now());
+      const top = { schema: "pharoam/1", id: nextId(), created, updated: created, ai: null };
       const file = createRecordFile({ ...top, ...profileFields(fields) }, "");
       const record = parseProfileRecord(file.top);
       if (!record.ok) return err({ kind: "invalid", error: record.error });
@@ -273,20 +365,22 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
       return createRecord(file);
     },
 
-    update: async (location, file) => {
-      if (attention.some((item) => item.location === location))
-        return err({ kind: "needs-attention", location });
-      const current = loaded.find((r) => r.location === location);
-      if (current === undefined) return err({ kind: "not-found", location });
-      const record = parseProfileRecord(file.top);
-      if (!record.ok) return err({ kind: "invalid", error: record.error });
-      if (record.value.id !== current.record.id) return err({ kind: "id-changed", location });
-      const written = await storage.write(location, file, current.version);
-      if (!written.ok) return err(saveError(written.error, location));
-      const result = toLoaded(location, written.value, file, record.value);
-      loaded = loaded.map((r) => (r.location === location ? result : r));
-      return ok(result);
+    updateProfile: async (fields) => {
+      const current = profile();
+      if (current === undefined) return err({ kind: "no-profile" });
+      const wanted = profileFields(fields);
+      let file = current.file;
+      // Only changed fields are set, so an unchanged one keeps how it was written and its comments.
+      for (const key of PROFILE_KEYS) {
+        const value = wanted[key];
+        if (value === undefined) file = withoutTopField(file, key);
+        else if (!sameValue(file.top[key], value)) file = withTopField(file, key, value);
+      }
+      return saveProfile(current, file);
     },
+
+    refreshOverview,
+    overviewProblem: () => overviewProblem,
   };
 }
 
@@ -313,14 +407,24 @@ function saveError(error: WriteError, location: string): SaveError {
   }
 }
 
+// The person's own fields in `pharoam.md`, in the data model's order (§10).
+const PROFILE_KEYS = ["headline", "situation", "region", "focus"] as const;
+
 // Only the fields a profile may hold, in the data model's order; anything else is dropped (hard rule 8).
-function profileFields(profile: NewProfile): Record<string, unknown> {
+function profileFields(profile: ProfileFields): Record<string, unknown> {
   const fields: Record<string, unknown> = {};
   if (profile.headline !== undefined) fields.headline = profile.headline;
   if (profile.situation !== undefined) fields.situation = { ...profile.situation };
   if (profile.region !== undefined) fields.region = profile.region;
   if (profile.focus !== undefined) fields.focus = { ...profile.focus };
   return fields;
+}
+
+// Whether two values read from YAML are the same, ignoring how they were written.
+function sameValue(a: unknown, b: unknown): boolean {
+  const left = canonicalJson(a);
+  const right = canonicalJson(b);
+  return left.ok && right.ok && left.value === right.value;
 }
 
 // A time as Pharoam writes it, to the second, such as `2026-10-24T14:02:11Z`.

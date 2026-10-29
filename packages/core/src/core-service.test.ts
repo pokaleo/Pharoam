@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { EVIDENCE_FILE, PHAROAM_FILE } from "./__fixtures__/profile-records.ts";
-import { createCoreService, type CoreService, type NewProfile } from "./core-service.ts";
+import { createCoreService, type CoreService, type ProfileFields } from "./core-service.ts";
+import type { OverviewWriter } from "./overview.ts";
 import type { IdSource } from "./ids.ts";
 import { sealEntry } from "./integrity.ts";
 import { createMemoryConnector, type MemoryConnector } from "./testing/memory-connector.ts";
@@ -15,6 +16,10 @@ import {
 // A fixed clock and randomness, so profile IDs and times are known in advance.
 const IDS: IdSource = { now: () => Date.UTC(2026, 9, 29, 9, 30, 0), fillRandom: (bytes) => bytes.fill(7) };
 
+// A stand-in for the app's translated overview.
+const OVERVIEW: OverviewWriter = (facts) =>
+  `## Overview\n\nEvidence: ${String(facts.evidence)}. Skills: ${String(facts.skills)}. Last change: ${facts.lastChange ?? "none"}.\n`;
+
 function file(text: string): RecordFile {
   const result = parseRecordFile(text);
   if (!result.ok) throw new Error(result.error.kind);
@@ -26,7 +31,7 @@ async function opened(files: Readonly<Record<string, string>>): Promise<{
   storage: MemoryConnector;
 }> {
   const storage = createMemoryConnector(files);
-  const service = createCoreService({ storage: storage.connector, ids: IDS });
+  const service = createCoreService({ storage: storage.connector, ids: IDS, overview: OVERVIEW });
   const result = await service.open();
   if (!result.ok) throw new Error(result.error.kind);
   return { service, storage };
@@ -90,6 +95,7 @@ describe("opening a profile", () => {
     const storage = createMemoryConnector({ "evidence/latin1.md": "x" });
     const service = createCoreService({
       ids: IDS,
+      overview: OVERVIEW,
       storage: {
         ...storage.connector,
         read: () =>
@@ -140,7 +146,11 @@ describe("opening a profile", () => {
   it("reports storage it can't reach", async () => {
     const storage = createMemoryConnector({ "pharoam.md": PHAROAM_FILE });
     storage.loseAccess();
-    const result = await createCoreService({ storage: storage.connector, ids: IDS }).open();
+    const result = await createCoreService({
+      storage: storage.connector,
+      ids: IDS,
+      overview: OVERVIEW,
+    }).open();
     expect(result).toEqual({
       ok: false,
       error: { kind: "unavailable", reason: "Access to the storage was lost." },
@@ -252,7 +262,8 @@ describe("saving a record", () => {
       value: { location: "evidence/0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d.md" },
     });
     expect(service.records()).toHaveLength(2);
-    expect(storage.writes()).toBe(1);
+    // The evidence, then the overview in pharoam.md (MVP S3.3).
+    expect(storage.writes()).toBe(2);
   });
 
   it("refuses to create a record whose ID is taken", async () => {
@@ -306,7 +317,7 @@ describe("saving a record", () => {
 });
 
 describe("creating a profile (MVP S1)", () => {
-  const PROFILE: NewProfile = {
+  const PROFILE: ProfileFields = {
     headline: "Backend engineer moving into machine learning",
     situation: { stage: "changing-career", field: "Software engineering" },
     region: "GB",
@@ -321,6 +332,7 @@ describe("creating a profile (MVP S1)", () => {
       schema: "pharoam/1",
       id: expect.stringMatching(/^01a186fe-adc0-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/) as unknown,
       created: "2026-10-29T09:30:00Z",
+      updated: "2026-10-29T09:30:00Z",
       ai: null,
     });
     expect(storage.text(result.value.location)).toBe(printRecordFile(result.value.file));
@@ -335,6 +347,7 @@ describe("creating a profile (MVP S1)", () => {
       "schema",
       "id",
       "created",
+      "updated",
       "ai",
       "headline",
       "situation",
@@ -384,5 +397,139 @@ describe("creating a profile (MVP S1)", () => {
       error: { kind: "unavailable", reason: "Access to the storage was lost." },
     });
     expect(storage.writes()).toBe(0);
+  });
+});
+
+describe("editing the profile (MVP S3.1)", () => {
+  const NOW = "2026-10-29T09:30:00Z";
+  const CURRENT: ProfileFields = {
+    headline: "Backend engineer moving into machine learning",
+    situation: { stage: "changing-career", field: "Software engineering" },
+    region: "GB",
+    focus: { pathways: ["ml-engineer"], skills: ["python", "pytorch"] },
+  };
+
+  it("saves the headline, situation, country and focus, and changes the updated time", async () => {
+    const { service, storage } = await opened({ "pharoam.md": PHAROAM_FILE });
+    const result = await service.updateProfile({ ...CURRENT, headline: "ML engineer", region: "IE" });
+    expect(result.ok && result.value.record).toMatchObject({ headline: "ML engineer", region: "IE" });
+    // Only the changed fields' lines change; preferences and the person's own text are kept.
+    expect(storage.text("pharoam.md")).toBe(
+      PHAROAM_FILE.replace("updated: 2026-10-25T09:30:00Z", `updated: ${NOW}`)
+        .replace("headline: Backend engineer moving into machine learning", "headline: ML engineer")
+        .replace("region: GB", "region: IE"),
+    );
+  });
+
+  it("removes the fields left out", async () => {
+    const { service, storage } = await opened({ "pharoam.md": PHAROAM_FILE });
+    expect((await service.updateProfile({ headline: "ML engineer" })).ok).toBe(true);
+    expect(storage.text("pharoam.md")).not.toMatch(/situation:|region:|focus:/);
+    expect(storage.text("pharoam.md")).toContain("preferences:");
+  });
+
+  it("never writes a name, photo or contact details, even if given them (hard rule 8)", async () => {
+    const { service, storage } = await opened({ "pharoam.md": PHAROAM_FILE });
+    const withPersonalData = { ...CURRENT, name: "Ada", email: "ada@example.com" };
+    await service.updateProfile(withPersonalData);
+    expect(storage.text("pharoam.md")).not.toMatch(/Ada|example\.com|name|email/);
+  });
+
+  it("writes nothing that fails validation", async () => {
+    const { service, storage } = await opened({ "pharoam.md": PHAROAM_FILE });
+    const result = await service.updateProfile({ ...CURRENT, region: "United Kingdom" });
+    expect(result.ok ? null : result.error.kind).toBe("invalid");
+    expect(storage.writes()).toBe(0);
+  });
+
+  it("returns a conflict, and writes nothing, after an outside change (AD10)", async () => {
+    const { service, storage } = await opened({ "pharoam.md": PHAROAM_FILE });
+    await storage.putOutside("pharoam.md", PHAROAM_FILE.replace("About me", "My edit"));
+    expect(await service.updateProfile(CURRENT)).toEqual({
+      ok: false,
+      error: { kind: "conflict", location: "pharoam.md" },
+    });
+    expect(storage.text("pharoam.md")).toContain("My edit");
+  });
+
+  it("needs a profile to edit", async () => {
+    const { service } = await opened({});
+    expect(await service.updateProfile(CURRENT)).toEqual({ ok: false, error: { kind: "no-profile" } });
+  });
+});
+
+describe("the overview in pharoam.md (MVP S3.2, S3.3)", () => {
+  const OWN_TEXT = "About me, in my own words.\n";
+  const overview = (evidence: number, skills: number, lastChange: string): string =>
+    `<!-- pharoam:overview -->\n## Overview\n\nEvidence: ${String(evidence)}. Skills: ${String(skills)}. Last change: ${lastChange}.\n<!-- /pharoam:overview -->\n`;
+
+  it("is regenerated when evidence is added, after the person's own text (S3.3)", async () => {
+    const { service, storage } = await opened({ "pharoam.md": PHAROAM_FILE });
+    expect((await service.create(file(EVIDENCE_FILE))).ok).toBe(true);
+    const text = storage.text("pharoam.md") ?? "";
+    expect(text).toBe(
+      PHAROAM_FILE.replace("updated: 2026-10-25T09:30:00Z", "updated: 2026-10-29T09:30:00Z").replace(
+        OWN_TEXT,
+        `${OWN_TEXT}\n${overview(1, 0, "2026-10-24T14:02:11Z")}`,
+      ),
+    );
+    expect(service.profile()?.file.body).toBe(`${OWN_TEXT}\n${overview(1, 0, "2026-10-24T14:02:11Z")}`);
+    expect(service.overviewProblem()).toBeUndefined();
+  });
+
+  it("is regenerated when skills change, changing only its own section (S3.2, S3.3)", async () => {
+    const after = "\nMore of my own words, after the overview.  \n";
+    const body = `${OWN_TEXT}\n${overview(0, 0, "none")}${after}`;
+    const { service, storage } = await opened({ "pharoam.md": PHAROAM_FILE.replace(OWN_TEXT, body) });
+    expect((await service.create(file(skillFile([ENTRY])))).ok).toBe(true);
+    const text = storage.text("pharoam.md") ?? "";
+    expect(text.slice(text.indexOf("---\n", 4) + 4)).toBe(
+      `${OWN_TEXT}\n${overview(0, 1, "2026-10-01T10:00:00Z")}${after}`,
+    );
+  });
+
+  it("is regenerated when evidence is edited", async () => {
+    const { service, storage } = await opened({ "pharoam.md": PHAROAM_FILE, "evidence/a.md": EVIDENCE_FILE });
+    const edited = withTopField(file(EVIDENCE_FILE), "updated", "2026-10-28T08:00:00Z");
+    expect((await service.update("evidence/a.md", edited)).ok).toBe(true);
+    expect(storage.text("pharoam.md")).toContain(overview(1, 0, "2026-10-28T08:00:00Z"));
+  });
+
+  it("isn't written again when nothing in it changed", async () => {
+    const { service, storage } = await opened({ "pharoam.md": PHAROAM_FILE, "evidence/a.md": EVIDENCE_FILE });
+    expect((await service.refreshOverview()).ok).toBe(true);
+    const writes = storage.writes();
+    expect((await service.refreshOverview()).ok).toBe(true);
+    expect(storage.writes()).toBe(writes);
+  });
+
+  it("leaves pharoam.md alone, and says why, when its markers are broken", async () => {
+    const broken = PHAROAM_FILE.replace(OWN_TEXT, `${OWN_TEXT}<!-- pharoam:overview -->\nOld.\n`);
+    const { service, storage } = await opened({ "pharoam.md": broken });
+    expect((await service.create(file(EVIDENCE_FILE))).ok).toBe(true);
+    expect(storage.text("pharoam.md")).toBe(broken);
+    expect(service.overviewProblem()).toEqual({ kind: "overview-markers", location: "pharoam.md" });
+    expect(await service.refreshOverview()).toEqual({
+      ok: false,
+      error: { kind: "overview-markers", location: "pharoam.md" },
+    });
+  });
+
+  it("forgets an earlier problem once the overview is brought up to date", async () => {
+    const { service, storage } = await opened({ "pharoam.md": PHAROAM_FILE });
+    await storage.putOutside("pharoam.md", PHAROAM_FILE.replace("About me", "My edit"));
+    expect((await service.create(file(EVIDENCE_FILE))).ok).toBe(true);
+    expect(service.overviewProblem()).toEqual({ kind: "conflict", location: "pharoam.md" });
+    expect((await service.open()).ok).toBe(true);
+    expect((await service.refreshOverview()).ok).toBe(true);
+    expect(service.overviewProblem()).toBeUndefined();
+  });
+
+  it("isn't needed without a profile", async () => {
+    const { service, storage } = await opened({});
+    expect((await service.create(file(EVIDENCE_FILE))).ok).toBe(true);
+    expect(storage.writes()).toBe(1);
+    expect(service.overviewProblem()).toBeUndefined();
+    expect(await service.refreshOverview()).toEqual({ ok: false, error: { kind: "no-profile" } });
   });
 });

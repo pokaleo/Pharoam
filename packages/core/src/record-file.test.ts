@@ -4,6 +4,7 @@ import {
   createRecordFile,
   parseRecordFile,
   printRecordFile,
+  withoutTopField,
   withTopField,
   type RecordFile,
 } from "./record-file.ts";
@@ -181,8 +182,19 @@ Body.
     expect(printRecordFile(changed)).toContain("zeta: 1\nupdated: 2026-10-28T09:00:00Z\n---\nBody.\n");
   });
 
+  it("removes one field and keeps everything else", () => {
+    const changed = withoutTopField(parsed(text), "unknown_field");
+    expect(changed.top).toEqual({ schema: "evidence/1", title: "Old title", zeta: 1 });
+    expect(printRecordFile(changed)).toBe(text.replace("unknown_field: kept\n", ""));
+  });
+
+  it("removes nothing when the field isn't there", () => {
+    expect(printRecordFile(withoutTopField(parsed(text), "missing"))).toBe(text);
+  });
+
   it("leaves the original file as it was", () => {
     const original = parsed(text);
+    withoutTopField(original, "title");
     withTopField(original, "title", "New title");
     expect(original.top.title).toBe("Old title");
     expect(printRecordFile(original)).toBe(text);
