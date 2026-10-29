@@ -10,5 +10,8 @@
   },
   "dependencies": {
     "@pharoam/core": "workspace:*"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "6.2.6"
   }
 }

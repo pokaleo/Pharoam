@@ -254,7 +254,13 @@ function isNotFound(error: unknown): boolean {
   );
 }
 
-function unavailable(error: unknown): StorageError {
+/**
+ * Turns what the browser threw into an `unavailable` error, keeping its name and message for diagnostics.
+ *
+ * @param error - The error the browser threw, usually a `DOMException`.
+ * @returns The storage error.
+ */
+export function unavailable(error: unknown): StorageError {
   const reason = error instanceof DOMException ? `${error.name}: ${error.message}` : String(error);
   return { kind: "unavailable", reason };
 }
