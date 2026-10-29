@@ -219,7 +219,7 @@ Outcomes are reported only in aggregate, with their uncertainty and possible bia
 | 2 | `README.md` derived from the charter | Done |
 | 3 | [PRD](PRD.md): the whole product blueprint | Draft |
 | 3a | [MVP and release plan](MVP.md): stories, acceptance criteria, what's deferred | Done |
-| 4 | [Architecture](ARCHITECTURE.md): decisions AD1–AD23, ADRs 0001–0019, data model, interfaces, security | Decided; design system deferred; spikes S1–S3 pending (none needed for v0.1) |
+| 4 | [Architecture](ARCHITECTURE.md): decisions AD1–AD23, ADRs 0001–0019, data model, interfaces, security | Decided, design system included (ADR-0015); spikes S1–S3 pending (none needed for v0.1) |
 | 4c | [Engineering standards](ENGINEERING.md) and agent instructions, enforced by hooks and CI | Done; waiting to be merged |
 | 4b | [Implementation plan](ROADMAP.md) and GitHub project | Plan done; GitHub project next |
 | 4a | Storage connectors: one issue per connector | Local folder in v0.1; the rest after |

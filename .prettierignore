@@ -4,3 +4,5 @@ CODE_OF_CONDUCT.md
 **/__fixtures__/
 # Markdown docs are prose with wide tables; Prettier's table padding hurts editing and diffs (ENGINEERING §3).
 *.md
+# The design system's finished files, copied unchanged (brand/README.md).
+brand/

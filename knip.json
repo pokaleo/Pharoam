@@ -2,7 +2,10 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "workspaces": {
     ".": { "entry": ["tooling/guard/bin/*.ts"] },
-    "packages/*": {}
+    "packages/*": {},
+    // `@brand/` is a Vite alias for brand/ or the neutral theme (apps/web/src/build/brand.ts); the neutral theme
+    // stands for both, so knip sees its files as used.
+    "apps/web": { "paths": { "@brand/*": ["src/theme/neutral/*"] } }
   },
   "ignore": ["**/__fixtures__/**"],
   "ignoreExportsUsedInFile": true
