@@ -154,6 +154,28 @@ export type SaveError =
   | { readonly kind: "duplicate-id"; readonly id: string; readonly keptAt: string };
 
 /**
+ * A record that changed in storage since Pharoam read it, when Pharoam was about to write or delete it (AD10).
+ *
+ * @remarks Nothing was written. The app shows both versions and the person chooses one with
+ * {@link CoreService.resolveConflict} (MVP S12.1).
+ */
+export interface Conflict {
+  /** Where the record is stored. */
+  readonly location: string;
+  /** What Pharoam was about to write, or `undefined` when it was about to delete the record. */
+  readonly mine: RecordFile | undefined;
+  /** The record as it is in storage now, or why it couldn't be read. */
+  readonly theirs: Result<RecordFile, ReadError>;
+}
+
+/** Why a conflict wasn't resolved as the person chose. */
+export type ResolveConflictError =
+  | SaveError
+  | { readonly kind: "no-conflict"; readonly location: string }
+  /** Their version couldn't be read, so only keeping theirs is possible. */
+  | { readonly kind: "theirs-unreadable"; readonly location: string };
+
+/**
  * What the person says about themselves in `pharoam.md` (MVP S1.2, S3.1).
  *
  * @remarks There is no field for a name, photo, contact details or exact location, and any given are never written
@@ -282,6 +304,19 @@ export interface CoreService {
   readonly profile: () => LoadedRecord | undefined;
   /** Forgets every record read, so no profile data is held once the profile is disconnected (MVP S2.4). */
   readonly close: () => void;
+  /** The records that changed in storage when Pharoam was about to write them, in the order they happened. */
+  readonly conflicts: () => readonly Conflict[];
+  /**
+   * Resolves a conflict with the version the person chose (MVP S12.1, AD10).
+   *
+   * @remarks `theirs` reads the record again and uses it, or lists it under Needs attention if it is no longer
+   * valid. `mine` writes Pharoam's version over theirs, only if theirs hasn't changed again since it was shown;
+   * if it has, the conflict is shown again with the newer version.
+   */
+  readonly resolveConflict: (
+    location: string,
+    keep: "mine" | "theirs",
+  ) => Promise<Result<undefined, ResolveConflictError>>;
   /**
    * Saves a new record, after validating it.
    *
@@ -439,9 +474,46 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
   let attention: AttentionItem[] = [];
   let overviewProblem: OverviewError | undefined;
   const gapProblems = new Map<string, GapError>();
+  // Each conflict, with the version of theirs it was shown with, if it could be read, and my validated record.
+  const conflicts = new Map<
+    string,
+    { conflict: Conflict; version: string | undefined; mine: Mine | undefined }
+  >();
 
   const byId = (id: string): LoadedRecord | undefined => loaded.find((r) => r.record.id === id);
   const profile = (): LoadedRecord | undefined => loaded.find((r) => r.record.schema === "pharoam/1");
+
+  // Adds a record read from storage to the valid records, or to Needs attention (MVP S12.2).
+  function place(location: string, read: Awaited<ReturnType<StorageConnector["read"]>>): void {
+    if (!read.ok) {
+      // A record deleted between listing and reading is simply gone.
+      if (read.error.kind !== "not-found") attention.push({ location, problem: read.error });
+      return;
+    }
+    const record = parseProfileRecord(read.value.file.top);
+    if (!record.ok) {
+      attention.push({ location, problem: { kind: "invalid", error: record.error } });
+      return;
+    }
+    const kept = byId(record.value.id);
+    if (kept !== undefined) {
+      attention.push({
+        location,
+        problem: { kind: "duplicate-id", id: record.value.id, keptAt: kept.location },
+      });
+      return;
+    }
+    loaded.push(toLoaded(location, read.value.version, read.value.file, record.value));
+  }
+
+  // Keeps both versions after a write or delete found the record changed in storage (AD10).
+  async function noteConflict(location: string, mine: Mine | undefined): Promise<void> {
+    const read = await storage.read(location);
+    const theirs = read.ok ? ok(read.value.file) : err(read.error);
+    const version = read.ok ? read.value.version : undefined;
+    conflicts.delete(location);
+    conflicts.set(location, { conflict: { location, mine: mine?.file, theirs }, version, mine });
+  }
 
   async function createRecord(given: RecordFile): Promise<Result<LoadedRecord, SaveError>> {
     const file = withProficiency(given);
@@ -467,7 +539,10 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
     if (!record.ok) return err({ kind: "invalid", error: record.error });
     if (record.value.id !== current.record.id) return err({ kind: "id-changed", location });
     const written = await storage.write(location, file, current.version);
-    if (!written.ok) return err(saveError(written.error, location));
+    if (!written.ok) {
+      if (written.error.kind === "conflict") await noteConflict(location, { file, record: record.value });
+      return err(saveError(written.error, location));
+    }
     const result = toLoaded(location, written.value, file, record.value);
     loaded = loaded.map((r) => (r.location === location ? result : r));
     await afterChange(result);
@@ -606,28 +681,8 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
       attention = [];
       overviewProblem = undefined;
       gapProblems.clear();
-      for (const { location, read } of reads) {
-        if (!read.ok) {
-          // A record deleted between listing and reading is simply gone.
-          if (read.error.kind === "not-found") continue;
-          attention.push({ location, problem: read.error });
-          continue;
-        }
-        const record = parseProfileRecord(read.value.file.top);
-        if (!record.ok) {
-          attention.push({ location, problem: { kind: "invalid", error: record.error } });
-          continue;
-        }
-        const kept = byId(record.value.id);
-        if (kept !== undefined) {
-          attention.push({
-            location,
-            problem: { kind: "duplicate-id", id: record.value.id, keptAt: kept.location },
-          });
-          continue;
-        }
-        loaded.push(toLoaded(location, read.value.version, read.value.file, record.value));
-      }
+      conflicts.clear();
+      for (const { location, read } of reads) place(location, read);
       return ok(undefined);
     },
 
@@ -641,6 +696,40 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
       attention = [];
       overviewProblem = undefined;
       gapProblems.clear();
+      conflicts.clear();
+    },
+
+    conflicts: () => [...conflicts.values()].map(({ conflict }) => conflict),
+
+    resolveConflict: async (location, keep) => {
+      const noted = conflicts.get(location);
+      if (noted === undefined) return err({ kind: "no-conflict", location });
+      const before = loaded.find((r) => r.location === location);
+      if (keep === "theirs") {
+        conflicts.delete(location);
+        loaded = loaded.filter((r) => r.location !== location);
+        attention = attention.filter((item) => item.location !== location);
+        place(location, await storage.read(location));
+      } else {
+        const { version, mine } = noted;
+        if (version === undefined) return err({ kind: "theirs-unreadable", location });
+        const saved =
+          mine === undefined
+            ? await storage.delete(location, version)
+            : await storage.write(location, mine.file, version);
+        if (!saved.ok) {
+          if (saved.error.kind === "conflict") await noteConflict(location, mine);
+          return err(saveError(saved.error, location));
+        }
+        conflicts.delete(location);
+        loaded = loaded.filter((r) => r.location !== location);
+        if (mine !== undefined && saved.value !== undefined)
+          loaded.push(toLoaded(location, saved.value, mine.file, mine.record));
+      }
+      // The overview and gaps follow whichever version was kept, or the record's removal.
+      const after = loaded.find((r) => r.location === location) ?? before;
+      if (after !== undefined) await afterChange(after);
+      return ok(undefined);
     },
 
     create: createRecord,
@@ -765,7 +854,10 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
       if (current === undefined) return err({ kind: "not-found", location });
       if (current.record.schema !== "evidence/1") return err({ kind: "not-evidence", location });
       const removed = await storage.delete(location, current.version);
-      if (!removed.ok) return err(saveError(removed.error, location));
+      if (!removed.ok) {
+        if (removed.error.kind === "conflict") await noteConflict(location, undefined);
+        return err(saveError(removed.error, location));
+      }
       loaded = loaded.filter((r) => r !== current);
       await afterChange(current);
       return ok(undefined);
@@ -804,6 +896,12 @@ function withProficiency(file: RecordFile): RecordFile {
   const record = parseProfileRecord(file.top);
   if (!record.ok || record.value.schema !== "skill-record/1") return file;
   return withTopFields(file, { proficiency: proficiencyOf(record.value.entries) });
+}
+
+// What Pharoam was about to write when it found a conflict, already validated.
+interface Mine {
+  readonly file: RecordFile;
+  readonly record: ProfileRecord;
 }
 
 function toLoaded(location: string, version: string, file: RecordFile, record: ProfileRecord): LoadedRecord {
