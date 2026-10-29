@@ -2,7 +2,7 @@ import { cpSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { ContentPack } from "../../packages/core/src/index.ts";
+import { compileContentPack, ContentPack, pathwaySummaries } from "../../packages/core/src/index.ts";
 import { buildPack, readContentFiles } from "./build-pack.ts";
 
 const repoRoot = path.join(import.meta.dirname, "..", "..");
@@ -51,5 +51,21 @@ describe("building the built-in content pack (AD16)", () => {
     expect(built.ok).toBe(false);
     if (!built.ok) expect(built.error.problems.map((p) => p.path)).toContain("data/skills/python.md");
     expect(existsSync(path.join(out, "pharoam-core-0.1.0.json"))).toBe(false);
+  });
+
+  it("offers the 4 built-in pathways, each with a summary and a review (MVP S10.1, S10.2)", () => {
+    const pack = compileContentPack(readContentFiles(repoRoot));
+    if (!pack.ok) throw new Error(JSON.stringify(pack.error.problems, null, 2));
+    const pathways = pathwaySummaries(pack.value);
+    expect(pathways.map((p) => p.title)).toEqual([
+      "Applied AI engineer",
+      "Backend engineer",
+      "Frontend engineer",
+      "Machine-learning engineer",
+    ]);
+    for (const pathway of pathways) {
+      expect(pathway.summary.length).toBeGreaterThan(0);
+      expect(pathway.review.by.length).toBeGreaterThan(0);
+    }
   });
 });
