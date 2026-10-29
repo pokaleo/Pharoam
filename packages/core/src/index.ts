@@ -34,6 +34,9 @@ export {
   type CoreServiceOptions,
   type CreateError,
   type CreateProfileError,
+  type DeleteEvidenceError,
+  type EditEvidenceError,
+  type EvidenceReference,
   type OverviewError,
   type ProfileChangeError,
   type ProfileFields,
@@ -49,6 +52,7 @@ export {
 export {
   EVIDENCE_FORM_KINDS,
   evidenceFormFields,
+  evidenceFormOf,
   type EvidenceForm,
   type EvidenceFormField,
   type EvidenceFormKind,

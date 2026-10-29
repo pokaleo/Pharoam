@@ -206,6 +206,42 @@ export function withoutTopField(file: RecordFile, key: string): RecordFile {
   return { ...file, top: plainFields(document), document };
 }
 
+/**
+ * Returns a copy of a record file with several top-block fields set or removed.
+ *
+ * @remarks A field given as `undefined` is removed. A field whose value is unchanged is left exactly as written,
+ * keeping its style and comments, so an edit only touches what changed. New fields are added at the end, in the
+ * order given; everything else in the file is unchanged (MVP S12.4).
+ * @param file - The record file to start from; it isn't changed.
+ * @param fields - The fields' new values, or `undefined` to remove them.
+ * @returns The changed copy.
+ */
+export function withTopFields(file: RecordFile, fields: Readonly<Record<string, unknown>>): RecordFile {
+  let changed = file;
+  for (const [key, value] of Object.entries(fields)) {
+    if (value === undefined) changed = withoutTopField(changed, key);
+    else if (!sameValue(changed.top[key], value)) changed = withTopField(changed, key, value);
+  }
+  return changed;
+}
+
+// Whether two plain values are equal, compared by content as YAML reads them.
+function sameValue(a: unknown, b: unknown): boolean {
+  if (Array.isArray(a) && Array.isArray(b))
+    return a.length === b.length && a.every((item, index) => sameValue(item, b[index]));
+  if (isPlainObject(a) && isPlainObject(b)) {
+    const keys = Object.keys(a);
+    return (
+      keys.length === Object.keys(b).length && keys.every((key) => key in b && sameValue(a[key], b[key]))
+    );
+  }
+  return Object.is(a, b);
+}
+
+function isPlainObject(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 // Finds the top block between the opening `---` line and the next one.
 function splitTopBlock(content: string): Result<{ yaml: string; body: string }, RecordFileError> {
   const firstBreak = content.indexOf("\n");

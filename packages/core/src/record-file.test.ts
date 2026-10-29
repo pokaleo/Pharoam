@@ -6,6 +6,7 @@ import {
   printRecordFile,
   withoutTopField,
   withTopField,
+  withTopFields,
   type RecordFile,
 } from "./record-file.ts";
 
@@ -190,6 +191,23 @@ Body.
 
   it("removes nothing when the field isn't there", () => {
     expect(printRecordFile(withoutTopField(parsed(text), "missing"))).toBe(text);
+  });
+
+  it("sets several fields, removes those given as undefined and leaves equal ones as written", () => {
+    const flow = text.replace("zeta: 1", "zeta: [a, b] # flow");
+    const changed = withTopFields(parsed(flow), {
+      title: "New title",
+      unknown_field: undefined,
+      zeta: ["a", "b"],
+      added: 2,
+      missing: undefined,
+    });
+    expect(printRecordFile(changed)).toBe(
+      flow
+        .replace("title: Old title # kept too", "title: New title # kept too")
+        .replace("unknown_field: kept\n", "")
+        .replace("---\nBody.", "added: 2\n---\nBody."),
+    );
   });
 
   it("leaves the original file as it was", () => {

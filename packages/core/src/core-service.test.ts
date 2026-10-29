@@ -558,3 +558,134 @@ describe("recording evidence with a form (MVP S4)", () => {
     expect(storage.writes()).toBe(0);
   });
 });
+
+describe("editing and deleting evidence (MVP S5)", () => {
+  const FORM = {
+    kind: "job",
+    title: "Senior Backend Engineer",
+    organisation: "Example Co",
+    start: "2022-09",
+    end: "2024-08",
+    links: ["https://example.com/payments-api"],
+    skills: ["python", "postgres"],
+    description: "Built and ran the payments API.\n",
+  } as const;
+  const EVIDENCE_ID = "0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d";
+  const CITING = skillFile([{ ...ENTRY, evidence: [EVIDENCE_ID] }]);
+
+  it("rewrites the file with the same ID, a new updated time and unknown fields kept (S5.1)", async () => {
+    const { service, storage } = await opened({ "evidence/a.md": EVIDENCE_WITH_EXTRAS });
+    const result = await service.editEvidence("evidence/a.md", FORM);
+    expect(result.ok && result.value.record).toMatchObject({
+      id: EVIDENCE_ID,
+      title: "Senior Backend Engineer",
+    });
+    expect(storage.text("evidence/a.md")).toBe(
+      EVIDENCE_WITH_EXTRAS.replace("updated: 2026-10-24T14:02:11Z", "updated: 2026-10-29T09:30:00Z").replace(
+        "title: Backend Engineer",
+        "title: Senior Backend Engineer",
+      ),
+    );
+  });
+
+  it("reports the fields to fix, and writes nothing", async () => {
+    const { service, storage } = await opened({ "evidence/a.md": EVIDENCE_FILE });
+    const result = await service.editEvidence("evidence/a.md", { ...FORM, title: "" });
+    expect(result.ok ? null : result.error.kind).toBe("invalid");
+    expect(storage.writes()).toBe(0);
+  });
+
+  it("returns a conflict, and writes nothing, after an outside change (AD10)", async () => {
+    const { service, storage } = await opened({ "evidence/a.md": EVIDENCE_FILE });
+    await storage.putOutside("evidence/a.md", EVIDENCE_FILE.replace("Built", "I built"));
+    expect(await service.editEvidence("evidence/a.md", FORM)).toEqual({
+      ok: false,
+      error: { kind: "conflict", location: "evidence/a.md" },
+    });
+    expect(storage.text("evidence/a.md")).toContain("I built");
+  });
+
+  it("edits only evidence, and never the record of a diagnostic (data model §4)", async () => {
+    const assessment = EVIDENCE_FILE.replace("kind: job", "kind: assessment");
+    const { service, storage } = await opened({ "skills/python.md": CITING, "evidence/x.md": assessment });
+    for (const location of ["skills/python.md", "evidence/x.md"]) {
+      expect(await service.editEvidence(location, FORM)).toEqual({
+        ok: false,
+        error: { kind: "not-editable", location },
+      });
+    }
+    expect(await service.editEvidence("evidence/missing.md", FORM)).toEqual({
+      ok: false,
+      error: { kind: "not-found", location: "evidence/missing.md" },
+    });
+    expect(storage.writes()).toBe(0);
+  });
+
+  it("never rewrites evidence under Needs attention (hard rule 3)", async () => {
+    const broken = EVIDENCE_FILE.replace("title: Backend Engineer\n", "");
+    const { service, storage } = await opened({ "evidence/broken.md": broken });
+    expect(await service.editEvidence("evidence/broken.md", FORM)).toEqual({
+      ok: false,
+      error: { kind: "needs-attention", location: "evidence/broken.md" },
+    });
+    expect(storage.text("evidence/broken.md")).toBe(broken);
+  });
+
+  it("says which observations refer to evidence before it is deleted (S5.3)", async () => {
+    const { service } = await opened({ "evidence/a.md": EVIDENCE_FILE, "skills/python.md": CITING });
+    expect(service.evidenceReferences(EVIDENCE_ID)).toEqual([
+      { location: "skills/python.md", skill: "python", observation: ENTRY.id },
+    ]);
+    expect(service.evidenceReferences("0192f3a1-0000-7000-8000-000000000099")).toEqual([]);
+  });
+
+  it("removes the file, and observations citing it still load, showing it as removed (S5.2)", async () => {
+    const { service, storage } = await opened({
+      "pharoam.md": PHAROAM_FILE,
+      "evidence/a.md": EVIDENCE_FILE,
+      "skills/python.md": CITING,
+    });
+    expect(await service.deleteEvidence("evidence/a.md")).toEqual({ ok: true, value: undefined });
+    expect(storage.text("evidence/a.md")).toBeUndefined();
+    expect(service.find(EVIDENCE_ID)).toBeUndefined();
+    expect(service.records().map((r) => r.location)).toEqual(["pharoam.md", "skills/python.md"]);
+    expect((await service.open()).ok).toBe(true);
+    expect(service.needsAttention()).toEqual([]);
+    expect(service.records().map((r) => r.location)).toEqual(["pharoam.md", "skills/python.md"]);
+  });
+
+  it("brings the overview up to date after a deletion", async () => {
+    const { service, storage } = await opened({ "pharoam.md": PHAROAM_FILE, "evidence/a.md": EVIDENCE_FILE });
+    await service.deleteEvidence("evidence/a.md");
+    expect(storage.text("pharoam.md")).toContain("Evidence: 0. Skills: 0. Last change: none.");
+  });
+
+  it("deletes nothing changed outside Pharoam since it was read (AD10)", async () => {
+    const { service, storage } = await opened({ "evidence/a.md": EVIDENCE_FILE });
+    await storage.putOutside("evidence/a.md", EVIDENCE_FILE.replace("Built", "I built"));
+    expect(await service.deleteEvidence("evidence/a.md")).toEqual({
+      ok: false,
+      error: { kind: "conflict", location: "evidence/a.md" },
+    });
+    expect(storage.text("evidence/a.md")).toContain("I built");
+  });
+
+  it("never deletes a record under Needs attention, or one that isn't evidence (hard rules 3, 4)", async () => {
+    const broken = EVIDENCE_FILE.replace("title: Backend Engineer\n", "");
+    const { service, storage } = await opened({ "evidence/broken.md": broken, "skills/python.md": CITING });
+    expect(await service.deleteEvidence("evidence/broken.md")).toEqual({
+      ok: false,
+      error: { kind: "needs-attention", location: "evidence/broken.md" },
+    });
+    expect(await service.deleteEvidence("skills/python.md")).toEqual({
+      ok: false,
+      error: { kind: "not-evidence", location: "skills/python.md" },
+    });
+    expect(await service.deleteEvidence("evidence/missing.md")).toEqual({
+      ok: false,
+      error: { kind: "not-found", location: "evidence/missing.md" },
+    });
+    expect(storage.text("evidence/broken.md")).toBe(broken);
+    expect(storage.text("skills/python.md")).toBe(CITING);
+  });
+});
