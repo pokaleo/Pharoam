@@ -14,9 +14,15 @@ import {
   type InvalidEvidenceError,
 } from "./evidence-form.ts";
 import { createProfileRecordIdGenerator, type IdSource } from "./ids.ts";
-import { checkEntry, type IntegrityStatus } from "./integrity.ts";
+import { checkEntry, sealEntry, type IntegrityStatus } from "./integrity.ts";
 import { overviewFacts, withOverview, type OverviewWriter } from "./overview.ts";
-import { createRecordFile, withTopFields, type RecordFile, type RecordFileError } from "./record-file.ts";
+import {
+  createRecordFile,
+  withAppendedItem,
+  withTopFields,
+  type RecordFile,
+  type RecordFileError,
+} from "./record-file.ts";
 import { err, ok, type Result } from "./result.ts";
 import { parseProfileRecord, type ProfileRecord, type ProfileRecordError } from "./schemas/profile-record.ts";
 
@@ -175,6 +181,23 @@ export interface EvidenceReference {
   readonly observation: string;
 }
 
+/**
+ * A level the person gives themselves for a skill (MVP S6).
+ *
+ * @remarks There is no provenance to choose: a level recorded by hand is always `self-reported` (MVP S6.5).
+ */
+export interface SelfRating {
+  /** The skill, by slug. */
+  readonly skill: string;
+  /** The level, 0–4. */
+  readonly level: number;
+  /** The IDs of evidence records the person cites; citing evidence doesn't test the level (MVP S6.2). */
+  readonly evidence?: readonly string[];
+}
+
+/** Why the service didn't record a level. */
+export type RecordLevelError = SaveError | { readonly kind: "unknown-evidence"; readonly id: string };
+
 /** Why the overview in `pharoam.md` wasn't brought up to date. */
 export type OverviewError =
   ProfileChangeError | { readonly kind: "overview-markers"; readonly location: string };
@@ -240,6 +263,14 @@ export interface CoreService {
    * up to date afterwards.
    */
   readonly deleteEvidence: (location: string) => Promise<Result<undefined, DeleteEvidenceError>>;
+  /**
+   * Appends the person's own rating of a skill to its skill record, starting the record if needed (MVP S6).
+   *
+   * @remarks The observation is `self-reported`, with its own ID, the time and an `integrity` fingerprint; the
+   * entries already in the record are left exactly as written (hard rule 4, MVP S6.4). Cited evidence must be in
+   * the profile.
+   */
+  readonly recordLevel: (rating: SelfRating) => Promise<Result<LoadedRecord, RecordLevelError>>;
   /**
    * Saves the person's headline, situation, country and focus, and the time of the change (MVP S3.1).
    *
@@ -412,6 +443,33 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
       return updateRecord(location, edited.value);
     },
 
+    recordLevel: async ({ skill, level, evidence = [] }) => {
+      const unknown = evidence.find((id) => byId(id)?.record.schema !== "evidence/1");
+      if (unknown !== undefined) return err({ kind: "unknown-evidence", id: unknown });
+      const now = timestamp(ids.now());
+      const observation = {
+        id: nextId(),
+        level,
+        provenance: "self-reported",
+        observed_at: now,
+        ...(evidence.length > 0 && { evidence: [...evidence] }),
+      };
+      const entry = sealEntry(observation);
+      if (!entry.ok) return err(invalidLevel());
+      const current = loaded.find((r) => r.record.schema === "skill-record/1" && r.record.skill === skill);
+      if (current !== undefined)
+        return updateRecord(current.location, withAppendedItem(current.file, "entries", entry.value));
+      const top = {
+        schema: "skill-record/1",
+        id: nextId(),
+        created: now,
+        ai: null,
+        skill,
+        entries: [entry.value],
+      };
+      return createRecord(createRecordFile(top, ""));
+    },
+
     evidenceReferences: (id) =>
       loaded.flatMap(({ location, record }) =>
         record.schema === "skill-record/1"
@@ -495,6 +553,12 @@ function profileFields(profile: ProfileFields): Record<string, unknown> {
   if (profile.region !== undefined) fields.region = profile.region;
   if (profile.focus !== undefined) fields.focus = { ...profile.focus };
   return fields;
+}
+
+// A level that can't be fingerprinted, such as one that isn't a finite number; the schema rejects the rest.
+function invalidLevel(): SaveError {
+  const issue = { path: ["entries", 0, "level"], code: "invalid_type", message: "Not a level." };
+  return { kind: "invalid", error: { kind: "invalid-fields", issues: [issue] } };
 }
 
 // A time as Pharoam writes it, to the second, such as `2026-10-24T14:02:11Z`.

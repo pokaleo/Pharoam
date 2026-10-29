@@ -689,3 +689,100 @@ describe("editing and deleting evidence (MVP S5)", () => {
     expect(storage.text("skills/python.md")).toBe(CITING);
   });
 });
+
+describe("saying what I can do (MVP S6)", () => {
+  const EVIDENCE_ID = "0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d";
+  const NEW_ID = /^01a186fe-adc0-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+  function sealed(entry: Readonly<Record<string, unknown>>): Readonly<Record<string, unknown>> {
+    const result = sealEntry(entry);
+    if (!result.ok) throw new Error("not sealed");
+    return result.value;
+  }
+
+  it("starts the skill's record with a self-reported observation (S6.1, S6.4)", async () => {
+    const { service, storage } = await opened({});
+    const result = await service.recordLevel({ skill: "python", level: 3 });
+    if (!result.ok) throw new Error(result.error.kind);
+    expect(result.value.file.top).toEqual({
+      schema: "skill-record/1",
+      id: expect.stringMatching(NEW_ID) as unknown,
+      created: "2026-10-29T09:30:00Z",
+      ai: null,
+      skill: "python",
+      entries: [
+        {
+          id: expect.stringMatching(NEW_ID) as unknown,
+          level: 3,
+          provenance: "self-reported",
+          observed_at: "2026-10-29T09:30:00Z",
+          integrity: expect.stringMatching(/^sha256-c1:[0-9a-f]{64}$/) as unknown,
+        },
+      ],
+    });
+    expect(result.value.entryIntegrity).toEqual([{ kind: "intact" }]);
+    expect(storage.text(result.value.location)).toBe(printRecordFile(result.value.file));
+  });
+
+  it("appends to the skill's record, leaving existing entries byte for byte (S6.1, S6.4)", async () => {
+    const existing = skillFile([sealed(ENTRY)]);
+    const { service, storage } = await opened({ "skills/python.md": existing });
+    const result = await service.recordLevel({ skill: "python", level: 4 });
+    expect(result.ok && result.value.location).toBe("skills/python.md");
+    const text = storage.text("skills/python.md") ?? "";
+    expect(text.startsWith(existing.slice(0, existing.lastIndexOf("---\n")))).toBe(true);
+    expect(result.ok && result.value.entryIntegrity).toEqual([{ kind: "intact" }, { kind: "intact" }]);
+    expect(result.ok && result.value.record).toMatchObject({
+      entries: [{ level: 3 }, { level: 4, provenance: "self-reported" }],
+    });
+  });
+
+  it("lists the evidence cited, and is still self-reported (S6.2)", async () => {
+    const { service } = await opened({ "evidence/a.md": EVIDENCE_FILE });
+    const result = await service.recordLevel({ skill: "python", level: 3, evidence: [EVIDENCE_ID] });
+    expect(result.ok && result.value.record).toMatchObject({
+      entries: [{ provenance: "self-reported", evidence: [EVIDENCE_ID] }],
+    });
+  });
+
+  it("offers no choice of provenance (S6.5)", async () => {
+    const { service } = await opened({});
+    const claimed = { skill: "python", level: 4, provenance: "demonstrated" };
+    const result = await service.recordLevel(claimed);
+    expect(result.ok && result.value.record).toMatchObject({ entries: [{ provenance: "self-reported" }] });
+  });
+
+  it("refuses evidence that isn't in the profile, and writes nothing", async () => {
+    const { service, storage } = await opened({ "pharoam.md": PHAROAM_FILE });
+    const missing = "0192f3a1-0000-7000-8000-000000000099";
+    expect(await service.recordLevel({ skill: "python", level: 3, evidence: [missing] })).toEqual({
+      ok: false,
+      error: { kind: "unknown-evidence", id: missing },
+    });
+    expect(storage.writes()).toBe(0);
+  });
+
+  it.each([5, -1, 2.5, Number.NaN, Number.POSITIVE_INFINITY])(
+    "refuses level %s, and writes nothing",
+    async (level) => {
+      const { service, storage } = await opened({});
+      const result = await service.recordLevel({ skill: "python", level });
+      expect(result.ok ? null : result.error.kind).toBe("invalid");
+      expect(storage.writes()).toBe(0);
+    },
+  );
+
+  it("refuses a skill that isn't a slug, and writes nothing", async () => {
+    const { service, storage } = await opened({});
+    const result = await service.recordLevel({ skill: "Python 3", level: 2 });
+    expect(result.ok ? null : result.error.kind).toBe("invalid");
+    expect(storage.writes()).toBe(0);
+  });
+
+  it("never writes over a skill record under Needs attention (hard rule 3)", async () => {
+    const broken = "---\nschema: skill-record/1\nskill: python\n---\n";
+    const { service, storage } = await opened({ "skill-record/broken.md": broken });
+    await service.recordLevel({ skill: "python", level: 3 });
+    expect(storage.text("skill-record/broken.md")).toBe(broken);
+  });
+});

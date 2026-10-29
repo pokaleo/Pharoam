@@ -207,6 +207,24 @@ export function withoutTopField(file: RecordFile, key: string): RecordFile {
 }
 
 /**
+ * Returns a copy of a record file with one item added to the end of a top-block list.
+ *
+ * @remarks The items already in the list are left exactly as written, so appending never changes an entry Pharoam
+ * must not edit (hard rule 4, MVP S6.4). A missing or empty list is started as a block list.
+ * @param file - The record file to start from; it isn't changed.
+ * @param key - The list's field, such as `entries`.
+ * @param item - The item to add.
+ * @returns The changed copy.
+ */
+export function withAppendedItem(file: RecordFile, key: string, item: unknown): RecordFile {
+  const document = file.document.clone();
+  const list = document.get(key, true);
+  if (isSeq(list) && list.items.length > 0) list.add(document.createNode(item));
+  else document.set(key, document.createNode([item]));
+  return { ...file, top: plainFields(document), document };
+}
+
+/**
  * Returns a copy of a record file with several top-block fields set or removed.
  *
  * @remarks A field given as `undefined` is removed. A field whose value is unchanged is left exactly as written,

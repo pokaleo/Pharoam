@@ -4,6 +4,7 @@ import {
   createRecordFile,
   parseRecordFile,
   printRecordFile,
+  withAppendedItem,
   withoutTopField,
   withTopField,
   withTopFields,
@@ -222,6 +223,34 @@ Body.
     const windows = `\uFEFF${text.replaceAll("\n", "\r\n")}`;
     const changed = printRecordFile(withTopField(parsed(windows), "title", "New title"));
     expect(changed).toBe(windows.replace("Old title", "New title"));
+  });
+});
+
+describe("appending to a list in a record file (MVP S6.4)", () => {
+  const list = `---
+schema: skill-record/1
+entries:
+  - id: a # the first
+    level: 2
+    evidence: [x, y]
+  - id: b
+    level: 3
+target: 4
+---
+Body.
+`;
+
+  it("adds the item at the end, leaving every existing item as written", () => {
+    const changed = withAppendedItem(parsed(list), "entries", { id: "c", level: 1 });
+    expect(printRecordFile(changed)).toBe(list.replace("target: 4", "  - id: c\n    level: 1\ntarget: 4"));
+  });
+
+  it("starts the list when there is none, or it is empty", () => {
+    const expected = "---\nschema: skill-record/1\nentries:\n  - id: c\n---\n";
+    const missing = parsed("---\nschema: skill-record/1\n---\n");
+    expect(printRecordFile(withAppendedItem(missing, "entries", { id: "c" }))).toBe(expected);
+    const empty = parsed("---\nschema: skill-record/1\nentries: []\n---\n");
+    expect(printRecordFile(withAppendedItem(empty, "entries", { id: "c" }))).toBe(expected);
   });
 });
 
