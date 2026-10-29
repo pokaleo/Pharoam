@@ -40,6 +40,10 @@ jobs:
         run: pnpm knip
       - name: API docs (every export documented)
         run: pnpm docs:api
+      - name: Chromium for the end-to-end tests
+        run: pnpm --filter @pharoam/web exec playwright install --with-deps chromium
+      - name: End-to-end tests with accessibility checks (builds the app)
+        run: pnpm test:e2e
       - name: Commit messages
         if: github.event_name == 'pull_request'
         run: pnpm exec commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }}
@@ -48,7 +52,6 @@ jobs:
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
         run: printf '%s\n' "$PR_TITLE" | pnpm exec commitlint
-      # Build, end-to-end with accessibility checks, and the JSON Schema check are added with the first packages.
 
   dependency-review:
     name: dependency-review

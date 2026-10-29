@@ -1,8 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "../../tsconfig.base.json",
-  // The web app runs in the browser (ADR-0008). Node types serve only its Vite config and the build helpers
-  // in src/build/, which Vite runs in Node.
+  // The web app runs in the browser (ADR-0008). Node types serve only its Vite and Playwright configs, the
+  // build helpers in src/build/, which Vite runs in Node, and the end-to-end tests in e2e/.
   "compilerOptions": {
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": ["vite/client", "node"],
@@ -10,5 +10,5 @@
     "allowImportingTsExtensions": true,
     "erasableSyntaxOnly": true
   },
-  "include": ["src/**/*", "vite.config.ts"]
+  "include": ["src/**/*", "e2e/**/*", "vite.config.ts", "playwright.config.ts"]
 }

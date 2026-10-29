@@ -15,3 +15,7 @@ coverage/
 
 # Generated API reference (pnpm docs:api)
 api-docs/
+
+# Playwright output (pnpm test:e2e)
+test-results/
+playwright-report/
