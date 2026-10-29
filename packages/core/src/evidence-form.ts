@@ -7,7 +7,7 @@
  * record's; their labels come from the app's translation files (hard rule 12).
  * @packageDocumentation
  */
-import { createRecordFile, type RecordFile } from "./record-file.ts";
+import { createRecordFile, withTopFields, type RecordFile } from "./record-file.ts";
 import { err, ok, type Result } from "./result.ts";
 import { parseProfileRecord, type ProfileRecordError } from "./schemas/profile-record.ts";
 
@@ -35,6 +35,11 @@ const KIND_FIELDS = {
   certificate: ["issuer", "credential_id", "expires"],
   other: ["role"],
 } as const satisfies Record<EvidenceFormKind, readonly string[]>;
+
+// Every field any kind's form has, so editing can remove those of a kind the record no longer is.
+const ALL_FIELDS = [
+  ...new Set(EVIDENCE_FORM_KINDS.flatMap((kind) => [...COMMON_FIELDS, ...KIND_FIELDS[kind]])),
+];
 
 /** A field on the evidence form. */
 export type EvidenceFormField =
@@ -134,9 +139,61 @@ export function evidenceDraft(
   return record.ok ? ok(file) : err({ kind: "invalid", error: record.error });
 }
 
+/**
+ * The form filled in from stored evidence, for editing it (MVP S5.1).
+ *
+ * @param file - The stored evidence record.
+ * @returns The record's answers, with the body as the description; `undefined` if the record isn't valid evidence
+ * of a kind the form offers, such as a degree or a diagnostic's record, which are edited by hand.
+ */
+export function evidenceFormOf(file: RecordFile): EvidenceForm | undefined {
+  const record = parseProfileRecord(file.top);
+  if (!record.ok || record.value.schema !== "evidence/1") return undefined;
+  const { kind } = record.value;
+  if (!isFormKind(kind)) return undefined;
+  const values: Readonly<Record<string, unknown>> = record.value;
+  const form: Record<string, unknown> = { kind };
+  for (const field of evidenceFormFields(kind)) {
+    const value = field === "description" ? file.body : values[field];
+    if (answer(value) !== undefined) form[field] = value;
+  }
+  // Built from a valid record of a form kind, field by field, so it has the form's shape.
+  return form as unknown as EvidenceForm;
+}
+
+/**
+ * Applies the edited form to stored evidence (MVP S5.1).
+ *
+ * @remarks The ID, creation time, source, AI skill links and fields Pharoam doesn't know are kept; unchanged answers
+ * stay exactly as written, cleared answers and fields of the kind the record no longer is are removed, the body
+ * becomes the description, and `updated` is set to now (data model §4).
+ * @param file - The stored evidence record.
+ * @param form - The person's edited answers.
+ * @param now - The time, as Pharoam writes it.
+ * @returns The edited record file, or the fields to fix.
+ */
+export function editedEvidence(
+  file: RecordFile,
+  form: EvidenceForm,
+  now: string,
+): Result<RecordFile, InvalidEvidenceError> {
+  const id = typeof file.top.id === "string" ? file.top.id : "";
+  const fresh = evidenceDraft(form, id, now);
+  if (!fresh.ok) return fresh;
+  const fields: Record<string, unknown> = { updated: now, kind: form.kind };
+  for (const field of ALL_FIELDS) if (field !== "description") fields[field] = fresh.value.top[field];
+  const edited = { ...withTopFields(file, fields), body: fresh.value.body };
+  const record = parseProfileRecord(edited.top);
+  return record.ok ? ok(edited) : err({ kind: "invalid", error: record.error });
+}
+
+function isFormKind(kind: string): kind is EvidenceFormKind {
+  return (EVIDENCE_FORM_KINDS as readonly string[]).includes(kind);
+}
+
 // An answer as stored: `undefined` when empty, and lists without their empty entries. An empty title is left out
 // too, so validation reports it as missing.
-function answer(value: string | number | readonly string[] | undefined): unknown {
+function answer(value: unknown): unknown {
   if (Array.isArray(value)) {
     const filled = value.filter((item) => item !== "");
     return filled.length === 0 ? undefined : filled;

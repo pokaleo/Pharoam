@@ -7,17 +7,16 @@
  * is never silently overwritten (AD10, MVP S12).
  * @packageDocumentation
  */
-import { evidenceDraft, type EvidenceForm, type InvalidEvidenceError } from "./evidence-form.ts";
-import { createProfileRecordIdGenerator, type IdSource } from "./ids.ts";
-import { canonicalJson, checkEntry, type IntegrityStatus } from "./integrity.ts";
-import { overviewFacts, withOverview, type OverviewWriter } from "./overview.ts";
 import {
-  createRecordFile,
-  withoutTopField,
-  withTopField,
-  type RecordFile,
-  type RecordFileError,
-} from "./record-file.ts";
+  editedEvidence,
+  evidenceDraft,
+  type EvidenceForm,
+  type InvalidEvidenceError,
+} from "./evidence-form.ts";
+import { createProfileRecordIdGenerator, type IdSource } from "./ids.ts";
+import { checkEntry, type IntegrityStatus } from "./integrity.ts";
+import { overviewFacts, withOverview, type OverviewWriter } from "./overview.ts";
+import { createRecordFile, withTopFields, type RecordFile, type RecordFileError } from "./record-file.ts";
 import { err, ok, type Result } from "./result.ts";
 import { parseProfileRecord, type ProfileRecord, type ProfileRecordError } from "./schemas/profile-record.ts";
 
@@ -160,6 +159,22 @@ export type CreateProfileError = SaveError | { readonly kind: "profile-exists"; 
 /** Why the service didn't change `pharoam.md`: the reasons a save fails, or there is no valid profile to change. */
 export type ProfileChangeError = SaveError | { readonly kind: "no-profile" };
 
+/** Why the service didn't change a piece of evidence. */
+export type EditEvidenceError = SaveError | { readonly kind: "not-editable"; readonly location: string };
+
+/** Why the service didn't delete a piece of evidence. */
+export type DeleteEvidenceError = SaveError | { readonly kind: "not-evidence"; readonly location: string };
+
+/** An observation that cites a piece of evidence (MVP S5.3). */
+export interface EvidenceReference {
+  /** Where the skill record holding the observation is stored. */
+  readonly location: string;
+  /** The skill the observation is about, by slug. */
+  readonly skill: string;
+  /** The observation's ID. */
+  readonly observation: string;
+}
+
 /** Why the overview in `pharoam.md` wasn't brought up to date. */
 export type OverviewError =
   ProfileChangeError | { readonly kind: "overview-markers"; readonly location: string };
@@ -201,6 +216,30 @@ export interface CoreService {
    * {@link CoreService.create} when the person confirms.
    */
   readonly draftEvidence: (form: EvidenceForm) => Result<RecordFile, InvalidEvidenceError>;
+  /**
+   * Saves the edited evidence form over a piece of evidence (MVP S5.1).
+   *
+   * @remarks Keeps the ID, creation time and fields Pharoam doesn't know, and sets `updated`; only if storage still
+   * has the version read (AD10). A diagnostic's record (`kind: assessment`) is never edited (data model §4).
+   */
+  readonly editEvidence: (
+    location: string,
+    form: EvidenceForm,
+  ) => Promise<Result<LoadedRecord, EditEvidenceError>>;
+  /**
+   * The observations that cite a piece of evidence, so the person sees them before deleting it (MVP S5.3).
+   *
+   * @remarks Observations are never edited (hard rule 4): after a deletion they keep the ID, which no longer
+   * finds a record, so they show it as removed (MVP S5.2).
+   */
+  readonly evidenceReferences: (id: string) => readonly EvidenceReference[];
+  /**
+   * Deletes a piece of evidence the person confirmed, only if storage still has the version read (MVP S5.2, AD10).
+   *
+   * @remarks Only evidence is deleted, never a record under Needs attention (hard rule 3). The overview is brought
+   * up to date afterwards.
+   */
+  readonly deleteEvidence: (location: string) => Promise<Result<undefined, DeleteEvidenceError>>;
   /**
    * Saves the person's headline, situation, country and focus, and the time of the change (MVP S3.1).
    *
@@ -286,7 +325,7 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
 
   // Saves a change to `pharoam.md`, marking the time of the change (data model §4).
   function saveProfile(current: LoadedRecord, file: RecordFile): Promise<Result<LoadedRecord, SaveError>> {
-    return updateRecord(current.location, withTopField(file, "updated", timestamp(ids.now())));
+    return updateRecord(current.location, withTopFields(file, { updated: timestamp(ids.now()) }));
   }
 
   async function regenerateOverview(): Promise<Result<LoadedRecord, OverviewError>> {
@@ -361,6 +400,40 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
     update: updateRecord,
     draftEvidence: (form) => evidenceDraft(form, nextId(), timestamp(ids.now())),
 
+    editEvidence: async (location, form) => {
+      if (attention.some((item) => item.location === location))
+        return err({ kind: "needs-attention", location });
+      const current = loaded.find((r) => r.location === location);
+      if (current === undefined) return err({ kind: "not-found", location });
+      if (current.record.schema !== "evidence/1" || current.record.kind === "assessment")
+        return err({ kind: "not-editable", location });
+      const edited = editedEvidence(current.file, form, timestamp(ids.now()));
+      if (!edited.ok) return edited;
+      return updateRecord(location, edited.value);
+    },
+
+    evidenceReferences: (id) =>
+      loaded.flatMap(({ location, record }) =>
+        record.schema === "skill-record/1"
+          ? record.entries
+              .filter((entry) => "evidence" in entry && entry.evidence.some((cited) => cited === id))
+              .map((entry) => ({ location, skill: record.skill, observation: entry.id }))
+          : [],
+      ),
+
+    deleteEvidence: async (location) => {
+      if (attention.some((item) => item.location === location))
+        return err({ kind: "needs-attention", location });
+      const current = loaded.find((r) => r.location === location);
+      if (current === undefined) return err({ kind: "not-found", location });
+      if (current.record.schema !== "evidence/1") return err({ kind: "not-evidence", location });
+      const removed = await storage.delete(location, current.version);
+      if (!removed.ok) return err(saveError(removed.error, location));
+      loaded = loaded.filter((r) => r !== current);
+      await afterChange(current);
+      return ok(undefined);
+    },
+
     createProfile: async (fields) => {
       const existing = profile();
       if (existing !== undefined) return err({ kind: "profile-exists", location: existing.location });
@@ -378,14 +451,9 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
       const current = profile();
       if (current === undefined) return err({ kind: "no-profile" });
       const wanted = profileFields(fields);
-      let file = current.file;
-      // Only changed fields are set, so an unchanged one keeps how it was written and its comments.
-      for (const key of PROFILE_KEYS) {
-        const value = wanted[key];
-        if (value === undefined) file = withoutTopField(file, key);
-        else if (!sameValue(file.top[key], value)) file = withTopField(file, key, value);
-      }
-      return saveProfile(current, file);
+      // Unchanged fields keep how they were written and their comments; those left out are removed.
+      const changes = Object.fromEntries(PROFILE_KEYS.map((key) => [key, wanted[key]]));
+      return saveProfile(current, withTopFields(current.file, changes));
     },
 
     refreshOverview,
@@ -427,13 +495,6 @@ function profileFields(profile: ProfileFields): Record<string, unknown> {
   if (profile.region !== undefined) fields.region = profile.region;
   if (profile.focus !== undefined) fields.focus = { ...profile.focus };
   return fields;
-}
-
-// Whether two values read from YAML are the same, ignoring how they were written.
-function sameValue(a: unknown, b: unknown): boolean {
-  const left = canonicalJson(a);
-  const right = canonicalJson(b);
-  return left.ok && right.ok && left.value === right.value;
 }
 
 // A time as Pharoam writes it, to the second, such as `2026-10-24T14:02:11Z`.
