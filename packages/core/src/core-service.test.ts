@@ -786,3 +786,144 @@ describe("saying what I can do (MVP S6)", () => {
     expect(storage.text("skill-record/broken.md")).toBe(broken);
   });
 });
+
+describe("correcting or retracting a level (MVP S7)", () => {
+  const OLD = "0192f3a1-0000-7000-8000-000000000011";
+  const NEW_ID = /^01a186fe-adc0-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+  function sealedEntry(entry: Readonly<Record<string, unknown>>): Readonly<Record<string, unknown>> {
+    const result = sealEntry(entry);
+    if (!result.ok) throw new Error("not sealed");
+    return result.value;
+  }
+
+  const HISTORY = skillFile([sealedEntry(ENTRY)]);
+  const before = HISTORY.slice(0, HISTORY.lastIndexOf("---\n"));
+
+  it("appends a correction that supersedes the old observation, leaving it unchanged (S7.1)", async () => {
+    const { service, storage } = await opened({ "skills/python.md": HISTORY });
+    const result = await service.correctLevel(OLD, { level: 2 });
+    if (!result.ok) throw new Error(result.error.kind);
+    expect(result.value.record).toMatchObject({
+      entries: [
+        { id: OLD, level: 3 },
+        {
+          id: expect.stringMatching(NEW_ID) as unknown,
+          level: 2,
+          provenance: "self-reported",
+          observed_at: "2026-10-29T09:30:00Z",
+          supersedes: OLD,
+        },
+      ],
+    });
+    expect(storage.text("skills/python.md")?.startsWith(before)).toBe(true);
+    expect(result.value.entryIntegrity).toEqual([{ kind: "intact" }, { kind: "intact" }]);
+  });
+
+  it("appends a retraction, and the observation stops counting (S7.2)", async () => {
+    const { service, storage } = await opened({ "skills/python.md": HISTORY });
+    const result = await service.retractLevel(OLD, "I rated this too high.");
+    if (!result.ok) throw new Error(result.error.kind);
+    expect(result.value.record).toMatchObject({
+      entries: [
+        { id: OLD },
+        {
+          id: expect.stringMatching(NEW_ID) as unknown,
+          target: OLD,
+          decision: "retract",
+          reviewed_at: "2026-10-29T09:30:00Z",
+          note: "I rated this too high.",
+        },
+      ],
+    });
+    expect(storage.text("skills/python.md")?.startsWith(before)).toBe(true);
+    expect(service.skillHistory("python")).toMatchObject([
+      { kind: "review" },
+      { kind: "observation", status: "retracted", shown: false },
+    ]);
+  });
+
+  it("shows the history newest first, marking the shown level (S7.3)", async () => {
+    const { service } = await opened({ "skills/python.md": HISTORY });
+    await service.correctLevel(OLD, { level: 2 });
+    expect(service.skillHistory("python")).toMatchObject([
+      { kind: "observation", entry: { level: 2 }, status: "counts", shown: true },
+      { kind: "observation", entry: { id: OLD }, status: "superseded", shown: false },
+    ]);
+    expect(service.skillHistory("rust")).toEqual([]);
+  });
+
+  it("corrects only the person's own current levels", async () => {
+    const tested = { ...ENTRY, id: "0192f3a1-0000-7000-8000-000000000012", provenance: "demonstrated" };
+    const assessed = { ...tested, assessment: "0192f3a1-0000-7000-8000-000000000090" };
+    const corrected = { ...ENTRY, id: "0192f3a1-0000-7000-8000-000000000013", supersedes: OLD };
+    const retracted = {
+      id: "0192f3a1-0000-7000-8000-000000000014",
+      target: corrected.id,
+      decision: "retract",
+    };
+    const file = skillFile([
+      sealedEntry(ENTRY),
+      sealedEntry(assessed),
+      sealedEntry(corrected),
+      sealedEntry({ ...retracted, reviewed_at: "2026-10-02T10:00:00Z" }),
+    ]);
+    const { service, storage } = await opened({ "skills/python.md": file });
+    for (const [observation, reason] of [
+      [assessed.id, "not-self-reported"],
+      [OLD, "superseded"],
+      [corrected.id, "retracted"],
+    ] as const) {
+      expect(await service.correctLevel(observation, { level: 1 })).toEqual({
+        ok: false,
+        error: { kind: "not-correctable", observation, reason },
+      });
+    }
+    expect(await service.retractLevel(corrected.id)).toEqual({
+      ok: false,
+      error: { kind: "not-correctable", observation: corrected.id, reason: "retracted" },
+    });
+    expect(storage.writes()).toBe(0);
+  });
+
+  it("can retract any observation, including a tested one", async () => {
+    const tested = {
+      ...ENTRY,
+      provenance: "demonstrated",
+      assessment: "0192f3a1-0000-7000-8000-000000000090",
+    };
+    const { service } = await opened({ "skills/python.md": skillFile([sealedEntry(tested)]) });
+    expect((await service.retractLevel(OLD)).ok).toBe(true);
+  });
+
+  it("finds no observation that isn't in the profile, and writes nothing", async () => {
+    const { service, storage } = await opened({ "skills/python.md": HISTORY });
+    const missing = "0192f3a1-0000-7000-8000-000000000099";
+    expect(await service.correctLevel(missing, { level: 1 })).toEqual({
+      ok: false,
+      error: { kind: "no-observation", id: missing },
+    });
+    expect(await service.retractLevel(missing)).toEqual({
+      ok: false,
+      error: { kind: "no-observation", id: missing },
+    });
+    expect(storage.writes()).toBe(0);
+  });
+
+  it("refuses a correction citing evidence that isn't in the profile, and writes nothing", async () => {
+    const { service, storage } = await opened({ "skills/python.md": HISTORY });
+    const missing = "0192f3a1-0000-7000-8000-000000000099";
+    expect(await service.correctLevel(OLD, { level: 2, evidence: [missing] })).toEqual({
+      ok: false,
+      error: { kind: "unknown-evidence", id: missing },
+    });
+    expect(storage.writes()).toBe(0);
+  });
+
+  it("refuses a corrected level outside 0–4, and writes nothing", async () => {
+    const { service, storage } = await opened({ "skills/python.md": HISTORY });
+    const result = await service.correctLevel(OLD, { level: 7 });
+    expect(result.ok ? null : result.error.kind).toBe("invalid");
+    expect(storage.writes()).toBe(0);
+  });
+});

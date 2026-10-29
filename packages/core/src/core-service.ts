@@ -24,7 +24,14 @@ import {
   type RecordFileError,
 } from "./record-file.ts";
 import { err, ok, type Result } from "./result.ts";
+import {
+  observationStatuses,
+  skillHistory,
+  type HistoryItem,
+  type ObservationStatus,
+} from "./skill-history.ts";
 import { parseProfileRecord, type ProfileRecord, type ProfileRecordError } from "./schemas/profile-record.ts";
+import type { Observation } from "./schemas/skill-record.ts";
 
 /** Storage that can't be reached, such as a folder whose permission was revoked. */
 export interface StorageError {
@@ -198,6 +205,17 @@ export interface SelfRating {
 /** Why the service didn't record a level. */
 export type RecordLevelError = SaveError | { readonly kind: "unknown-evidence"; readonly id: string };
 
+/** Why the service didn't correct or retract an observation. */
+export type ChangeLevelError =
+  | RecordLevelError
+  | { readonly kind: "no-observation"; readonly id: string }
+  | {
+      readonly kind: "not-correctable";
+      readonly observation: string;
+      /** A tested or AI level is retaken, not corrected; a superseded or retracted one no longer counts. */
+      readonly reason: "not-self-reported" | "superseded" | "retracted";
+    };
+
 /** Why the overview in `pharoam.md` wasn't brought up to date. */
 export type OverviewError =
   ProfileChangeError | { readonly kind: "overview-markers"; readonly location: string };
@@ -271,6 +289,27 @@ export interface CoreService {
    * the profile.
    */
   readonly recordLevel: (rating: SelfRating) => Promise<Result<LoadedRecord, RecordLevelError>>;
+  /**
+   * Corrects one of the person's own levels: appends a new `self-reported` observation that supersedes it (MVP S7.1).
+   *
+   * @remarks The old observation is left as written (hard rule 4). Only a current `self-reported` level can be
+   * corrected: a tested level is retaken instead (PRD E7), and a superseded or retracted one no longer counts.
+   */
+  readonly correctLevel: (
+    observation: string,
+    correction: Omit<SelfRating, "skill">,
+  ) => Promise<Result<LoadedRecord, ChangeLevelError>>;
+  /**
+   * Withdraws an observation: appends a review with `decision: retract`, so it stops counting (MVP S7.2).
+   *
+   * @remarks Any observation that isn't already retracted can be withdrawn; it stays in the history, marked.
+   */
+  readonly retractLevel: (
+    observation: string,
+    note?: string,
+  ) => Promise<Result<LoadedRecord, ChangeLevelError>>;
+  /** A skill's history, newest first, with each entry marked; empty for a skill without a record (MVP S7.3). */
+  readonly skillHistory: (skill: string) => readonly HistoryItem[];
   /**
    * Saves the person's headline, situation, country and focus, and the time of the change (MVP S3.1).
    *
@@ -381,6 +420,49 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
       await refreshOverview();
   }
 
+  const skillRecord = (skill: string): LoadedRecord | undefined =>
+    loaded.find((r) => r.record.schema === "skill-record/1" && r.record.skill === skill);
+
+  // A new self-reported observation, sealed; cited evidence must be in the profile (MVP S6.2).
+  function newObservation(
+    level: number,
+    evidence: readonly string[],
+    supersedes?: string,
+  ): Result<Readonly<Record<string, unknown>> & { readonly observed_at: string }, RecordLevelError> {
+    const unknown = evidence.find((id) => byId(id)?.record.schema !== "evidence/1");
+    if (unknown !== undefined) return err({ kind: "unknown-evidence", id: unknown });
+    const observedAt = timestamp(ids.now());
+    const sealed = sealEntry({
+      id: nextId(),
+      level,
+      provenance: "self-reported",
+      observed_at: observedAt,
+      ...(evidence.length > 0 && { evidence: [...evidence] }),
+      ...(supersedes !== undefined && { supersedes }),
+    });
+    return sealed.ok ? ok({ ...sealed.value, observed_at: observedAt }) : err(invalidLevel());
+  }
+
+  function appendEntry(record: LoadedRecord, entry: unknown): Promise<Result<LoadedRecord, SaveError>> {
+    return updateRecord(record.location, withAppendedItem(record.file, "entries", entry));
+  }
+
+  // The skill record holding an observation, and whether the observation still counts.
+  function observationById(
+    id: string,
+  ): Result<{ record: LoadedRecord; observation: Observation; status: ObservationStatus }, ChangeLevelError> {
+    for (const record of loaded) {
+      if (record.record.schema !== "skill-record/1") continue;
+      const observation = record.record.entries.find(
+        (e): e is Observation => !("decision" in e) && e.id === id,
+      );
+      if (observation === undefined) continue;
+      const status = observationStatuses(record.record.entries).get(id) ?? "counts";
+      return ok({ record, observation, status });
+    }
+    return err({ kind: "no-observation", id });
+  }
+
   return {
     open: async () => {
       const listed = await storage.list();
@@ -444,30 +526,56 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
     },
 
     recordLevel: async ({ skill, level, evidence = [] }) => {
-      const unknown = evidence.find((id) => byId(id)?.record.schema !== "evidence/1");
-      if (unknown !== undefined) return err({ kind: "unknown-evidence", id: unknown });
-      const now = timestamp(ids.now());
-      const observation = {
-        id: nextId(),
-        level,
-        provenance: "self-reported",
-        observed_at: now,
-        ...(evidence.length > 0 && { evidence: [...evidence] }),
-      };
-      const entry = sealEntry(observation);
-      if (!entry.ok) return err(invalidLevel());
-      const current = loaded.find((r) => r.record.schema === "skill-record/1" && r.record.skill === skill);
-      if (current !== undefined)
-        return updateRecord(current.location, withAppendedItem(current.file, "entries", entry.value));
+      const observation = newObservation(level, evidence);
+      if (!observation.ok) return observation;
+      const current = skillRecord(skill);
+      if (current !== undefined) return appendEntry(current, observation.value);
       const top = {
         schema: "skill-record/1",
         id: nextId(),
-        created: now,
+        created: observation.value.observed_at,
         ai: null,
         skill,
-        entries: [entry.value],
+        entries: [observation.value],
       };
       return createRecord(createRecordFile(top, ""));
+    },
+
+    correctLevel: async (id, { level, evidence = [] }) => {
+      const found = observationById(id);
+      if (!found.ok) return found;
+      const { record, observation, status } = found.value;
+      if (observation.provenance !== "self-reported")
+        return err({ kind: "not-correctable", observation: id, reason: "not-self-reported" });
+      if (status !== "counts") return err({ kind: "not-correctable", observation: id, reason: status });
+      const correction = newObservation(level, evidence, id);
+      if (!correction.ok) return correction;
+      return appendEntry(record, correction.value);
+    },
+
+    retractLevel: async (id, note) => {
+      const found = observationById(id);
+      if (!found.ok) return found;
+      const { record, status } = found.value;
+      if (status === "retracted") return err({ kind: "not-correctable", observation: id, reason: status });
+      const review = {
+        id: nextId(),
+        target: id,
+        decision: "retract",
+        reviewed_at: timestamp(ids.now()),
+        ...(note !== undefined && note !== "" && { note }),
+      };
+      const sealed = sealEntry(review);
+      // A review holds only IDs, a time and text, which always have a fingerprint.
+      if (!sealed.ok) throw new Error("A review couldn't be fingerprinted.");
+      return appendEntry(record, sealed.value);
+    },
+
+    skillHistory: (skill) => {
+      const current = skillRecord(skill);
+      return current?.record.schema === "skill-record/1"
+        ? skillHistory(current.record.entries, current.entryIntegrity)
+        : [];
     },
 
     evidenceReferences: (id) =>
