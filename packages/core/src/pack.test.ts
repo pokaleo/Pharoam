@@ -1,17 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { PACK_FILE, PATHWAY_FILE, SKILL_FILE } from "./__fixtures__/content-records.ts";
+import { LEVELS_FILE, PACK_FILE, PATHWAY_FILE, SKILL_FILE } from "./__fixtures__/content-records.ts";
 import { compileContentPack, ContentPack } from "./pack.ts";
-
-const LEVELS_FILE = `---
-schema: levels/1
-levels:
-  0: { name: Aware, description: Knows what it is. }
-  1: { name: Beginner, description: Has used it with help. }
-  2: { name: Working, description: Uses it alone. }
-  3: { name: Proficient, description: Uses it well on complex work. }
-  4: { name: Expert, description: Shapes how others use it. }
----
-`;
 
 const skill = (slug: string, extra = ""): string =>
   `---\nschema: skill/1\nslug: ${slug}\nname: ${slug}\ndomain: Test\norigin: { source: Pharoam, licence: MIT }\n${extra}---\n`;

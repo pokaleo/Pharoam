@@ -66,6 +66,13 @@ export {
 } from "./evidence-form.ts";
 export { levelDescriptions, type Level, type LevelDescription } from "./levels.ts";
 export { type OverviewFacts, type OverviewWriter } from "./overview.ts";
+export {
+  pathwayDetail,
+  pathwaySummaries,
+  type PathwayDetail,
+  type PathwayRequirementView,
+  type PathwaySummary,
+} from "./pathways.ts";
 export { proficiencyOf, type LevelSince, type ProficiencySummary } from "./proficiency.ts";
 export {
   compileContentPack,

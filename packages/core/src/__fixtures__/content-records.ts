@@ -104,3 +104,15 @@ contents:
 translations: [en]
 ---
 `;
+
+/** The shared level scale. */
+export const LEVELS_FILE = `---
+schema: levels/1
+levels:
+  0: { name: Aware, description: Knows what it is. }
+  1: { name: Beginner, description: Has used it with help. }
+  2: { name: Working, description: Uses it alone. }
+  3: { name: Proficient, description: Uses it well on complex work. }
+  4: { name: Expert, description: Shapes how others use it. }
+---
+`;
