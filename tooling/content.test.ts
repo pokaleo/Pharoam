@@ -84,11 +84,11 @@ describe("content and data", () => {
     }
   });
 
-  // Pathways whose required skills have their own level descriptions so far; #24 adds one pathway at a time.
-  const DESCRIBED_PATHWAYS = ["frontend-engineer", "backend-engineer", "ml-engineer"];
+  // A skill a pathway requires has its own level descriptions, so a level means the same to everyone (MVP §3).
+  const pathwayFiles = files.filter((file) => file.startsWith("content/pathways/"));
 
-  it.each(DESCRIBED_PATHWAYS)("describes each level of every skill %s requires (data model §6)", (slug) => {
-    const pathway = PathwayRecord.parse(top(`content/pathways/${slug}.md`));
+  it.each(pathwayFiles)("describes each level of every skill %s requires (data model §6)", (file) => {
+    const pathway = PathwayRecord.parse(top(file));
     const undescribed = pathway.requirements
       .map((requirement) => requirement.skill)
       .filter((skill) => skills.find((s) => s.slug === skill)?.levels === undefined);
