@@ -719,6 +719,15 @@ describe("saying what I can do (MVP S6)", () => {
           integrity: expect.stringMatching(/^sha256-c1:[0-9a-f]{64}$/) as unknown,
         },
       ],
+      proficiency: {
+        shown: {
+          level: 3,
+          provenance: "self-reported",
+          since: "2026-10-29",
+          observation: expect.stringMatching(NEW_ID) as unknown,
+        },
+        "by-source": { "self-reported": { level: 3, since: "2026-10-29" } },
+      },
     });
     expect(result.value.entryIntegrity).toEqual([{ kind: "intact" }]);
     expect(storage.text(result.value.location)).toBe(printRecordFile(result.value.file));
@@ -1003,5 +1012,66 @@ describe("adding a skill the vocabulary is missing (MVP S8)", () => {
     const result = await service.addCustomSkill({ name: "   " });
     expect(result.ok ? null : result.error.kind).toBe("invalid");
     expect(storage.writes()).toBe(0);
+  });
+});
+
+describe("seeing what I can do (MVP S9)", () => {
+  it("writes the proficiency summary when a level is recorded (S9.2)", async () => {
+    const { service, storage } = await opened({});
+    const result = await service.recordLevel({ skill: "python", level: 3 });
+    if (!result.ok) throw new Error(result.error.kind);
+    expect(result.value.record).toMatchObject({
+      proficiency: {
+        shown: { level: 3, provenance: "self-reported", since: "2026-10-29" },
+        "by-source": { "self-reported": { level: 3, since: "2026-10-29" } },
+      },
+    });
+    expect(storage.text(result.value.location)).toContain("proficiency:\n  shown:\n    level: 3\n");
+  });
+
+  it("regenerates it when a level is corrected or retracted", async () => {
+    const { service } = await opened({});
+    const first = await service.recordLevel({ skill: "python", level: 3 });
+    if (!first.ok || first.value.record.schema !== "skill-record/1") throw new Error("not recorded");
+    const old = first.value.record.entries[0]?.id ?? "";
+    const corrected = await service.correctLevel(old, { level: 2 });
+    expect(corrected.ok && corrected.value.record).toMatchObject({ proficiency: { shown: { level: 2 } } });
+    const latest =
+      corrected.ok && corrected.value.record.schema === "skill-record/1" ? corrected.value.record : undefined;
+    const retracted = await service.retractLevel(latest?.entries[1]?.id ?? "");
+    // Nothing counts any more, so there is no summary to show.
+    expect(retracted.ok && retracted.value.file.top.proficiency).toBeUndefined();
+  });
+
+  it("replaces a summary that doesn't match the history when the file is saved", async () => {
+    const hand = skillFile([ENTRY]).replace(
+      "entries:",
+      "proficiency:\n  shown: { level: 4, provenance: self-reported, since: 2026-10-01, observation: 0192f3a1-0000-7000-8000-000000000011 }\nentries:",
+    );
+    const { service } = await opened({ "skills/python.md": hand });
+    const current = service.find("0192f3a1-0000-7000-8000-000000000010");
+    if (current === undefined) throw new Error("not loaded");
+    const saved = await service.update(current.location, current.file);
+    expect(saved.ok && saved.value.record).toMatchObject({ proficiency: { shown: { level: 3 } } });
+  });
+
+  it("leaves a summary that is up to date exactly as written", async () => {
+    const { service, storage } = await opened({});
+    const first = await service.recordLevel({ skill: "python", level: 3 });
+    if (!first.ok) throw new Error(first.error.kind);
+    const before = storage.text(first.value.location);
+    const saved = await service.update(first.value.location, first.value.file);
+    expect(saved.ok && storage.text(first.value.location)).toBe(before);
+  });
+
+  it("lists the person's skills with their shown levels, narrowed by a filter (S9.1, S9.3)", async () => {
+    const { service } = await opened({});
+    await service.recordLevel({ skill: "python", level: 3 });
+    await service.addCustomSkill({ name: "KDB+/q" });
+    expect(service.skillView([]).map((item) => [item.skill, item.shown?.level])).toEqual([
+      ["custom-kdb-q", undefined],
+      ["python", 3],
+    ]);
+    expect(service.skillView([], { query: "kdb" }).map((item) => item.skill)).toEqual(["custom-kdb-q"]);
   });
 });
