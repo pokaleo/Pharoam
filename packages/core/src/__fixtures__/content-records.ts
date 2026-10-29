@@ -1,4 +1,5 @@
 // Example content record files for the schema tests, following data model §11.
+import { compileContentPack, type ContentPack } from "../pack.ts";
 
 /** A skill inventory entry with skill-specific level descriptions. */
 export const SKILL_FILE = `---
@@ -116,3 +117,23 @@ levels:
   4: { name: Expert, description: Shapes how others use it. }
 ---
 `;
+
+const skill = (slug: string, name: string): string =>
+  `---\nschema: skill/1\nslug: ${slug}\nname: ${name}\ndomain: Test\norigin: { source: Pharoam, licence: MIT }\n---\n`;
+
+/** The example records compiled into a pack: the ML engineer pathway and the skills it names. */
+export function examplePack(): ContentPack {
+  const compiled = compileContentPack([
+    { path: "content/pack.md", text: PACK_FILE },
+    { path: "data/levels.md", text: LEVELS_FILE },
+    { path: "data/skills/python.md", text: SKILL_FILE },
+    { path: "data/skills/pytorch.md", text: skill("pytorch", "PyTorch") },
+    { path: "data/skills/docker.md", text: skill("docker", "Docker") },
+    { path: "data/skills/sql.md", text: skill("sql", "SQL") },
+    { path: "data/skills/django.md", text: skill("django", "Django") },
+    { path: "data/skills/pandas.md", text: skill("pandas", "pandas") },
+    { path: "content/pathways/ml-engineer.md", text: PATHWAY_FILE },
+  ]);
+  if (!compiled.ok) throw new Error(JSON.stringify(compiled.error.problems));
+  return compiled.value;
+}

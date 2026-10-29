@@ -14,9 +14,12 @@ import {
   type InvalidEvidenceError,
 } from "./evidence-form.ts";
 import { customSkillSlug } from "./custom-skills.ts";
+import { gapItems, type GapItem, type GapWriter } from "./gaps.ts";
 import { createProfileRecordIdGenerator, type IdSource } from "./ids.ts";
 import { checkEntry, sealEntry, type IntegrityStatus } from "./integrity.ts";
 import { overviewFacts, withOverview, type OverviewWriter } from "./overview.ts";
+import type { ContentPack } from "./pack.ts";
+import { pathwayDetail, type PathwayDetail } from "./pathways.ts";
 import { proficiencyOf } from "./proficiency.ts";
 import {
   createRecordFile,
@@ -240,6 +243,23 @@ export type ChangeLevelError =
       readonly reason: "not-self-reported" | "superseded" | "retracted";
     };
 
+/** The gap to a pathway, as stored and shown (MVP S11). */
+export interface GapView {
+  /** The stored gap record's ID. */
+  readonly id: string;
+  /** Where the gap record is stored, such as `gaps/ml-engineer.md`. */
+  readonly location: string;
+  /** When the stored gap last changed, for "Updated just now" (MVP S11.5). */
+  readonly updated: string;
+  /** The pathway, in full. */
+  readonly pathway: PathwayDetail;
+  /** Each requirement, grouped, in the pathway's order. */
+  readonly requirements: readonly GapItem[];
+}
+
+/** Why the gap to a pathway couldn't be shown or stored. */
+export type GapError = SaveError | { readonly kind: "unknown-pathway"; readonly pathway: string };
+
 /** Why the overview in `pharoam.md` wasn't brought up to date. */
 export type OverviewError =
   ProfileChangeError | { readonly kind: "overview-markers"; readonly location: string };
@@ -347,6 +367,21 @@ export interface CoreService {
    * from each skill record's `proficiency` summary, which every save regenerates from the history (S9.2).
    */
   readonly skillView: (vocabulary: readonly SkillEntry[], filter?: SkillFilter) => readonly SkillViewItem[];
+  /**
+   * Compares the profile with a pathway and stores the result as `gaps/<pathway>.md` (MVP S11.1, S11.4).
+   *
+   * @remarks Any pathway can be explored, however far off it is (Charter R2, S11.6). The stored gap pins the pathway
+   * to its pack version and has a readable summary in its body; it is written only when it has changed. Call it
+   * again to refresh by hand (S11.5). Nothing is scored, totalled or ranked (Charter R1).
+   */
+  readonly exploreGap: (pathway: string) => Promise<Result<GapView, GapError>>;
+  /**
+   * Why a stored gap couldn't be regenerated after the last change to evidence or skills, if it couldn't (MVP S11.5).
+   *
+   * @remarks Every stored gap is regenerated after such a change; the change itself was saved. A gap changed outside
+   * Pharoam is never overwritten (hard rule 3).
+   */
+  readonly gapProblem: (pathway: string) => GapError | undefined;
   /** A skill's history, newest first, with each entry marked; empty for a skill without a record (MVP S7.3). */
   readonly skillHistory: (skill: string) => readonly HistoryItem[];
   /**
@@ -384,6 +419,10 @@ export interface CoreServiceOptions {
   readonly ids: IdSource;
   /** Writes the overview in `pharoam.md` in the person's language, from the app's translation files. */
   readonly overview: OverviewWriter;
+  /** The content pack: the skill vocabulary, level scale and pathways. */
+  readonly content: ContentPack;
+  /** Writes a stored gap's summary in the person's language, from the app's translation files. */
+  readonly gapSummary: GapWriter;
 }
 
 /**
@@ -394,11 +433,12 @@ export interface CoreServiceOptions {
  * @returns The service, with nothing read yet.
  */
 export function createCoreService(options: CoreServiceOptions): CoreService {
-  const { storage, ids, overview } = options;
+  const { storage, ids, overview, content, gapSummary } = options;
   const nextId = createProfileRecordIdGenerator(ids);
   let loaded: LoadedRecord[] = [];
   let attention: AttentionItem[] = [];
   let overviewProblem: OverviewError | undefined;
+  const gapProblems = new Map<string, GapError>();
 
   const byId = (id: string): LoadedRecord | undefined => loaded.find((r) => r.record.id === id);
   const profile = (): LoadedRecord | undefined => loaded.find((r) => r.record.schema === "pharoam/1");
@@ -454,11 +494,62 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
     return result;
   }
 
-  // Evidence and skills feed the overview (MVP S3.3); a folder without a profile has none to refresh.
+  // Evidence and skills feed the overview (MVP S3.3) and every stored gap (MVP S11.5); a folder without a profile
+  // has no overview to refresh.
   async function afterChange(saved: LoadedRecord): Promise<void> {
     const { schema } = saved.record;
-    if ((schema === "evidence/1" || schema === "skill-record/1") && profile() !== undefined)
-      await refreshOverview();
+    if (schema !== "evidence/1" && schema !== "skill-record/1") return;
+    if (profile() !== undefined) await refreshOverview();
+    for (const gap of loaded)
+      if (gap.record.schema === "gap/1") await refreshGap(pathwaySlug(gap.record.pathway));
+  }
+
+  const storedGap = (pathway: string): LoadedRecord | undefined =>
+    loaded.find((r) => r.record.schema === "gap/1" && pathwaySlug(r.record.pathway) === pathway);
+
+  async function writeGap(slug: string): Promise<Result<GapView, GapError>> {
+    const pathway = pathwayDetail(content, slug);
+    if (pathway === undefined) return err({ kind: "unknown-pathway", pathway: slug });
+    const requirements = gapItems(
+      pathway,
+      loaded.map((r) => r.record),
+    );
+    const fields = {
+      pathway: `${content.manifest.name}@${content.manifest.version}:${slug}`,
+      requirements: requirements.map(({ skill, required, shown, group, evidence }) => ({
+        skill,
+        required,
+        shown,
+        group,
+        ...(evidence.length > 0 && { evidence: evidence.map((e) => e.id) }),
+      })),
+    };
+    const summary = gapSummary({ title: pathway.title, requirements });
+    const body = summary === "" || summary.endsWith("\n") ? summary : `${summary}\n`;
+    const current = storedGap(slug);
+    const now = timestamp(ids.now());
+    let saved: Result<LoadedRecord, SaveError>;
+    if (current === undefined) {
+      const top = { schema: "gap/1", id: nextId(), created: now, updated: now, ai: null, ...fields };
+      saved = await createRecord(createRecordFile(top, body));
+    } else {
+      const changed = withTopFields(current.file, fields);
+      saved =
+        changed === current.file && current.file.body === body
+          ? ok(current)
+          : await updateRecord(current.location, { ...withTopFields(changed, { updated: now }), body });
+    }
+    if (!saved.ok) return saved;
+    const { location, record } = saved.value;
+    const updated = record.updated ?? record.created;
+    return ok({ id: record.id, location, updated, pathway, requirements });
+  }
+
+  async function refreshGap(slug: string): Promise<Result<GapView, GapError>> {
+    const result = await writeGap(slug);
+    if (result.ok) gapProblems.delete(slug);
+    else gapProblems.set(slug, result.error);
+    return result;
   }
 
   const skillRecord = (skill: string): LoadedRecord | undefined =>
@@ -514,6 +605,7 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
       loaded = [];
       attention = [];
       overviewProblem = undefined;
+      gapProblems.clear();
       for (const { location, read } of reads) {
         if (!read.ok) {
           // A record deleted between listing and reading is simply gone.
@@ -548,6 +640,7 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
       loaded = [];
       attention = [];
       overviewProblem = undefined;
+      gapProblems.clear();
     },
 
     create: createRecord,
@@ -643,6 +736,9 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
       if (!sealed.ok) throw new Error("A review couldn't be fingerprinted.");
       return appendEntry(record, sealed.value);
     },
+
+    exploreGap: refreshGap,
+    gapProblem: (pathway) => gapProblems.get(pathway),
 
     skillView: (vocabulary, filter) => skillView(loaded, vocabulary, filter),
 
@@ -755,6 +851,11 @@ function invalidLevel(): SaveError {
 // A skill's name compared as the person would: ignoring case and surrounding spaces.
 function sameName(name: string): string {
   return name.normalize("NFKC").trim().toLowerCase();
+}
+
+// The pathway's own slug in a gap's pinned reference, such as `ml-engineer` in `pharoam-core@0.1.0:ml-engineer`.
+function pathwaySlug(pinned: string): string {
+  return pinned.slice(pinned.lastIndexOf(":") + 1);
 }
 
 // A time as Pharoam writes it, to the second, such as `2026-10-24T14:02:11Z`.

@@ -1,4 +1,4 @@
-import { createCoreService, createRecordFile, printRecordFile } from "@pharoam/core";
+import { ContentPack, createCoreService, createRecordFile, printRecordFile } from "@pharoam/core";
 import { CONNECTOR_CHECKS, type ConnectorHarness } from "@pharoam/core/testing";
 import { describe, expect, it } from "vitest";
 import { memoryFolder, type MemoryFolder } from "./__fixtures__/memory-folder.ts";
@@ -25,6 +25,23 @@ function harness(folder: MemoryFolder = memoryFolder()): ConnectorHarness {
     },
   };
 }
+
+// The least content a service needs: a manifest and the level scale, with no skills or pathways.
+const level = { name: "Level", description: "What someone at this level can do." };
+const CONTENT = ContentPack.parse({
+  format: "pharoam-pack/1",
+  manifest: {
+    schema: "pack/1",
+    name: "test",
+    version: "0.1.0",
+    min_app_version: "0.1.0",
+    publisher: "Test",
+    licences: [{ source: "Test", licence: "MIT" }],
+  },
+  levels: { schema: "levels/1", levels: { 0: level, 1: level, 2: level, 3: level, 4: level } },
+  skills: [],
+  pathways: [],
+});
 
 const RECORD = createRecordFile(
   { schema: "evidence/1", id: "0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d", title: "Backend Engineer" },
@@ -60,6 +77,8 @@ describe("the folder connector", () => {
       storage: createFolderConnector(folder.handle),
       ids: { now: () => Date.UTC(2026, 9, 29, 9, 30, 0), fillRandom: (bytes) => bytes.fill(7) },
       overview: () => "",
+      content: CONTENT,
+      gapSummary: () => "",
     });
     const draft = service.draftEvidence({
       kind: "job",
