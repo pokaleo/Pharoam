@@ -32,6 +32,7 @@ export {
   type AttentionItem,
   type CoreService,
   type CoreServiceOptions,
+  type ChangeLevelError,
   type CreateError,
   type CreateProfileError,
   type DeleteEvidenceError,
@@ -80,6 +81,14 @@ export {
   type YamlProblem,
 } from "./record-file.ts";
 export { err, ok, type Result } from "./result.ts";
+export {
+  countingObservations,
+  observationStatuses,
+  shownObservation,
+  skillHistory,
+  type HistoryItem,
+  type ObservationStatus,
+} from "./skill-history.ts";
 export { AiSkillLink, EvidenceRecord } from "./schemas/evidence.ts";
 export { AiProvenance, ConfirmedAiProvenance, Provenance } from "./schemas/fields.ts";
 export { GapRecord, GapRequirement } from "./schemas/gap.ts";
