@@ -2,7 +2,7 @@
 
 Pharoam's own **content**: the career pathways, and later the assessment items. Pathways are drafted with AI and reviewed by the founder in their PRs (PRD I2, I3).
 
-Files are Markdown with a YAML top block, checked by the content schemas and compiled into the built-in content bundle (ADR-0005, AD16). Skills are referred to by their slugs in the skill vocabulary in [`data/`](../data).
+Files are Markdown with a YAML top block, checked by the content schemas and compiled into the built-in content bundle (ADR-0005, AD16). `pack.md` is that bundle's manifest: its name, version and licences. `pnpm content:build` compiles everything into `dist/content/`, and fails, listing every problem, if any content is invalid. Skills are referred to by their slugs in the skill vocabulary in [`data/`](../data).
 
 ## Licence
 
