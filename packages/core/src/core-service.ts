@@ -7,8 +7,9 @@
  * is never silently overwritten (AD10, MVP S12).
  * @packageDocumentation
  */
+import { createProfileRecordIdGenerator, type IdSource } from "./ids.ts";
 import { checkEntry, type IntegrityStatus } from "./integrity.ts";
-import type { RecordFile, RecordFileError } from "./record-file.ts";
+import { createRecordFile, type RecordFile, type RecordFileError } from "./record-file.ts";
 import { err, ok, type Result } from "./result.ts";
 import { parseProfileRecord, type ProfileRecord, type ProfileRecordError } from "./schemas/profile-record.ts";
 
@@ -63,6 +64,12 @@ export type CreateError = StorageError | { readonly kind: "exists"; readonly loc
 export interface StorageConnector {
   /** Lists every record in the profile, valid or not. */
   readonly list: () => Promise<Result<readonly StoredRef[], StorageError>>;
+  /**
+   * Prepares the storage for a new profile, such as a folder's `skills/`, `evidence/` and `gaps/` (MVP S1.1).
+   *
+   * @remarks Creates only what is missing and changes nothing that exists, so it is safe to run twice (MVP S1.3).
+   */
+  readonly initialise: () => Promise<Result<undefined, StorageError>>;
   /** Reads one record. */
   readonly read: (location: string) => Promise<Result<{ file: RecordFile; version: string }, ReadError>>;
   /** Stores a new record where the connector's layout puts it, never over something already there. */
@@ -119,6 +126,29 @@ export type SaveError =
   | { readonly kind: "id-changed"; readonly location: string }
   | { readonly kind: "duplicate-id"; readonly id: string; readonly keptAt: string };
 
+/**
+ * What the person says about themselves when creating a profile (MVP S1.2).
+ *
+ * @remarks There is no field for a name, photo, contact details or exact location, and any given are never written
+ * (hard rule 8, data model §10).
+ */
+export interface NewProfile {
+  /** Their own one-line summary. */
+  readonly headline?: string;
+  /** What they are doing now, and in which field. */
+  readonly situation?: {
+    readonly stage: "studying" | "working" | "between-roles" | "changing-career";
+    readonly field?: string;
+  };
+  /** Their country, as an ISO 3166-1 two-letter code such as `GB`. */
+  readonly region?: string;
+  /** The pathways and skills they are exploring, by slug. */
+  readonly focus?: { readonly pathways?: readonly string[]; readonly skills?: readonly string[] };
+}
+
+/** Why the service didn't create a profile. */
+export type CreateProfileError = SaveError | { readonly kind: "profile-exists"; readonly location: string };
+
 /** The core service for one open profile. */
 export interface CoreService {
   /** Reads every record from storage, replacing what was read before; writes nothing (MVP S2.1). */
@@ -133,27 +163,48 @@ export interface CoreService {
   readonly create: (file: RecordFile) => Promise<Result<LoadedRecord, SaveError>>;
   /** Saves a change to a record read earlier, only if storage still has the version read (AD10). */
   readonly update: (location: string, file: RecordFile) => Promise<Result<LoadedRecord, SaveError>>;
+  /**
+   * Creates the profile: prepares the storage and writes `pharoam.md` (MVP S1).
+   *
+   * @remarks Validates before writing anything, and refuses if the profile already has a `pharoam` record.
+   */
+  readonly createProfile: (profile: NewProfile) => Promise<Result<LoadedRecord, CreateProfileError>>;
 }
 
 /** What the core service needs. */
 export interface CoreServiceOptions {
   /** The storage the profile lives in. */
   readonly storage: StorageConnector;
+  /** The clock and randomness for new IDs and times, such as `Date.now` and `crypto.getRandomValues`. */
+  readonly ids: IdSource;
 }
 
 /**
  * Creates the core service for one profile.
  *
  * @remarks Call {@link CoreService.open} before anything else.
- * @param options - The storage the profile lives in.
+ * @param options - The storage the profile lives in, and where new IDs and times come from.
  * @returns The service, with nothing read yet.
  */
 export function createCoreService(options: CoreServiceOptions): CoreService {
-  const { storage } = options;
+  const { storage, ids } = options;
+  const nextId = createProfileRecordIdGenerator(ids);
   let loaded: LoadedRecord[] = [];
   let attention: AttentionItem[] = [];
 
   const byId = (id: string): LoadedRecord | undefined => loaded.find((r) => r.record.id === id);
+
+  async function createRecord(file: RecordFile): Promise<Result<LoadedRecord, SaveError>> {
+    const record = parseProfileRecord(file.top);
+    if (!record.ok) return err({ kind: "invalid", error: record.error });
+    const kept = byId(record.value.id);
+    if (kept !== undefined) return err({ kind: "duplicate-id", id: record.value.id, keptAt: kept.location });
+    const created = await storage.create(file);
+    if (!created.ok) return err(created.error);
+    const result = toLoaded(created.value.location, created.value.version, file, record.value);
+    loaded = [...loaded, result];
+    return ok(result);
+  }
 
   return {
     open: async () => {
@@ -193,17 +244,18 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
     needsAttention: () => attention,
     find: byId,
 
-    create: async (file) => {
+    create: createRecord,
+
+    createProfile: async (profile) => {
+      const existing = loaded.find((r) => r.record.schema === "pharoam/1");
+      if (existing !== undefined) return err({ kind: "profile-exists", location: existing.location });
+      const top = { schema: "pharoam/1", id: nextId(), created: timestamp(ids.now()), ai: null };
+      const file = createRecordFile({ ...top, ...profileFields(profile) }, "");
       const record = parseProfileRecord(file.top);
       if (!record.ok) return err({ kind: "invalid", error: record.error });
-      const kept = byId(record.value.id);
-      if (kept !== undefined)
-        return err({ kind: "duplicate-id", id: record.value.id, keptAt: kept.location });
-      const created = await storage.create(file);
-      if (!created.ok) return err(created.error);
-      const result = toLoaded(created.value.location, created.value.version, file, record.value);
-      loaded = [...loaded, result];
-      return ok(result);
+      const ready = await storage.initialise();
+      if (!ready.ok) return ready;
+      return createRecord(file);
     },
 
     update: async (location, file) => {
@@ -244,4 +296,19 @@ function saveError(error: WriteError, location: string): SaveError {
     case "not-found":
       return { kind: "not-found", location };
   }
+}
+
+// Only the fields a profile may hold, in the data model's order; anything else is dropped (hard rule 8).
+function profileFields(profile: NewProfile): Record<string, unknown> {
+  const fields: Record<string, unknown> = {};
+  if (profile.headline !== undefined) fields.headline = profile.headline;
+  if (profile.situation !== undefined) fields.situation = { ...profile.situation };
+  if (profile.region !== undefined) fields.region = profile.region;
+  if (profile.focus !== undefined) fields.focus = { ...profile.focus };
+  return fields;
+}
+
+// A time as Pharoam writes it, to the second, such as `2026-10-24T14:02:11Z`.
+function timestamp(milliseconds: number): string {
+  return new Date(milliseconds).toISOString().replace(/\.\d{3}Z$/, "Z");
 }

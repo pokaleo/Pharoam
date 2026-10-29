@@ -33,6 +33,8 @@ export {
   type CoreService,
   type CoreServiceOptions,
   type CreateError,
+  type CreateProfileError,
+  type NewProfile,
   type LoadedRecord,
   type ReadError,
   type SaveError,

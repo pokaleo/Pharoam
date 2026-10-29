@@ -31,6 +31,8 @@ export interface MemoryConnector extends ConnectorHarness {
   readonly text: (location: string) => string | undefined;
   /** How many times the connector created, wrote or deleted a record. */
   readonly writes: () => number;
+  /** How many times the storage was prepared for a new profile. */
+  readonly initialisations: () => number;
   /** Makes every later call fail, as when a folder's permission is revoked. */
   readonly loseAccess: () => void;
 }
@@ -45,7 +47,7 @@ export interface MemoryConnector extends ConnectorHarness {
  * @example
  * ```ts
  * const memory = createMemoryConnector({ "pharoam.md": text });
- * const service = createCoreService({ storage: memory.connector });
+ * const service = createCoreService({ storage: memory.connector, ids: { now: Date.now, fillRandom: (b) => crypto.getRandomValues(b) } });
  * ```
  */
 export function createMemoryConnector(initial: Readonly<Record<string, string>> = {}): MemoryConnector {
@@ -55,10 +57,17 @@ export function createMemoryConnector(initial: Readonly<Record<string, string>> 
     Object.entries(initial).map(([location, text]) => [location, { text, version: nextVersion() }]),
   );
   let writes = 0;
+  let initialisations = 0;
   let available = true;
   const unavailable: StorageError = { kind: "unavailable", reason: "Access to the storage was lost." };
 
   const connector: StorageConnector = {
+    // Memory has no folders to prepare; counting the calls lets tests check it was asked.
+    initialise: () => {
+      if (!available) return Promise.resolve(err(unavailable));
+      initialisations++;
+      return Promise.resolve(ok(undefined));
+    },
     list: () => {
       if (!available) return Promise.resolve(err(unavailable));
       return Promise.resolve(ok([...files].map(([location, file]) => ({ location, version: file.version }))));
@@ -118,6 +127,7 @@ export function createMemoryConnector(initial: Readonly<Record<string, string>> 
     },
     text: (location) => files.get(location)?.text,
     writes: () => writes,
+    initialisations: () => initialisations,
     loseAccess: () => {
       available = false;
     },

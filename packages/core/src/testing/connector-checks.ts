@@ -89,6 +89,21 @@ function parsed(text: string): RecordFile {
 
 /** Every check a storage connector must pass. */
 export const CONNECTOR_CHECKS: readonly ConnectorCheck[] = [
+  check(
+    "prepares storage for a new profile without changing anything, and can do it twice",
+    async (setup) => {
+      const { connector, putOutside, readOutside } = await setup();
+      await putOutside(HAND_MADE_LOCATION, HAND_MADE);
+      value(await connector.initialise(), "Preparing");
+      value(await connector.initialise(), "Preparing again");
+      same(await readOutside(HAND_MADE_LOCATION), HAND_MADE, "The stored text");
+      same(
+        value(await connector.list(), "Listing").map((ref) => ref.location),
+        [HAND_MADE_LOCATION],
+        "The listed locations",
+      );
+    },
+  ),
   check("lists nothing in empty storage", async (setup) => {
     const { connector } = await setup();
     same(value(await connector.list(), "Listing"), [], "The listing");

@@ -7,6 +7,8 @@ export interface MemoryFolder {
   readonly handle: FolderHandle;
   /** Every file's bytes, by path such as `evidence/a.md`. */
   readonly files: Map<string, Uint8Array>;
+  /** Folders created explicitly, by path, including empty ones. */
+  readonly folders: Set<string>;
   /** Sets what the permission check returns, and whether a request is granted. */
   readonly setPermission: (state: PermissionState, onRequest?: PermissionState) => void;
 }
@@ -19,6 +21,7 @@ export function memoryFolder(initial: Readonly<Record<string, string | Uint8Arra
   );
   let permission: PermissionState = "granted";
   let onRequest: PermissionState = "granted";
+  const folders = new Set<string>();
 
   const fail = (name: string, message: string): never => {
     throw new DOMException(message, name);
@@ -56,7 +59,8 @@ export function memoryFolder(initial: Readonly<Record<string, string | Uint8Arra
 
   function folderHandle(prefix: string, name: string): FolderHandle {
     const pathOf = (child: string): string => `${prefix}${child}`;
-    const hasFolder = (path: string): boolean => [...files.keys()].some((p) => p.startsWith(`${path}/`));
+    const hasFolder = (path: string): boolean =>
+      folders.has(path) ? true : [...files.keys()].some((p) => p.startsWith(`${path}/`));
     return {
       kind: "directory",
       name,
@@ -68,7 +72,7 @@ export function memoryFolder(initial: Readonly<Record<string, string | Uint8Arra
       values: async function* () {
         guard();
         const children = new Set<string>();
-        for (const path of files.keys()) {
+        for (const path of [...files.keys(), ...folders]) {
           if (path.startsWith(prefix)) children.add(path.slice(prefix.length).split("/")[0] ?? "");
         }
         for (const child of children) {
@@ -79,7 +83,10 @@ export function memoryFolder(initial: Readonly<Record<string, string | Uint8Arra
       getDirectoryHandle: (child, options) => {
         guard();
         if (files.has(pathOf(child))) fail("TypeMismatchError", `${child} is a file.`);
-        if (!hasFolder(pathOf(child)) && options?.create !== true) fail("NotFoundError", `${child} was not found.`);
+        if (!hasFolder(pathOf(child))) {
+          if (options?.create !== true) fail("NotFoundError", `${child} was not found.`);
+          folders.add(pathOf(child));
+        }
         return Promise.resolve(folderHandle(`${pathOf(child)}/`, child));
       },
       getFileHandle: (child, options) => {
@@ -102,6 +109,7 @@ export function memoryFolder(initial: Readonly<Record<string, string | Uint8Arra
   return {
     handle: folderHandle("", "Pharoam"),
     files,
+    folders,
     setPermission: (state, request = state) => {
       permission = state;
       onRequest = request;
