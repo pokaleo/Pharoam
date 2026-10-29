@@ -40,6 +40,8 @@ export {
   type DeleteEvidenceError,
   type EditEvidenceError,
   type EvidenceReference,
+  type GapError,
+  type GapView,
   type RecordLevelError,
   type SelfRating,
   type OverviewError,
@@ -64,6 +66,7 @@ export {
   type EvidenceFormKind,
   type InvalidEvidenceError,
 } from "./evidence-form.ts";
+export { gapGroup, gapItems, type GapFacts, type GapGroup, type GapItem, type GapWriter } from "./gaps.ts";
 export { levelDescriptions, type Level, type LevelDescription } from "./levels.ts";
 export { type OverviewFacts, type OverviewWriter } from "./overview.ts";
 export {

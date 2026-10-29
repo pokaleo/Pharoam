@@ -47,7 +47,7 @@ export interface MemoryConnector extends ConnectorHarness {
  * @example
  * ```ts
  * const memory = createMemoryConnector({ "pharoam.md": text });
- * const service = createCoreService({ storage: memory.connector, ids: { now: Date.now, fillRandom: (b) => crypto.getRandomValues(b) }, overview: (facts) => t("overview", facts) });
+ * const service = createCoreService({ storage: memory.connector, ids: { now: Date.now, fillRandom: (b) => crypto.getRandomValues(b) }, overview: (facts) => t("overview", facts), content: pack, gapSummary: (gap) => t("gap", gap) });
  * ```
  */
 export function createMemoryConnector(initial: Readonly<Record<string, string>> = {}): MemoryConnector {

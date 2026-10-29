@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { examplePack } from "./__fixtures__/content-records.ts";
 import { EVIDENCE_FILE, PHAROAM_FILE } from "./__fixtures__/profile-records.ts";
 import { createCoreService, type CoreService, type ProfileFields } from "./core-service.ts";
+import type { GapWriter } from "./gaps.ts";
 import type { OverviewWriter } from "./overview.ts";
 import type { IdSource } from "./ids.ts";
 import { sealEntry } from "./integrity.ts";
@@ -20,6 +22,12 @@ const IDS: IdSource = { now: () => Date.UTC(2026, 9, 29, 9, 30, 0), fillRandom: 
 const OVERVIEW: OverviewWriter = (facts) =>
   `## Overview\n\nEvidence: ${String(facts.evidence)}. Skills: ${String(facts.skills)}. Last change: ${facts.lastChange ?? "none"}.\n`;
 
+// A stand-in for the app's translated gap summary.
+const GAP_SUMMARY: GapWriter = (gap) =>
+  `# ${gap.title}\n\n${gap.requirements.map((r) => `- ${r.name}: ${r.group}`).join("\n")}\n`;
+
+const OPTIONS = { ids: IDS, overview: OVERVIEW, content: examplePack(), gapSummary: GAP_SUMMARY };
+
 function file(text: string): RecordFile {
   const result = parseRecordFile(text);
   if (!result.ok) throw new Error(result.error.kind);
@@ -31,7 +39,7 @@ async function opened(files: Readonly<Record<string, string>>): Promise<{
   storage: MemoryConnector;
 }> {
   const storage = createMemoryConnector(files);
-  const service = createCoreService({ storage: storage.connector, ids: IDS, overview: OVERVIEW });
+  const service = createCoreService({ ...OPTIONS, storage: storage.connector });
   const result = await service.open();
   if (!result.ok) throw new Error(result.error.kind);
   return { service, storage };
@@ -94,8 +102,7 @@ describe("opening a profile", () => {
   it("puts a file that isn't text under Needs attention", async () => {
     const storage = createMemoryConnector({ "evidence/latin1.md": "x" });
     const service = createCoreService({
-      ids: IDS,
-      overview: OVERVIEW,
+      ...OPTIONS,
       storage: {
         ...storage.connector,
         read: () =>
@@ -146,11 +153,7 @@ describe("opening a profile", () => {
   it("reports storage it can't reach", async () => {
     const storage = createMemoryConnector({ "pharoam.md": PHAROAM_FILE });
     storage.loseAccess();
-    const result = await createCoreService({
-      storage: storage.connector,
-      ids: IDS,
-      overview: OVERVIEW,
-    }).open();
+    const result = await createCoreService({ ...OPTIONS, storage: storage.connector }).open();
     expect(result).toEqual({
       ok: false,
       error: { kind: "unavailable", reason: "Access to the storage was lost." },
@@ -1073,5 +1076,148 @@ describe("seeing what I can do (MVP S9)", () => {
       ["python", 3],
     ]);
     expect(service.skillView([], { query: "kdb" }).map((item) => item.skill)).toEqual(["custom-kdb-q"]);
+  });
+});
+
+describe("seeing my gap to a pathway (MVP S11)", () => {
+  const NEW_ID = /^01a186fe-adc0-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+  it("stores the gap in a gap record, pinned to the pathway's version, with a readable summary (S11.4)", async () => {
+    const { service, storage } = await opened({});
+    const result = await service.exploreGap("ml-engineer");
+    if (!result.ok) throw new Error(result.error.kind);
+    const stored = storage.text(result.value.location) ?? "";
+    expect(parseRecordFile(stored)).toMatchObject({
+      ok: true,
+      value: {
+        top: {
+          schema: "gap/1",
+          id: expect.stringMatching(NEW_ID) as unknown,
+          created: "2026-10-29T09:30:00Z",
+          updated: "2026-10-29T09:30:00Z",
+          ai: null,
+          pathway: "pharoam-core@0.1.0:ml-engineer",
+          requirements: [
+            { skill: "python", required: 3, shown: null, group: "unknown" },
+            { skill: "pytorch", required: 3, shown: null, group: "unknown" },
+            { skill: "docker", required: 2, shown: null, group: "unknown" },
+          ],
+        },
+        body: "# Machine-learning engineer\n\n- Python: unknown\n- PyTorch: unknown\n- Docker: unknown\n",
+      },
+    });
+  });
+
+  it("shows each requirement's group, shown level and source, and the pathway (S11.1, S11.2, S11.6)", async () => {
+    const { service } = await opened({ "evidence/a.md": EVIDENCE_FILE });
+    await service.recordLevel({
+      skill: "python",
+      level: 3,
+      evidence: ["0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d"],
+    });
+    await service.recordLevel({ skill: "pytorch", level: 1 });
+    const result = await service.exploreGap("ml-engineer");
+    if (!result.ok) throw new Error(result.error.kind);
+    expect(result.value.pathway).toMatchObject({ slug: "ml-engineer", title: "Machine-learning engineer" });
+    expect(result.value.updated).toBe("2026-10-29T09:30:00Z");
+    expect(result.value.requirements).toEqual([
+      {
+        skill: "python",
+        name: "Python",
+        importance: "core",
+        required: 3,
+        shown: { level: 3, provenance: "self-reported" },
+        group: "claimed",
+        evidence: [{ id: "0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d", title: "Backend Engineer" }],
+      },
+      {
+        skill: "pytorch",
+        name: "PyTorch",
+        importance: "core",
+        required: 3,
+        shown: { level: 1, provenance: "self-reported" },
+        group: "below",
+        evidence: [],
+      },
+      {
+        skill: "docker",
+        name: "Docker",
+        importance: "helpful",
+        required: 2,
+        shown: null,
+        group: "unknown",
+        evidence: [],
+      },
+    ]);
+    expect(service.find(result.value.id)?.record).toMatchObject({
+      requirements: [{ group: "claimed", evidence: ["0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d"] }, {}, {}],
+    });
+  });
+
+  it("regenerates a stored gap when my observations change (S11.5)", async () => {
+    const { service, storage } = await opened({});
+    const explored = await service.exploreGap("ml-engineer");
+    if (!explored.ok) throw new Error(explored.error.kind);
+    await service.recordLevel({ skill: "docker", level: 2 });
+    expect(storage.text(explored.value.location)).toContain("- Docker: claimed");
+    expect(service.find(explored.value.id)?.record).toMatchObject({
+      requirements: [{}, {}, { skill: "docker", shown: { level: 2 }, group: "claimed" }],
+    });
+    expect(service.gapProblem("ml-engineer")).toBeUndefined();
+  });
+
+  it("writes nothing when the stored gap is already up to date, and reuses the stored record", async () => {
+    const { service, storage } = await opened({});
+    const first = await service.exploreGap("ml-engineer");
+    const writes = storage.writes();
+    const again = await service.exploreGap("ml-engineer");
+    expect(again.ok && first.ok && again.value.location).toBe(first.ok && first.value.location);
+    expect(storage.writes()).toBe(writes);
+  });
+
+  it("refuses a pathway the content doesn't have, and writes nothing", async () => {
+    const { service, storage } = await opened({});
+    expect(await service.exploreGap("astronaut")).toEqual({
+      ok: false,
+      error: { kind: "unknown-pathway", pathway: "astronaut" },
+    });
+    expect(storage.writes()).toBe(0);
+  });
+
+  it("never overwrites a gap edited outside Pharoam, and says why it couldn't regenerate it", async () => {
+    const { service, storage } = await opened({});
+    const explored = await service.exploreGap("ml-engineer");
+    if (!explored.ok) throw new Error(explored.error.kind);
+    const edited = `${storage.text(explored.value.location) ?? ""}My notes.\n`;
+    await storage.putOutside(explored.value.location, edited);
+    await service.recordLevel({ skill: "docker", level: 2 });
+    expect(storage.text(explored.value.location)).toBe(edited);
+    expect(service.gapProblem("ml-engineer")).toEqual({
+      kind: "conflict",
+      location: explored.value.location,
+    });
+  });
+
+  it("ends the summary with a newline, as Markdown files do", async () => {
+    const storage = createMemoryConnector({});
+    const service = createCoreService({
+      ...OPTIONS,
+      storage: storage.connector,
+      gapSummary: () => "Summary",
+    });
+    await service.open();
+    const result = await service.exploreGap("ml-engineer");
+    expect(result.ok && storage.text(result.value.location)?.endsWith("---\nSummary\n")).toBe(true);
+  });
+
+  it("shows when a gap without an updated time was created", async () => {
+    const first = await opened({});
+    const explored = await first.service.exploreGap("ml-engineer");
+    if (!explored.ok) throw new Error(explored.error.kind);
+    const text = (first.storage.text(explored.value.location) ?? "").replace(/^updated: .*\n/m, "");
+    const { service, storage } = await opened({ [explored.value.location]: text });
+    const again = await service.exploreGap("ml-engineer");
+    expect(again.ok && again.value.updated).toBe("2026-10-29T09:30:00Z");
+    expect(storage.writes()).toBe(0);
   });
 });
