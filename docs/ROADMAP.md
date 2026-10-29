@@ -7,6 +7,10 @@
 | **Source** | [MVP and release plan](MVP.md) (what each release contains) · [Architecture](ARCHITECTURE.md) (how it's built) |
 | **Status** | The order of work. MVP.md says *what*; this says *in what order* and *what depends on what*. No dates or estimates: a phase is done when its checks pass. Work is tracked in the GitHub project; this file is the plan it follows. |
 
+## Where v0.1 stands
+
+*29 October 2026.* Phases 1–7 are done: the core, the folder connector, the content, every story's behaviour, the design system and the web app, with end-to-end tests in Chromium, WebKit and Firefox. **The app is live at [pokaleo.github.io/Pharoam](https://pokaleo.github.io/Pharoam/)**, deployed from `main`. Chromium browsers keep the profile in a folder; Safari and Firefox keep it in the browser's own storage, with a downloadable copy ([ADR-0020](adr/0020-browser-storage-where-no-folder.md)). Next is phase 8, the founder trial.
+
 ## 1. How the plan works
 
 - **Releases** become GitHub milestones (`v0.1` … `v0.4`). **Phases** split a release into ordered steps; each phase is a label (`phase:1` …).

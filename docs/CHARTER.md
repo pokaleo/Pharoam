@@ -145,7 +145,7 @@ Step 5, more fields, multi-language support, more connectors and browsers, and l
 - **One developer**, the founder, working with AI coding agents. Scope stays small (R16), and machine-checked standards take the place of much of the review a team would do ([Engineering standards](ENGINEERING.md)). What a machine can't check, such as whether tests were written first, is still the founder's review (ENGINEERING §10).
 - **No servers holding user data, and none run by the project** (R11). The official app is a static site on GitHub Pages, so running costs stay near zero.
 - **No AI cost to the project.** Users bring their own model key, or an operator pays for its own users.
-- **Browser limits.** Storage reached directly from the browser depends on browser support; the first connector (a local folder) works in desktop Chromium browsers only.
+- **Browser limits.** Storage reached directly from the browser depends on browser support. A local folder works in desktop Chromium browsers; Safari and Firefox keep the profile in the browser's own storage on the device, with a downloadable copy ([ADR-0020](adr/0020-browser-storage-where-no-folder.md)).
 - **Licences.** Code is AGPL-3.0-only. Content Pharoam writes, such as pathways, is CC BY-SA 4.0, kept in `content/`. Skill and occupation data keep their own licences (MIT for the MIND fork, ESCO's attribution terms), kept apart in `data/`. The published JSON Schemas for the file formats are CC0, in `schemas/`. The brand and design system are the founder's own, not open source, kept apart in `brand/` and outside the repository (§7).
 - **Closed to outside pull requests** until contributor terms exist (§7).
 - **Accessible and translatable from the start:** WCAG 2.2 AA and English first, with no hard-coded interface text.
@@ -219,7 +219,7 @@ Outcomes are reported only in aggregate, with their uncertainty and possible bia
 | 2 | `README.md` derived from the charter | Done |
 | 3 | [PRD](PRD.md): the whole product blueprint | Draft |
 | 3a | [MVP and release plan](MVP.md): stories, acceptance criteria, what's deferred | Done |
-| 4 | [Architecture](ARCHITECTURE.md): decisions AD1–AD23, ADRs 0001–0019, data model, interfaces, security | Decided, design system included (ADR-0015); spikes S1–S3 pending (none needed for v0.1) |
+| 4 | [Architecture](ARCHITECTURE.md): decisions AD1–AD23, ADRs 0001–0020, data model, interfaces, security | Decided, design system included (ADR-0015); spikes S1–S3 pending (none needed for v0.1) |
 | 4c | [Engineering standards](ENGINEERING.md) and agent instructions, enforced by hooks and CI | Done; waiting to be merged |
 | 4b | [Implementation plan](ROADMAP.md) and GitHub project | Plan done; GitHub project next |
 | 4a | Storage connectors: one issue per connector | Local folder in v0.1; the rest after |

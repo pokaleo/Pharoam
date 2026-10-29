@@ -54,9 +54,11 @@ test("S2: offers the folder again after a reload, reads it only when asked, and 
   await expect(page.getByRole("button", { name: "Open my-profile again" })).toHaveCount(0);
 });
 
-test("browsers that can't open a folder see the not-supported page (MVP §3)", async ({ app, page }) => {
+test("browsers that can keep no files see the not-supported page (MVP §3)", async ({ app, page }) => {
+  // Neither a folder picker nor the browser's own file system, as in older browsers.
   await page.addInitScript(() => {
     Reflect.deleteProperty(window, "showDirectoryPicker");
+    Reflect.deleteProperty(Object.getPrototypeOf(navigator.storage) as object, "getDirectory");
   });
   await page.goto("./");
 

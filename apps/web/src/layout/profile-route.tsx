@@ -5,6 +5,7 @@
  */
 import type { CoreService } from "@pharoam/core";
 import { Navigate } from "@tanstack/react-router";
+import { useTranslation } from "react-i18next";
 import type { ReactElement, ReactNode } from "react";
 import { useSession } from "../profile/session.tsx";
 import { AppShell } from "./app-shell.tsx";
@@ -21,11 +22,13 @@ export function ProfileRoute({
 }: {
   readonly page: (service: CoreService, folder: string) => ReactNode;
 }): ReactElement {
-  const { session, disconnect } = useSession();
+  const { t } = useTranslation();
+  const { session, services, disconnect } = useSession();
   if (session.status !== "open") return <Navigate to="/" />;
   return (
     <AppShell
-      folder={session.place}
+      kind={services.places.kind}
+      folder={services.places.kind === "browser" ? t("place.thisBrowser") : session.place}
       attention={session.service.needsAttention().length + session.service.conflicts().length}
       onDisconnect={() => void disconnect()}
     >

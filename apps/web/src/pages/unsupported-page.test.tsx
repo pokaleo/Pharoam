@@ -5,20 +5,20 @@ import { renderApp } from "../__fixtures__/render-app.tsx";
 import { expectNoAxeViolations } from "../testing/axe.ts";
 
 describe("UnsupportedPage (MVP §3)", () => {
-  it("tells people in other browsers that only desktop Chromium browsers work yet", async () => {
+  it("tells people in a browser that can keep no files which browsers work", async () => {
     const { container } = renderApp({
       name: "my-profile",
       memory: createMemoryConnector(),
-      supportsFolders: false,
+      supported: false,
     });
 
     await screen.findByRole("heading", { level: 1, name: "This browser isn't supported yet" });
-    screen.getByText(/Chrome, Edge, Brave or Arc/);
+    screen.getByText(/a recent version of Safari, Firefox, Chrome, Edge, Brave or Arc/);
     await expectNoAxeViolations(container);
   });
 
   it("shows at every address, not just the start", async () => {
-    renderApp({ name: "my-profile", memory: createMemoryConnector(), supportsFolders: false }, "/skills");
+    renderApp({ name: "my-profile", memory: createMemoryConnector(), supported: false }, "/skills");
 
     await screen.findByRole("heading", { level: 1, name: "This browser isn't supported yet" });
   });

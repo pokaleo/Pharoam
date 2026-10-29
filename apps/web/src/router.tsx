@@ -32,8 +32,8 @@ import { UnsupportedPage } from "./pages/unsupported-page.tsx";
 
 /** What every route can read. */
 interface RouterContext {
-  /** Whether the browser can open a folder; without it, every address shows the "not supported yet" page. */
-  readonly supportsFolders: boolean;
+  /** Whether the browser can keep a profile; without it, every address shows the "not supported yet" page. */
+  readonly supported: boolean;
 }
 
 const rootRoute = createRootRouteWithContext<RouterContext>()({
@@ -42,8 +42,8 @@ const rootRoute = createRootRouteWithContext<RouterContext>()({
 });
 
 function Root(): ReactElement {
-  const { supportsFolders } = rootRoute.useRouteContext();
-  return supportsFolders ? <Outlet /> : <UnsupportedPage />;
+  const { supported } = rootRoute.useRouteContext();
+  return supported ? <Outlet /> : <UnsupportedPage />;
 }
 
 const startRoute = createRoute({ getParentRoute: () => rootRoute, path: "/", component: HomePage });
@@ -175,7 +175,7 @@ export function createAppRouter(options: RouterContext & { readonly history: Rou
   return createRouter({
     routeTree,
     history: options.history,
-    context: { supportsFolders: options.supportsFolders },
+    context: { supported: options.supported },
   });
 }
 

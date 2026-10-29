@@ -8,7 +8,49 @@ Pharoam helps people understand what they know, what they can show, which paths 
 
 *Pharos* (the lighthouse of Alexandria) + *roam* (the freedom to explore).
 
-> **Status: design done, building the first release.** There is no usable software yet. The first release (v0.1) lets you keep an evidence-based skills profile in a folder on your own computer and see your gap to a career pathway, with no AI and no server. See the [MVP and release plan](docs/MVP.md).
+> **Status: v0.1 is live, in its founder trial.** Try it at **[pokaleo.github.io/Pharoam](https://pokaleo.github.io/Pharoam/)**. It keeps an evidence-based skills profile on your own device and shows your gap to a career pathway, with no AI and no server. See the [MVP and release plan](docs/MVP.md).
+
+## Try it
+
+Open **[pokaleo.github.io/Pharoam](https://pokaleo.github.io/Pharoam/)** in a desktop browser. Your profile never leaves your device: the app is static, and Pharoam has no server to send it to.
+
+| Browser | Where your profile is kept |
+|---|---|
+| Chrome, Edge, Brave, Arc | **A folder you choose** on your computer, as Markdown files you can also open in Obsidian or any editor |
+| Safari, Firefox | **The browser's own storage** on your device, as the same files. You can start from a folder you pick, and download a copy as a `.zip` whenever you like. Keep a copy: Safari can delete a site's data after seven days without a visit, unless you add Pharoam to the Dock ([why](docs/adr/0020-browser-storage-where-no-folder.md)) |
+
+What v0.1 does:
+
+- **About you:** a headline, what you're doing now, your country and the pathways you're exploring. Never your name or contact details.
+- **Evidence:** projects, jobs, courses and certificates, recorded with a form; you see the file before it's saved.
+- **Skills:** your own level for each skill, from a vocabulary of about 300 skills or your own, with every correction and retraction kept in its history.
+- **Pathways:** frontend, backend, machine-learning and applied AI engineer, each requirement with its sources.
+- **Your gap to a pathway:** each requirement grouped as supported, claimed, below or not in your profile yet. No score, no ranking.
+- **Edits made outside Pharoam** are noticed, never overwritten: you see both versions and choose.
+
+Diagnostics, AI assistance and learning plans come in later releases ([MVP](docs/MVP.md)).
+
+## Run it yourself
+
+You need Node 26 and pnpm (the version is pinned in `package.json`).
+
+```sh
+pnpm install
+pnpm dev          # the app at http://localhost:5173
+pnpm build        # a static build in dist/web/, to serve from any static host
+pnpm check        # lint, types, tests, the hard-rule scan and the API docs, as CI runs them
+pnpm test:e2e     # end-to-end tests in Chromium, WebKit and Firefox, with accessibility checks
+```
+
+The app builds without `brand/`, with a neutral look, so forks can follow the AGPL without the Pharoam brand ([TRADEMARKS.md](TRADEMARKS.md)).
+
+| Folder | What's there |
+|---|---|
+| `packages/core` | The profile model, schemas, record files, shown levels and gaps: no browser or UI code |
+| `packages/connector-folder` | Reads and writes the profile's files in a folder, or in the browser's own storage |
+| `apps/web` | The web app (React and Vite), with its end-to-end tests in `e2e/` |
+| `content/`, `data/` | The pathways and the skill vocabulary, compiled into the app |
+| `brand/`, `fonts/` | The design system's finished files and its typefaces, under their own licences |
 
 ---
 

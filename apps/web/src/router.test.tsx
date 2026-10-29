@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createAppRouter } from "./router.tsx";
 
 describe("createAppRouter (ADR-0008)", () => {
-  const router = createAppRouter({ history: createMemoryHistory(), supportsFolders: true });
+  const router = createAppRouter({ history: createMemoryHistory(), supported: true });
 
   it("has a route for every screen", () => {
     expect(Object.keys(router.routesByPath).sort()).toEqual(

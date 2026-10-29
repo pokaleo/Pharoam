@@ -36,6 +36,8 @@ export function createFolderPlaces({ pick, memory }: FolderPlacesOptions): Place
   };
 
   return {
+    kind: "folder",
+
     remembered: async () => (await recall())?.name,
 
     reopen: async () => {
