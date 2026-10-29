@@ -1,0 +1,39 @@
+{
+  "name": "@pharoam/web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pharoam's web app: the static single-page app on the design system.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@pharoam/connector-folder": "workspace:*",
+    "@pharoam/core": "workspace:*",
+    "@tanstack/react-query": "5.105.0",
+    "@tanstack/react-router": "1.170.46",
+    "i18next": "26.5.11",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-i18next": "17.1.9",
+    "react-markdown": "10.1.0",
+    "rehype-sanitize": "6.0.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.3",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.8",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "axe-core": "4.14.0",
+    "fake-indexeddb": "6.2.6",
+    "tailwindcss": "4.3.3",
+    "vite": "8.3.5"
+  }
+}

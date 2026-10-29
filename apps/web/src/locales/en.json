@@ -1,0 +1,420 @@
+{
+  "app": {
+    "name": "Pharoam",
+    "locale": "en-GB",
+    "home": "Pharoam home"
+  },
+  "start": {
+    "title": "Your skills, in files you own",
+    "lead": "Build a picture of your skills from what you've done, see what a pathway asks for, and decide what to learn next.",
+    "storage": "Your profile is a folder of Markdown files on your computer. Pharoam reads and writes them in your browser, never on Pharoam's servers, and you can open them in any editor.",
+    "reopen": "Open {{folder}} again",
+    "choose": "Choose a folder",
+    "chooseHint": "Choose the folder your profile is in, or an empty one to start a new profile. The browser will ask you to let Pharoam use it.",
+    "opening": "Opening your folder…",
+    "denied": {
+      "title": "Pharoam needs permission to read and write the folder",
+      "text": "Your profile is the files in that folder, so Pharoam can't open or create it without your permission. Nothing was written. Choose the folder again and allow access when the browser asks."
+    },
+    "forgotten": {
+      "title": "The browser no longer has your folder",
+      "text": "Choose it again to carry on where you left off."
+    },
+    "unavailable": {
+      "title": "Pharoam couldn't read {{folder}}",
+      "titleNoFolder": "Pharoam couldn't open that folder",
+      "text": "The browser may have lost access to it, or it may have moved. Nothing was written. Choose the folder again."
+    }
+  },
+  "createProfile": {
+    "title": "Create your profile in {{folder}}",
+    "lead": "There's no profile in this folder yet. Pharoam will add pharoam.md and the folders skills, evidence and gaps. Files already in the folder are left as they are.",
+    "optional": "Everything here is optional, and you can change it later. Pharoam never asks for your name, photo or contact details.",
+    "headline": "Headline",
+    "headlineHint": "A line about you, in your own words, such as \"Backend developer moving into ML\".",
+    "stage": "What are you doing now?",
+    "stageNone": "Not saying",
+    "stages": {
+      "studying": "Studying",
+      "working": "Working",
+      "between-roles": "Between roles",
+      "changing-career": "Changing career"
+    },
+    "field": "In which field? (optional)",
+    "region": "Country (optional)",
+    "regionNone": "Not saying",
+    "focus": "Pathways you're exploring (optional)",
+    "submit": "Create my profile",
+    "creating": "Creating your profile…",
+    "failed": "Pharoam couldn't create your profile. Nothing was overwritten. {{reason}}",
+    "chooseAnother": "Choose another folder"
+  },
+  "unreadableProfile": {
+    "title": "pharoam.md in {{folder}} can't be read",
+    "text": "The folder has a profile file, but it isn't in a form Pharoam can read, so Pharoam won't replace it. Open pharoam.md in an editor to fix it, or choose another folder."
+  },
+  "profileHome": {
+    "untitled": "Your profile",
+    "lead": "From your folder {{folder}}. The files there are the master copy.",
+    "files": "Files in {{folder}}",
+    "filesCount_one": "{{count}} file read.",
+    "filesCount_other": "{{count}} files read.",
+    "attention_one": "{{count}} file needs your attention and is left out until it's fixed.",
+    "attention_other": "{{count}} files need your attention and are left out until they're fixed."
+  },
+  "shell": {
+    "main": "Main",
+    "profile": "Profile",
+    "folder": "Your folder",
+    "disconnect": "Disconnect {{folder}}",
+    "disconnectLabel": "Disconnect",
+    "about": "About you",
+    "evidence": "Evidence",
+    "skills": "Skills",
+    "pathways": "Pathways",
+    "attention": "Needs attention"
+  },
+  "unsupported": {
+    "title": "This browser isn't supported yet",
+    "lead": "Pharoam keeps your profile in a folder on your computer, and only some browsers can open one.",
+    "browsers": "For now, use Chrome, Edge, Brave or Arc on a desktop or laptop. Other browsers will work once Pharoam can store your profile in other places."
+  },
+  "notFound": {
+    "title": "There's nothing at this address",
+    "lead": "The link may be old, or mistyped.",
+    "back": "Go to the start page"
+  },
+  "overview": {
+    "title": "Overview",
+    "note": "Pharoam keeps this section up to date from your evidence and skills. Your own words outside it are never changed.",
+    "evidence_one": "{{count}} piece of evidence",
+    "evidence_other": "{{count}} pieces of evidence",
+    "skills_one": "{{count}} skill",
+    "skills_other": "{{count}} skills",
+    "lastChange": "Last change: {{date}}",
+    "nothing": "Nothing recorded yet"
+  },
+  "gapSummary": {
+    "title": "Your gap to {{pathway}}",
+    "note": "What the pathway asks for, beside what your profile shows. There is no score or total.",
+    "group": {
+      "supported": "Supported",
+      "claimed": "Claimed",
+      "below": "Below the level asked, for now",
+      "unknown": "Nothing in your profile yet"
+    },
+    "importance": {
+      "core": "core",
+      "helpful": "helpful"
+    },
+    "level": "{{name}} ({{level}})",
+    "asks": "{{skill}} ({{importance}}): asks for {{level}}.",
+    "shows": "Shows {{level}}, {{source}}.",
+    "showsCiting": "Shows {{level}}, {{source}}, citing {{evidence}}.",
+    "removedEvidence": "evidence that has been removed",
+    "source": {
+      "self-reported": "your own rating",
+      "ai-judged": "an AI judgement from your evidence",
+      "demonstrated": "demonstrated in a diagnostic",
+      "ai-correlated": "AI correlated in a diagnostic"
+    }
+  },
+  "about": {
+    "title": "About you",
+    "lead": "How you describe yourself in pharoam.md. Your own words below its top block are yours: Pharoam never changes them.",
+    "save": "Save changes",
+    "saved": "Saved to pharoam.md.",
+    "failed": "Pharoam couldn't save your changes. Nothing was overwritten. Try again, or check the folder is still there.",
+    "changedOutside": {
+      "title": "pharoam.md was changed in your folder since Pharoam read it",
+      "text": "Nothing has been overwritten. Compare the two versions and choose which to keep."
+    },
+    "overview": {
+      "title": "Overview",
+      "text": "pharoam.md has a short overview of your evidence and skills, between two markers, so the file makes sense without Pharoam. It's updated whenever your evidence or skills change.",
+      "refresh": "Bring the overview up to date",
+      "done": "The overview in pharoam.md is up to date.",
+      "failed": "Pharoam couldn't update the overview. Nothing was overwritten.",
+      "markers": {
+        "title": "The overview in pharoam.md can't be updated",
+        "text": "Its markers have been changed, and Pharoam won't guess where your words end. Open pharoam.md in an editor and leave one start marker followed by one end marker, or remove both, then try again."
+      }
+    }
+  },
+  "markdown": {
+    "imageBlocked": "Image not loaded",
+    "imageBlockedNamed": "Image not loaded: {{alt}}"
+  },
+  "evidence": {
+    "title": "Evidence",
+    "lead_zero": "Records of things you did. Evidence is linked to skills; it carries no level.",
+    "lead_one": "{{count}} record of something you did. Evidence is linked to skills; it carries no level.",
+    "lead_other": "{{count}} records of things you did. Evidence is linked to skills; it carries no level.",
+    "list": "Your evidence",
+    "empty": "No evidence yet. Start with something you did recently: a project, a job, or a course you finished.",
+    "add": "Add evidence",
+    "deleted": "{{title}} was deleted from your folder.",
+    "kindQuestion": "What kind of evidence is it?",
+    "kinds": {
+      "project": "Project",
+      "job": "Job",
+      "module": "Course or module",
+      "certificate": "Certificate",
+      "other": "Other"
+    },
+    "fields": {
+      "title": "Title",
+      "organisation": "Organisation (optional)",
+      "date": "Date (optional)",
+      "start": "Started (optional)",
+      "end": "Ended (optional)",
+      "links": "Links (optional)",
+      "skills": "Skills it involved (optional)",
+      "description": "What you did (optional)",
+      "role": "Your role (optional)",
+      "course_code": "Course code (optional)",
+      "credits": "Credits (optional)",
+      "grade": "Grade (optional)",
+      "issuer": "Issued by (optional)",
+      "credential_id": "Credential ID (optional)",
+      "expires": "Expires (optional)"
+    },
+    "hints": {
+      "title": "What it was, such as a project's name or a job title.",
+      "organisation": "An employer, university or issuer.",
+      "dateOne": "For something that happened at one time. A year, month or day: 2024, 2024-09 or 2024-09-30.",
+      "date": "A year, month or day: 2024, 2024-09 or 2024-09-30.",
+      "links": "One web address per line, starting with https://.",
+      "description": "In your own words. You can use Markdown."
+    },
+    "findSkill": "Find a skill",
+    "addSkill": "Add skill",
+    "removeSkill": "Remove {{skill}}",
+    "skillsPicked": "Skills picked",
+    "errors": {
+      "title": "Give it a title, such as the project's name or your job title.",
+      "date": "Write a date as a year, a month or a day, such as 2024, 2024-09 or 2024-09-30.",
+      "endBeforeStart": "The end is before the start.",
+      "links": "Each link must start with http:// or https://, such as https://example.com.",
+      "credits": "Write credits as a number, such as 15.",
+      "text": "Check this answer.",
+      "unknownSkill": "There's no skill called {{skill}}. Pick one from the list."
+    },
+    "continue": "Continue",
+    "preview": {
+      "title": "Check before saving",
+      "lead": "This is the file Pharoam will add to your folder, exactly as it will be stored. Nothing is written until you save.",
+      "file": "The file as it will be stored",
+      "save": "Save evidence",
+      "back": "Change something"
+    },
+    "saveFailed": "Pharoam couldn't save the evidence. Nothing was overwritten. Try again, or check the folder is still there.",
+    "newTitle": "Add evidence",
+    "newLead": "Something you did: a project, a job, a course or a certificate. You can link it to skills.",
+    "editTitle": "Edit {{title}}",
+    "editLead": "Pharoam rewrites the file with your changes and keeps everything else in it.",
+    "saveChanges": "Save changes",
+    "cancel": "Cancel",
+    "changedOutside": {
+      "title": "This file was changed in your folder since Pharoam read it",
+      "text": "Nothing has been overwritten. Compare the two versions and choose which to keep."
+    },
+    "page": {
+      "file": "File",
+      "kind": "Kind",
+      "when": "When",
+      "links": "Links",
+      "skills": "Skills",
+      "description": "What you did",
+      "edit": "Edit",
+      "delete": "Delete",
+      "notEditable": "Pharoam's form doesn't edit this kind of evidence. You can change it in your folder.",
+      "missing": "There's no evidence at this address. It may have been deleted.",
+      "back": "Back to your evidence"
+    },
+    "delete": {
+      "title": "Delete {{title}}?",
+      "text": "This removes {{file}} from your folder.",
+      "cited_one": "Your level for {{skills}} cites it. That level stays, and will show this evidence as removed.",
+      "cited_other": "Your levels for {{skills}} cite it. Those levels stay, and will show this evidence as removed.",
+      "confirm": "Delete it",
+      "keep": "Keep it",
+      "failed": "Pharoam couldn't delete the evidence. Nothing was changed."
+    }
+  },
+  "skills": {
+    "title": "Skills",
+    "lead_zero": "Every level says where it came from.",
+    "lead_one": "{{count}} skill. Every level says where it came from.",
+    "lead_other": "{{count}} skills. Every level says where it came from.",
+    "empty": "No skills yet. Record a level for something you can do, or add a skill the list is missing.",
+    "noMatch": "No skills match. Try another search or domain.",
+    "record": "Record a level",
+    "addCustom": "Add your own skill",
+    "search": "Search your skills",
+    "domain": "Domain",
+    "allDomains": "All domains",
+    "table": "Your skills",
+    "columns": {
+      "skill": "Skill",
+      "level": "Level",
+      "source": "Where it came from"
+    },
+    "own": "Your own skill",
+    "since": "{{source}} · since {{date}}",
+    "noLevel": "No level counts",
+    "level": "Level",
+    "sources": {
+      "self-reported": "Self-reported",
+      "ai-judged": "AI judgement",
+      "demonstrated": "Demonstrated",
+      "ai-correlated": "AI correlated"
+    },
+    "recordPage": {
+      "title": "Record a level",
+      "lead": "Your own rating of a skill. It's added to the skill's history; nothing already there changes.",
+      "own": "This is your own rating. Citing evidence doesn't test it.",
+      "skill": "Skill",
+      "skillHint": "Start typing a skill's name. If it isn't in the list, add your own skill first.",
+      "evidence": "Evidence it rests on (optional)",
+      "noEvidence": "You have no evidence to cite yet.",
+      "submit": "Record my level",
+      "errors": {
+        "skill": "Pick a skill from the list, or add your own skill first.",
+        "level": "Choose a level."
+      },
+      "failed": "Pharoam couldn't record the level. Nothing was overwritten."
+    },
+    "skillPage": {
+      "missing": "There's nothing in your profile for this skill.",
+      "back": "Back to your skills",
+      "noRecord": "You haven't recorded a level for this skill yet.",
+      "noCount": "No level counts for this skill now.",
+      "history": "Skill history",
+      "historyLead": "Every level this skill has had, newest first. Nothing is ever deleted: corrections and retractions are added.",
+      "shownMark": "Shown",
+      "superseded": "Corrected",
+      "retracted": "Retracted",
+      "editedOutside": "Edited outside Pharoam",
+      "cites": "Cites {{evidence}}",
+      "removedEvidence": "evidence that has been removed",
+      "retraction": "Retracted the level from {{date}}",
+      "retractionNote": "Retracted the level from {{date}}: {{note}}",
+      "entry": "{{level}}, {{date}}",
+      "correct": "Correct",
+      "correctLabel": "Correct {{entry}}",
+      "retract": "Retract",
+      "retractLabel": "Retract {{entry}}",
+      "correctTitle": "Correct your level",
+      "correctLead": "Your new level is added and replaces this one. This one stays in the history, marked as corrected.",
+      "saveCorrection": "Save the correction",
+      "cancel": "Cancel",
+      "retractTitle": "Retract this level?",
+      "retractLead": "It stops counting, and stays in the history, marked as retracted.",
+      "retractNote": "Why are you retracting it? (optional)",
+      "retractConfirm": "Retract it",
+      "keep": "Keep it",
+      "failed": "Pharoam couldn't save that. Nothing was overwritten.",
+      "changedOutside": "This skill's file was changed in your folder since Pharoam read it. Nothing has been overwritten."
+    },
+    "customPage": {
+      "title": "Add your own skill",
+      "lead": "For something you can do that the skill list doesn't have. It's marked as your own wherever it appears, and never counts for a pathway's requirements.",
+      "name": "Name",
+      "description": "What it covers (optional)",
+      "submit": "Add the skill",
+      "errors": {
+        "name": "Give the skill a name."
+      },
+      "exists": "You already have a skill called {{name}}.",
+      "open": "Open {{name}}",
+      "failed": "Pharoam couldn't add the skill. Nothing was overwritten."
+    }
+  },
+  "changedOutside": {
+    "compare": "Compare the two versions"
+  },
+  "pathways": {
+    "title": "Pathways",
+    "lead": "What different roles ask for. Open one to see what it asks for, and your gap to it.",
+    "list": "Pathways",
+    "reviewed": "Reviewed by {{by}} on {{date}}.",
+    "aiDrafted": "Drafted with AI ({{model}}), then reviewed by {{by}}. AI can be wrong: every requirement lists its sources.",
+    "aiMark": "Drafted with AI",
+    "missing": "There's no pathway at this address.",
+    "back": "Back to pathways",
+    "requirements": "What it asks for",
+    "columns": {
+      "skill": "Skill",
+      "level": "Level asked",
+      "importance": "How much it's needed",
+      "sources": "Sources"
+    },
+    "importance": {
+      "core": "Core",
+      "helpful": "Helpful"
+    },
+    "prerequisites": "Before you start",
+    "uncertainties": "What's uncertain",
+    "seeGap": "See my gap to this pathway"
+  },
+  "gap": {
+    "title": "Your gap to {{pathway}}",
+    "lead": "What the pathway asks for, beside what your profile shows. Every pathway can be explored, however far off it is.",
+    "updatedNow": "Updated just now",
+    "updated": "Updated {{date}}",
+    "refresh": "Bring the gap up to date",
+    "stored": "Saved in your folder as {{file}}.",
+    "groups": {
+      "supported": "Supported",
+      "claimed": "Claimed",
+      "below": "Below the level asked, for now",
+      "unknown": "Nothing in your profile yet"
+    },
+    "groupLeads": {
+      "supported": "A level tested in a diagnostic meets what's asked.",
+      "claimed": "A level you or an AI judgement gave meets what's asked. It hasn't been tested.",
+      "below": "What your profile shows is under the level asked.",
+      "unknown": "Your profile has no level for these skills."
+    },
+    "asks": "Asks for {{level}} {{number}} · {{importance}}",
+    "shows": "Shows {{level}} {{number}} · {{source}}",
+    "ownRating": "Self-reported, your own rating",
+    "cites": "Cites {{evidence}}",
+    "removedEvidence": "evidence that has been removed",
+    "changedOutside": "The stored gap was changed in your folder since Pharoam read it. Nothing has been overwritten.",
+    "failed": "Pharoam couldn't save the gap in your folder. Nothing was overwritten.",
+    "problem": "The stored gap couldn't be brought up to date after your last change. Bring it up to date to try again."
+  },
+  "attention": {
+    "title": "Needs attention",
+    "lead": "Files Pharoam can't use as they are, and files changed in your folder while Pharoam was saving them.",
+    "none": "Nothing needs your attention.",
+    "brokenTitle": "Files Pharoam can't read",
+    "brokenLead": "Each one is left out until it's fixed, and Pharoam never changes or deletes it. Open it in an editor to fix it.",
+    "conflictsTitle": "Two versions",
+    "conflictsLead": "These files were changed in your folder since Pharoam read them. Nothing has been overwritten. Choose which version to keep.",
+    "conflict": "Two versions of {{file}}",
+    "theirs": "In your folder",
+    "mine": "From Pharoam",
+    "mineDelete": "Pharoam was about to delete this file.",
+    "theirsUnreadable": "Pharoam can't read the version in your folder, so it can only keep it. Fix it in an editor if it needs fixing.",
+    "theirsGone": "The file is no longer in your folder.",
+    "keepTheirs": "Keep the version in your folder",
+    "keepMine": "Keep Pharoam's version",
+    "resolveFailed": "Pharoam couldn't keep that version. Nothing was overwritten.",
+    "problems": {
+      "no-top-block": "It has no top block: the file should start with a line of three dashes (---), then its fields.",
+      "unclosed-top-block": "Its top block isn't closed: add a line of three dashes (---) after the fields.",
+      "invalid-yaml": "Its top block isn't valid YAML: {{message}} (line {{line}}).",
+      "not-fields": "Its top block doesn't hold fields.",
+      "too-many-aliases": "Its top block uses too many YAML aliases to read safely.",
+      "not-utf8": "It isn't UTF-8 text, so Pharoam can't read it without changing it.",
+      "unknown-schema": "Its schema isn't one Pharoam knows.",
+      "unsupported-version": "It's written for a newer version of Pharoam.",
+      "invalid-fields": "These fields need fixing: {{fields}}.",
+      "duplicate-id": "Another file has the same ID: {{file}}. Give one of them a new ID.",
+      "unavailable": "Pharoam couldn't read it from your folder."
+    }
+  }
+}

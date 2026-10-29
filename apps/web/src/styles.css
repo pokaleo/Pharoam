@@ -1,0 +1,128 @@
+/* The app's stylesheet: Tailwind, the theme from @brand (brand/ or the neutral theme), and Tailwind names for
+   the theme's tokens. Components use these names only, so they look right with either theme (ADR-0015). */
+@import "tailwindcss";
+@import "@brand/tokens.css";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-active: var(--active);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-line-strong: var(--line-strong);
+  --color-channel: var(--channel);
+  --color-channel-wash: var(--channel-wash);
+  --color-focus: var(--focus);
+  --color-notice: var(--notice);
+  --color-notice-wash: var(--notice-wash);
+  --color-notice-edge: var(--notice-edge);
+  --color-problem: var(--problem);
+  --color-problem-wash: var(--problem-wash);
+  --color-problem-edge: var(--problem-edge);
+
+  --font-sans: var(--font-ui);
+  --font-serif: var(--font-read);
+  --font-mono: var(--font-code);
+
+  --text-meta: var(--fs-meta);
+  --text-meta--line-height: var(--lh-meta);
+  --text-body: var(--fs-body);
+  --text-body--line-height: var(--lh-body);
+  --text-lead: var(--fs-lead);
+  --text-lead--line-height: var(--lh-lead);
+  --text-section: var(--fs-section);
+  --text-section--line-height: var(--lh-section);
+  --text-title: var(--fs-title);
+  --text-title--line-height: var(--lh-title);
+
+  --radius-sm: var(--radius-chip);
+  --radius-md: var(--radius-control);
+  --radius-lg: var(--radius-panel);
+}
+
+@layer base {
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Focus is always visible, and never colour on colour. */
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+}
+
+/* Long-form reading: Markdown the person wrote, and content packs (the design system's reading style). */
+@layer components {
+  .prose-pharoam {
+    font-size: var(--fs-read);
+    line-height: var(--lh-read);
+  }
+  .prose-pharoam > * + * {
+    margin-block-start: 0.85em;
+  }
+  .prose-pharoam :is(h1, h2, h3, h4) {
+    font-weight: 600;
+    line-height: 1.3;
+    margin-block: 1.4em 0.4em;
+  }
+  .prose-pharoam h1 {
+    font-size: 1.4em;
+  }
+  .prose-pharoam h2 {
+    font-size: 1.25em;
+  }
+  .prose-pharoam h3 {
+    font-size: 1.1em;
+  }
+  .prose-pharoam :is(ul, ol) {
+    padding-inline-start: 1.3em;
+  }
+  .prose-pharoam ul {
+    list-style: disc;
+  }
+  .prose-pharoam ol {
+    list-style: decimal;
+  }
+  .prose-pharoam blockquote {
+    border-inline-start: 3px solid var(--line);
+    padding-inline-start: 1em;
+    color: var(--ink-2);
+  }
+  .prose-pharoam code {
+    font-family: var(--font-code);
+    font-size: 0.84em;
+    background: var(--panel);
+    padding: 0.1em 0.3em;
+    border-radius: var(--radius-chip);
+  }
+}

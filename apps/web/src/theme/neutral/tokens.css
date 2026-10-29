@@ -1,0 +1,211 @@
+/* The neutral theme: used when brand/ is absent, so the app builds and runs without the Pharoam brand
+   (LICENSING.md, ADR-0015). Plain greys, one blue for data and links, and the system's own fonts.
+   It defines every name brand/tokens.css defines, so components look whole with either. AGPL-3.0-only. */
+
+:root {
+  --font-ui: system-ui, sans-serif;
+  --font-read: Georgia, serif;
+  --font-code: ui-monospace, monospace;
+
+  --radius-panel: 8px;
+  --radius-control: 6px;
+  --radius-chip: 4px;
+  --radius-round: 999px;
+
+  --ease: ease-out;
+  --ease-exit: ease-in;
+  --dur-feedback: 100ms;
+  --dur-open: 150ms;
+  --dur-sheet: 200ms;
+
+  --sidebar: 240px;
+  --canvas-max: 1200px;
+  --reading-measure: 70ch;
+
+  --lamp: #737373;
+}
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  --ground: #fafafa;
+  --surface: #ffffff;
+  --panel: #f0f0f0;
+  --panel-2: #e8e8e8;
+  --active: #e0e0e0;
+
+  --ink: #171717;
+  --ink-2: #525252;
+  --ink-3: #5c5c5c;
+  --ink-inverse: #ffffff;
+
+  --line: #e0e0e0;
+  --line-soft: #ebebeb;
+  --line-strong: #8a8a8a;
+
+  --channel: #1d4ed8;
+  --channel-wash: #e0e8fb;
+  --primary: #171717;
+  --primary-ink: #fafafa;
+  --focus: #1d4ed8;
+  --lamp-wash: #f0f0f0;
+
+  --src-self: #404040;
+  --src-self-wash: #ececec;
+  --src-demo: #1d4ed8;
+  --src-demo-wash: #e0e8fb;
+  --src-ai: #4a4a4a;
+  --src-ai-wash: #f0f0f0;
+  --ai-edge: #8a8a8a;
+  --ai-hatch: none;
+
+  --notice: #8a4b00;
+  --notice-wash: #fdf1dc;
+  --notice-edge: #e0b46a;
+  --problem: #b91c1c;
+  --problem-wash: #fde8e8;
+  --problem-edge: #eaa0a0;
+
+  --shadow-float: 0 4px 16px rgb(0 0 0 / 0.12);
+  --scrim: rgb(0 0 0 / 0.45);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --ground: #0a0a0a;
+  --surface: #171717;
+  --panel: #1f1f1f;
+  --panel-2: #262626;
+  --active: #2e2e2e;
+
+  --ink: #f5f5f5;
+  --ink-2: #b5b5b5;
+  --ink-3: #a0a0a0;
+  --ink-inverse: #171717;
+
+  --line: #2e2e2e;
+  --line-soft: #242424;
+  --line-strong: #6e6e6e;
+
+  --channel: #8ab4f8;
+  --channel-wash: #1a2740;
+  --primary: #f5f5f5;
+  --primary-ink: #171717;
+  --focus: #8ab4f8;
+  --lamp-wash: #262626;
+
+  --src-self: #d4d4d4;
+  --src-self-wash: #262626;
+  --src-demo: #8ab4f8;
+  --src-demo-wash: #1a2740;
+  --src-ai: #cccccc;
+  --src-ai-wash: #222222;
+  --ai-edge: #777777;
+
+  --notice: #f0b860;
+  --notice-wash: #382a12;
+  --notice-edge: #6b5226;
+  --problem: #f19c94;
+  --problem-wash: #3a1d1b;
+  --problem-edge: #773b35;
+
+  --shadow-float: 0 4px 16px rgb(0 0 0 / 0.5);
+  --scrim: rgb(0 0 0 / 0.6);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ground: #0a0a0a;
+    --surface: #171717;
+    --panel: #1f1f1f;
+    --panel-2: #262626;
+    --active: #2e2e2e;
+    --ink: #f5f5f5;
+    --ink-2: #b5b5b5;
+    --ink-3: #a0a0a0;
+    --ink-inverse: #171717;
+    --line: #2e2e2e;
+    --line-soft: #242424;
+    --line-strong: #6e6e6e;
+    --channel: #8ab4f8;
+    --channel-wash: #1a2740;
+    --primary: #f5f5f5;
+    --primary-ink: #171717;
+    --focus: #8ab4f8;
+    --lamp-wash: #262626;
+    --src-self: #d4d4d4;
+    --src-self-wash: #262626;
+    --src-demo: #8ab4f8;
+    --src-demo-wash: #1a2740;
+    --src-ai: #cccccc;
+    --src-ai-wash: #222222;
+    --ai-edge: #777777;
+    --notice: #f0b860;
+    --notice-wash: #382a12;
+    --notice-edge: #6b5226;
+    --problem: #f19c94;
+    --problem-wash: #3a1d1b;
+    --problem-edge: #773b35;
+    --shadow-float: 0 4px 16px rgb(0 0 0 / 0.5);
+    --scrim: rgb(0 0 0 / 0.6);
+  }
+}
+
+:root,
+[data-density] {
+  --fs-meta: 12px;
+  --lh-meta: 16px;
+  --fs-body: 14px;
+  --lh-body: 20px;
+  --fs-lead: 16px;
+  --lh-lead: 24px;
+  --fs-section: 18px;
+  --lh-section: 24px;
+  --fs-title: 24px;
+  --lh-title: 32px;
+  --fs-read: 16px;
+  --lh-read: 26px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --gap: 16px;
+  --pad: 16px;
+  --row: 40px;
+  --row-2: 56px;
+  --control: 32px;
+  --nav-row: 32px;
+  --chip: 22px;
+  --icon: 16px;
+}
+
+/* shadcn/ui names, read by its components. */
+:root,
+[data-theme] {
+  --background: var(--ground);
+  --foreground: var(--ink);
+  --card: var(--panel);
+  --card-foreground: var(--ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--ink);
+  --primary-foreground: var(--primary-ink);
+  --secondary: var(--panel);
+  --secondary-foreground: var(--ink);
+  --muted: var(--panel);
+  --muted-foreground: var(--ink-2);
+  --accent: var(--panel-2);
+  --accent-foreground: var(--ink);
+  --destructive: var(--problem);
+  --border: var(--line);
+  --input: var(--line-strong);
+  --ring: var(--focus);
+  --radius: var(--radius-panel);
+}
