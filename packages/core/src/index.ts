@@ -43,6 +43,13 @@ export {
   type WriteError,
 } from "./core-service.ts";
 export {
+  compileContentPack,
+  ContentPack,
+  type ContentFile,
+  type ContentProblem,
+  type InvalidContentError,
+} from "./pack.ts";
+export {
   createRecordFile,
   parseRecordFile,
   printRecordFile,

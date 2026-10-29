@@ -89,5 +89,6 @@ Node 26 (`.nvmrc`), pnpm 12 (exact version pinned in `package.json`; pnpm switch
 | `pnpm typecheck` | TypeScript |
 | `pnpm knip` | Unused files, exports and dependencies |
 | `pnpm docs:api` | Build the API reference into `api-docs/` (fails on undocumented exports) |
+| `pnpm content:build` | Compile `data/` and `content/` into the built-in content pack in `dist/content/` (fails on invalid content) |
 | `pnpm check` | All of the above plus the hard-rule scan, as CI runs them |
 | `pnpm guard:unlock <minutes>` | **User only.** Pause approval prompts for enforcement files |
