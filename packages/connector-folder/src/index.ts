@@ -11,3 +11,4 @@ export {
   type FileHandle,
   type FolderHandle,
 } from "./folder-connector.ts";
+export { createFolderMemory, type FolderMemory } from "./folder-memory.ts";

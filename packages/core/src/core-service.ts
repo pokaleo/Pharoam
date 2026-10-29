@@ -159,6 +159,14 @@ export interface CoreService {
   readonly needsAttention: () => readonly AttentionItem[];
   /** The valid record with this ID, if there is one. */
   readonly find: (id: string) => LoadedRecord | undefined;
+  /**
+   * The profile's own `pharoam` record, if storage has a valid one.
+   *
+   * @remarks Without one, the app offers to create a profile there instead of showing an error (MVP S2.3).
+   */
+  readonly profile: () => LoadedRecord | undefined;
+  /** Forgets every record read, so no profile data is held once the profile is disconnected (MVP S2.4). */
+  readonly close: () => void;
   /** Saves a new record, after validating it. */
   readonly create: (file: RecordFile) => Promise<Result<LoadedRecord, SaveError>>;
   /** Saves a change to a record read earlier, only if storage still has the version read (AD10). */
@@ -193,6 +201,7 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
   let attention: AttentionItem[] = [];
 
   const byId = (id: string): LoadedRecord | undefined => loaded.find((r) => r.record.id === id);
+  const profile = (): LoadedRecord | undefined => loaded.find((r) => r.record.schema === "pharoam/1");
 
   async function createRecord(file: RecordFile): Promise<Result<LoadedRecord, SaveError>> {
     const record = parseProfileRecord(file.top);
@@ -243,14 +252,20 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
     records: () => loaded,
     needsAttention: () => attention,
     find: byId,
+    profile,
+
+    close: () => {
+      loaded = [];
+      attention = [];
+    },
 
     create: createRecord,
 
-    createProfile: async (profile) => {
-      const existing = loaded.find((r) => r.record.schema === "pharoam/1");
+    createProfile: async (fields) => {
+      const existing = profile();
       if (existing !== undefined) return err({ kind: "profile-exists", location: existing.location });
       const top = { schema: "pharoam/1", id: nextId(), created: timestamp(ids.now()), ai: null };
-      const file = createRecordFile({ ...top, ...profileFields(profile) }, "");
+      const file = createRecordFile({ ...top, ...profileFields(fields) }, "");
       const record = parseProfileRecord(file.top);
       if (!record.ok) return err({ kind: "invalid", error: record.error });
       const ready = await storage.initialise();

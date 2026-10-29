@@ -146,6 +146,44 @@ describe("opening a profile", () => {
       error: { kind: "unavailable", reason: "Access to the storage was lost." },
     });
   });
+
+  it("finds the profile's pharoam.md", async () => {
+    const { service } = await opened({ "pharoam.md": PHAROAM_FILE, "evidence/a.md": EVIDENCE_FILE });
+    expect(service.profile()?.location).toBe("pharoam.md");
+  });
+
+  it("has no profile in storage without pharoam.md, so one can be created there (MVP S2.3)", async () => {
+    const { service, storage } = await opened({ "evidence/a.md": EVIDENCE_FILE });
+    expect(service.profile()).toBeUndefined();
+    expect(await service.createProfile({ headline: "Engineer" })).toMatchObject({ ok: true });
+    expect(service.profile()?.record).toMatchObject({ schema: "pharoam/1", headline: "Engineer" });
+    expect(await storage.readOutside("evidence/a.md")).toBe(EVIDENCE_FILE);
+  });
+});
+
+describe("closing a profile (MVP S2.4)", () => {
+  it("forgets every record read, and those under Needs attention", async () => {
+    const { service, storage } = await opened({
+      "pharoam.md": PHAROAM_FILE,
+      "evidence/a.md": EVIDENCE_FILE,
+      "notes/plain.md": "# Just a note\n",
+    });
+    service.close();
+    expect(service.records()).toEqual([]);
+    expect(service.needsAttention()).toEqual([]);
+    expect(service.profile()).toBeUndefined();
+    expect(service.find("0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d")).toBeUndefined();
+    expect(storage.writes()).toBe(0);
+  });
+
+  it("can't save a change to a record read before closing", async () => {
+    const { service } = await opened({ "evidence/a.md": EVIDENCE_FILE });
+    service.close();
+    expect(await service.update("evidence/a.md", file(EVIDENCE_FILE))).toEqual({
+      ok: false,
+      error: { kind: "not-found", location: "evidence/a.md" },
+    });
+  });
 });
 
 describe("saving a record", () => {
