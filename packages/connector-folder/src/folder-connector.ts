@@ -18,7 +18,7 @@ import {
   type StorageError,
   type StoredRef,
 } from "@pharoam/core";
-import { recordPath } from "./layout.ts";
+import { PROFILE_FOLDERS, recordPath } from "./layout.ts";
 
 /** The part of the File System Access API's file handle the connector uses. */
 export interface FileHandle {
@@ -92,7 +92,7 @@ export async function requestAccess(
  * @example
  * ```ts
  * const folder = await showDirectoryPicker({ mode: "readwrite" });
- * const service = createCoreService({ storage: createFolderConnector(folder) });
+ * const service = createCoreService({ storage: createFolderConnector(folder), ids: { now: Date.now, fillRandom: (b) => crypto.getRandomValues(b) } });
  * ```
  */
 export function createFolderConnector(root: FolderHandle): StorageConnector {
@@ -115,6 +115,17 @@ export function createFolderConnector(root: FolderHandle): StorageConnector {
   }
 
   return {
+    initialise: async () => {
+      if (!(await granted())) return err(NOT_GRANTED);
+      try {
+        // Opening with `create` makes a missing folder and leaves an existing one, and its files, alone.
+        for (const name of PROFILE_FOLDERS) await root.getDirectoryHandle(name, { create: true });
+        return ok(undefined);
+      } catch (error) {
+        return err(unavailable(error));
+      }
+    },
+
     list: async () => {
       if (!(await granted())) return err(NOT_GRANTED);
       try {

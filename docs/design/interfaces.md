@@ -12,6 +12,7 @@
 
 ```ts
 interface StorageConnector {                         // packages/core/src/core-service.ts; every call is async
+  initialise(): Result<void>                          // prepares a new profile, e.g. skills/, evidence/, gaps/; changes nothing
   list(): Result<StoredRef[]>                         // every record, valid or not: location + version token
   read(location): Result<{ file, version }>           // not-found, or unreadable with the codec's error
   create(file): Result<StoredRef>                     // where the layout puts it; never over an existing record

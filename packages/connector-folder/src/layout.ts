@@ -10,6 +10,9 @@ import type { RecordFile } from "@pharoam/core";
 
 const MAX_NAME_LENGTH = 60;
 
+/** The folders a new profile starts with, so the person can see where each kind of record goes (MVP S1.1). */
+export const PROFILE_FOLDERS = ["skills", "evidence", "gaps"] as const;
+
 /**
  * Chooses the path for a new record.
  *

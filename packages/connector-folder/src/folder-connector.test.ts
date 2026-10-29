@@ -54,6 +54,15 @@ describe("the folder connector", () => {
     );
   });
 
+  it("prepares a folder for a new profile with skills/, evidence/ and gaps/ (MVP S1.1)", async () => {
+    const folder = memoryFolder({ "notes.txt": "mine", "evidence/a.md": "x" });
+    expect(await createFolderConnector(folder.handle).initialise()).toEqual({ ok: true, value: undefined });
+    // evidence/ already existed, so only the missing folders are created.
+    expect([...folder.folders].toSorted()).toEqual(["gaps", "skills"]);
+    expect(decoder.decode(folder.files.get("notes.txt"))).toBe("mine");
+    expect(decoder.decode(folder.files.get("evidence/a.md"))).toBe("x");
+  });
+
   it("lists Markdown files at any depth, but not hidden folders, attachments or other files", async () => {
     const folder = memoryFolder({
       "pharoam.md": "x",
