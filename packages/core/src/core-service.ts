@@ -13,6 +13,7 @@ import {
   type EvidenceForm,
   type InvalidEvidenceError,
 } from "./evidence-form.ts";
+import { customSkillSlug } from "./custom-skills.ts";
 import { createProfileRecordIdGenerator, type IdSource } from "./ids.ts";
 import { checkEntry, sealEntry, type IntegrityStatus } from "./integrity.ts";
 import { overviewFacts, withOverview, type OverviewWriter } from "./overview.ts";
@@ -205,6 +206,26 @@ export interface SelfRating {
 /** Why the service didn't record a level. */
 export type RecordLevelError = SaveError | { readonly kind: "unknown-evidence"; readonly id: string };
 
+/** A skill the vocabulary is missing, as the person describes it (MVP S8.1). */
+export interface CustomSkill {
+  /** What the skill is called, as the person writes it. */
+  readonly name: string;
+  /** What it covers, in the person's own words. */
+  readonly description?: string;
+}
+
+/** Why the service didn't add a custom skill. */
+export type AddCustomSkillError =
+  | SaveError
+  | {
+      /** The person already has a custom skill with this name. */
+      readonly kind: "skill-exists";
+      /** That skill's slug. */
+      readonly skill: string;
+      /** Where its skill record is stored. */
+      readonly location: string;
+    };
+
 /** Why the service didn't correct or retract an observation. */
 export type ChangeLevelError =
   | RecordLevelError
@@ -308,6 +329,14 @@ export interface CoreService {
     observation: string,
     note?: string,
   ) => Promise<Result<LoadedRecord, ChangeLevelError>>;
+  /**
+   * Adds a skill the vocabulary is missing: starts its skill record, with a `custom-` slug made from the name (MVP S8.1).
+   *
+   * @remarks The record holds the name and any description, and takes observations like any other skill (S8.2).
+   * A name already used, ignoring case, is refused. When another name gives the same slug, or the name has no
+   * letters a slug can hold, the record's short ID is added to the slug so it is still unique.
+   */
+  readonly addCustomSkill: (skill: CustomSkill) => Promise<Result<LoadedRecord, AddCustomSkillError>>;
   /** A skill's history, newest first, with each entry marked; empty for a skill without a record (MVP S7.3). */
   readonly skillHistory: (skill: string) => readonly HistoryItem[];
   /**
@@ -541,6 +570,38 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
       return createRecord(createRecordFile(top, ""));
     },
 
+    addCustomSkill: async ({ name, description = "" }) => {
+      const wanted = sameName(name);
+      const kept = loaded.find(
+        (r) =>
+          r.record.schema === "skill-record/1" &&
+          r.record.name !== undefined &&
+          sameName(r.record.name) === wanted,
+      );
+      if (kept?.record.schema === "skill-record/1")
+        return err({ kind: "skill-exists", skill: kept.record.skill, location: kept.location });
+      const id = nextId();
+      const slug = customSkillSlug(name);
+      // The short ID is the UUIDv7's random end, as in file names (data model §8).
+      const shortId = id.replaceAll("-", "").slice(-8);
+      const skill =
+        slug === undefined
+          ? `custom-${shortId}`
+          : skillRecord(slug) === undefined
+            ? slug
+            : `${slug}-${shortId}`;
+      const top = {
+        schema: "skill-record/1",
+        id,
+        created: timestamp(ids.now()),
+        ai: null,
+        skill,
+        name: name.trim(),
+        ...(description.trim() !== "" && { description }),
+      };
+      return createRecord(createRecordFile(top, ""));
+    },
+
     correctLevel: async (id, { level, evidence = [] }) => {
       const found = observationById(id);
       if (!found.ok) return found;
@@ -667,6 +728,11 @@ function profileFields(profile: ProfileFields): Record<string, unknown> {
 function invalidLevel(): SaveError {
   const issue = { path: ["entries", 0, "level"], code: "invalid_type", message: "Not a level." };
   return { kind: "invalid", error: { kind: "invalid-fields", issues: [issue] } };
+}
+
+// A skill's name compared as the person would: ignoring case and surrounding spaces.
+function sameName(name: string): string {
+  return name.normalize("NFKC").trim().toLowerCase();
 }
 
 // A time as Pharoam writes it, to the second, such as `2026-10-24T14:02:11Z`.

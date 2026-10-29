@@ -927,3 +927,81 @@ describe("correcting or retracting a level (MVP S7)", () => {
     expect(storage.writes()).toBe(0);
   });
 });
+
+describe("adding a skill the vocabulary is missing (MVP S8)", () => {
+  const NEW_ID = /^01a186fe-adc0-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+  it("starts a skill record whose slug starts with custom-, holding the name and description (S8.1)", async () => {
+    const { service, storage } = await opened({});
+    const result = await service.addCustomSkill({ name: "KDB+/q", description: "Time-series queries." });
+    if (!result.ok) throw new Error(result.error.kind);
+    expect(result.value.file.top).toEqual({
+      schema: "skill-record/1",
+      id: expect.stringMatching(NEW_ID) as unknown,
+      created: "2026-10-29T09:30:00Z",
+      ai: null,
+      skill: "custom-kdb-q",
+      name: "KDB+/q",
+      description: "Time-series queries.",
+    });
+    expect(storage.text(result.value.location)).toBe(printRecordFile(result.value.file));
+  });
+
+  it("keeps the name as typed, trimmed, and leaves out an empty description", async () => {
+    const { service } = await opened({});
+    const result = await service.addCustomSkill({ name: "  Latte art ", description: "" });
+    expect(result.ok && result.value.file.top).toMatchObject({
+      skill: "custom-latte-art",
+      name: "Latte art",
+    });
+    expect(result.ok && "description" in result.value.file.top).toBe(false);
+  });
+
+  it("works like any other skill in observations (S8.2)", async () => {
+    const { service } = await opened({});
+    await service.addCustomSkill({ name: "KDB+/q" });
+    const rated = await service.recordLevel({ skill: "custom-kdb-q", level: 2 });
+    expect(rated.ok && rated.value.record).toMatchObject({
+      skill: "custom-kdb-q",
+      name: "KDB+/q",
+      entries: [{ level: 2, provenance: "self-reported" }],
+    });
+    expect(service.skillHistory("custom-kdb-q")).toMatchObject([{ kind: "observation", shown: true }]);
+  });
+
+  it("refuses a name it already has, and writes nothing more", async () => {
+    const { service, storage } = await opened({});
+    const first = await service.addCustomSkill({ name: "KDB+/q" });
+    expect(await service.addCustomSkill({ name: "kdb+/Q " })).toEqual({
+      ok: false,
+      error: { kind: "skill-exists", skill: "custom-kdb-q", location: first.ok && first.value.location },
+    });
+    expect(storage.writes()).toBe(1);
+  });
+
+  it("gives a different skill whose slug is taken its own, with a short ID", async () => {
+    const { service } = await opened({});
+    await service.addCustomSkill({ name: "C++" });
+    const second = await service.addCustomSkill({ name: "C#" });
+    expect(second.ok && second.value.record).toMatchObject({
+      skill: expect.stringMatching(/^custom-c-[0-9a-f]{8}$/) as unknown,
+      name: "C#",
+    });
+  });
+
+  it("uses a short ID for a name the slug can't spell", async () => {
+    const { service } = await opened({});
+    const result = await service.addCustomSkill({ name: "日本語" });
+    expect(result.ok && result.value.record).toMatchObject({
+      skill: expect.stringMatching(/^custom-[0-9a-f]{8}$/) as unknown,
+      name: "日本語",
+    });
+  });
+
+  it("refuses a blank name, and writes nothing", async () => {
+    const { service, storage } = await opened({});
+    const result = await service.addCustomSkill({ name: "   " });
+    expect(result.ok ? null : result.error.kind).toBe("invalid");
+    expect(storage.writes()).toBe(0);
+  });
+});

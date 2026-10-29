@@ -29,12 +29,14 @@ export {
 } from "./integrity.ts";
 export {
   createCoreService,
+  type AddCustomSkillError,
   type AttentionItem,
   type CoreService,
   type CoreServiceOptions,
   type ChangeLevelError,
   type CreateError,
   type CreateProfileError,
+  type CustomSkill,
   type DeleteEvidenceError,
   type EditEvidenceError,
   type EvidenceReference,
@@ -52,6 +54,7 @@ export {
   type UnreadableError,
   type WriteError,
 } from "./core-service.ts";
+export { isCustomSkill } from "./custom-skills.ts";
 export {
   EVIDENCE_FORM_KINDS,
   evidenceFormFields,
