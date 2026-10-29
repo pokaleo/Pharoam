@@ -45,6 +45,15 @@ async function opened(files: Readonly<Record<string, string>>): Promise<{
   return { service, storage };
 }
 
+// Each conflict as the person sees it: both versions as text.
+function conflictTexts(service: CoreService): readonly unknown[] {
+  return service.conflicts().map(({ location, mine, theirs }) => ({
+    location,
+    mine: mine && printRecordFile(mine),
+    theirs: theirs.ok ? printRecordFile(theirs.value) : theirs.error,
+  }));
+}
+
 // Evidence with a field Pharoam doesn't know and a comment, to check both survive a save.
 const EVIDENCE_WITH_EXTRAS = EVIDENCE_FILE.replace(
   "source: manual",
@@ -223,6 +232,148 @@ describe("saving a record", () => {
     expect(storage.text("evidence/a.md")).toBe(outside);
     expect(service.find("0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d")?.record).toMatchObject({
       title: "Backend Engineer",
+    });
+  });
+
+  it("keeps both versions after a conflict, so the person can choose (MVP S12.1)", async () => {
+    const { service, storage } = await opened({ "evidence/a.md": EVIDENCE_FILE });
+    const outside = EVIDENCE_FILE.replace("Built and ran", "Designed and ran");
+    await storage.putOutside("evidence/a.md", outside);
+    const mine = withTopField(file(EVIDENCE_FILE), "title", "Mine");
+    await service.update("evidence/a.md", mine);
+    expect(conflictTexts(service)).toEqual([
+      { location: "evidence/a.md", mine: printRecordFile(mine), theirs: outside },
+    ]);
+  });
+
+  it("keeps their version when the person chooses it, reading it again", async () => {
+    const { service, storage } = await opened({ "evidence/a.md": EVIDENCE_FILE });
+    const outside = EVIDENCE_FILE.replace("title: Backend Engineer", "title: Their title");
+    await storage.putOutside("evidence/a.md", outside);
+    await service.update("evidence/a.md", withTopField(file(EVIDENCE_FILE), "title", "Mine"));
+    expect(await service.resolveConflict("evidence/a.md", "theirs")).toEqual({ ok: true, value: undefined });
+    expect(storage.text("evidence/a.md")).toBe(outside);
+    expect(service.conflicts()).toEqual([]);
+    expect(service.find("0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d")?.record).toMatchObject({
+      title: "Their title",
+    });
+    // Saved again from their version, the record no longer conflicts.
+    const current = service.find("0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d");
+    const saved =
+      current && (await service.update(current.location, withTopField(current.file, "title", "Next")));
+    expect(saved?.ok).toBe(true);
+  });
+
+  it("puts their version under Needs attention when it isn't valid any more", async () => {
+    const { service, storage } = await opened({ "evidence/a.md": EVIDENCE_FILE, "evidence/b.md": "x" });
+    await storage.putOutside("evidence/a.md", EVIDENCE_FILE.replace("title: Backend Engineer\n", ""));
+    await service.update("evidence/a.md", withTopField(file(EVIDENCE_FILE), "title", "Mine"));
+    await service.resolveConflict("evidence/a.md", "theirs");
+    expect(service.find("0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d")).toBeUndefined();
+    expect(service.needsAttention()).toMatchObject([
+      { location: "evidence/b.md" },
+      { location: "evidence/a.md", problem: { kind: "invalid" } },
+    ]);
+  });
+
+  it("keeps the conflict when storage can't be reached while keeping mine", async () => {
+    const { service, storage } = await opened({ "evidence/a.md": EVIDENCE_FILE });
+    await storage.putOutside("evidence/a.md", EVIDENCE_FILE.replace("Built and ran", "Designed and ran"));
+    await service.update("evidence/a.md", withTopField(file(EVIDENCE_FILE), "title", "Mine"));
+    storage.loseAccess();
+    expect(await service.resolveConflict("evidence/a.md", "mine")).toEqual({
+      ok: false,
+      error: { kind: "unavailable", reason: "Access to the storage was lost." },
+    });
+    expect(service.conflicts()).toHaveLength(1);
+  });
+
+  it("writes my version over theirs only when the person chooses it", async () => {
+    const { service, storage } = await opened({ "evidence/a.md": EVIDENCE_FILE });
+    await storage.putOutside("evidence/a.md", EVIDENCE_FILE.replace("Built and ran", "Designed and ran"));
+    const mine = withTopField(file(EVIDENCE_FILE), "title", "Mine");
+    await service.update("evidence/a.md", mine);
+    expect(await service.resolveConflict("evidence/a.md", "mine")).toEqual({ ok: true, value: undefined });
+    expect(storage.text("evidence/a.md")).toBe(printRecordFile(mine));
+    expect(service.conflicts()).toEqual([]);
+    expect(service.find("0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d")?.record).toMatchObject({ title: "Mine" });
+  });
+
+  it("shows the conflict again if their version changed once more before I chose mine", async () => {
+    const { service, storage } = await opened({ "evidence/a.md": EVIDENCE_FILE });
+    await storage.putOutside("evidence/a.md", EVIDENCE_FILE.replace("Built and ran", "Designed and ran"));
+    await service.update("evidence/a.md", withTopField(file(EVIDENCE_FILE), "title", "Mine"));
+    const later = EVIDENCE_FILE.replace("Built and ran", "Led and ran");
+    await storage.putOutside("evidence/a.md", later);
+    expect(await service.resolveConflict("evidence/a.md", "mine")).toEqual({
+      ok: false,
+      error: { kind: "conflict", location: "evidence/a.md" },
+    });
+    expect(storage.text("evidence/a.md")).toBe(later);
+    expect(conflictTexts(service)).toMatchObject([{ theirs: later }]);
+  });
+
+  it("keeps a deletion conflict too: deleting mine, or keeping theirs", async () => {
+    const { service, storage } = await opened({ "evidence/a.md": EVIDENCE_FILE });
+    const outside = EVIDENCE_FILE.replace("Built and ran", "Designed and ran");
+    await storage.putOutside("evidence/a.md", outside);
+    expect((await service.deleteEvidence("evidence/a.md")).ok).toBe(false);
+    expect(conflictTexts(service)).toEqual([{ location: "evidence/a.md", mine: undefined, theirs: outside }]);
+    expect(await service.resolveConflict("evidence/a.md", "mine")).toEqual({ ok: true, value: undefined });
+    expect(storage.text("evidence/a.md")).toBeUndefined();
+    expect(service.find("0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d")).toBeUndefined();
+  });
+
+  it("shows a deletion conflict again if their version changed once more", async () => {
+    const { service, storage } = await opened({ "evidence/a.md": EVIDENCE_FILE });
+    await storage.putOutside("evidence/a.md", EVIDENCE_FILE.replace("Built and ran", "Designed and ran"));
+    await service.deleteEvidence("evidence/a.md");
+    const later = EVIDENCE_FILE.replace("Built and ran", "Led and ran");
+    await storage.putOutside("evidence/a.md", later);
+    expect(await service.resolveConflict("evidence/a.md", "mine")).toEqual({
+      ok: false,
+      error: { kind: "conflict", location: "evidence/a.md" },
+    });
+    expect(storage.text("evidence/a.md")).toBe(later);
+    expect(conflictTexts(service)).toEqual([{ location: "evidence/a.md", mine: undefined, theirs: later }]);
+  });
+
+  it("can only keep theirs when their version can't be read", async () => {
+    const { service, storage } = await opened({ "evidence/a.md": EVIDENCE_FILE });
+    await storage.putOutside("evidence/a.md", EVIDENCE_FILE.replace("Built and ran", "Designed and ran"));
+    await service.update("evidence/a.md", withTopField(file(EVIDENCE_FILE), "title", "Mine"));
+    await storage.removeOutside("evidence/a.md");
+    // Read again when the person chooses, their version is now gone.
+    expect(await service.resolveConflict("evidence/a.md", "theirs")).toEqual({ ok: true, value: undefined });
+    expect(service.find("0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d")).toBeUndefined();
+    expect(await service.resolveConflict("evidence/a.md", "mine")).toEqual({
+      ok: false,
+      error: { kind: "no-conflict", location: "evidence/a.md" },
+    });
+  });
+
+  it("refuses to keep mine over a version it couldn't read", async () => {
+    const storage = createMemoryConnector({ "evidence/a.md": EVIDENCE_FILE });
+    // Reads work while the profile opens, then fail, as for a file saved in another encoding.
+    const reads = { fail: false };
+    const service = createCoreService({
+      ...OPTIONS,
+      storage: {
+        ...storage.connector,
+        read: (location) =>
+          reads.fail
+            ? Promise.resolve({ ok: false, error: { kind: "unreadable", error: { kind: "not-utf8" } } })
+            : storage.connector.read(location),
+      },
+    });
+    await service.open();
+    reads.fail = true;
+    await storage.putOutside("evidence/a.md", EVIDENCE_FILE.replace("Built and ran", "Designed and ran"));
+    await service.update("evidence/a.md", withTopField(file(EVIDENCE_FILE), "title", "Mine"));
+    expect(service.conflicts()).toMatchObject([{ theirs: { ok: false, error: { kind: "unreadable" } } }]);
+    expect(await service.resolveConflict("evidence/a.md", "mine")).toEqual({
+      ok: false,
+      error: { kind: "theirs-unreadable", location: "evidence/a.md" },
     });
   });
 
