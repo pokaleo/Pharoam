@@ -66,6 +66,7 @@ export {
 } from "./evidence-form.ts";
 export { levelDescriptions, type Level, type LevelDescription } from "./levels.ts";
 export { type OverviewFacts, type OverviewWriter } from "./overview.ts";
+export { proficiencyOf, type LevelSince, type ProficiencySummary } from "./proficiency.ts";
 export {
   compileContentPack,
   ContentPack,
@@ -92,6 +93,7 @@ export {
   type HistoryItem,
   type ObservationStatus,
 } from "./skill-history.ts";
+export { skillView, type SkillFilter, type SkillViewItem } from "./skill-view.ts";
 export { AiSkillLink, EvidenceRecord } from "./schemas/evidence.ts";
 export { AiProvenance, ConfirmedAiProvenance, Provenance } from "./schemas/fields.ts";
 export { GapRecord, GapRequirement } from "./schemas/gap.ts";

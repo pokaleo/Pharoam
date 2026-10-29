@@ -17,6 +17,7 @@ import { customSkillSlug } from "./custom-skills.ts";
 import { createProfileRecordIdGenerator, type IdSource } from "./ids.ts";
 import { checkEntry, sealEntry, type IntegrityStatus } from "./integrity.ts";
 import { overviewFacts, withOverview, type OverviewWriter } from "./overview.ts";
+import { proficiencyOf } from "./proficiency.ts";
 import {
   createRecordFile,
   withAppendedItem,
@@ -31,8 +32,10 @@ import {
   type HistoryItem,
   type ObservationStatus,
 } from "./skill-history.ts";
+import { skillView, type SkillFilter, type SkillViewItem } from "./skill-view.ts";
 import { parseProfileRecord, type ProfileRecord, type ProfileRecordError } from "./schemas/profile-record.ts";
 import type { Observation } from "./schemas/skill-record.ts";
+import type { SkillEntry } from "./schemas/skill.ts";
 
 /** Storage that can't be reached, such as a folder whose permission was revoked. */
 export interface StorageError {
@@ -337,6 +340,13 @@ export interface CoreService {
    * letters a slug can hold, the record's short ID is added to the slug so it is still unique.
    */
   readonly addCustomSkill: (skill: CustomSkill) => Promise<Result<LoadedRecord, AddCustomSkillError>>;
+  /**
+   * The person's skills, each with its one shown level, its source and since when, sorted by name (MVP S9.1).
+   *
+   * @remarks Narrowed by vocabulary domain or by a search of names, other names and slugs (S9.3). The level comes
+   * from each skill record's `proficiency` summary, which every save regenerates from the history (S9.2).
+   */
+  readonly skillView: (vocabulary: readonly SkillEntry[], filter?: SkillFilter) => readonly SkillViewItem[];
   /** A skill's history, newest first, with each entry marked; empty for a skill without a record (MVP S7.3). */
   readonly skillHistory: (skill: string) => readonly HistoryItem[];
   /**
@@ -393,7 +403,8 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
   const byId = (id: string): LoadedRecord | undefined => loaded.find((r) => r.record.id === id);
   const profile = (): LoadedRecord | undefined => loaded.find((r) => r.record.schema === "pharoam/1");
 
-  async function createRecord(file: RecordFile): Promise<Result<LoadedRecord, SaveError>> {
+  async function createRecord(given: RecordFile): Promise<Result<LoadedRecord, SaveError>> {
+    const file = withProficiency(given);
     const record = parseProfileRecord(file.top);
     if (!record.ok) return err({ kind: "invalid", error: record.error });
     const kept = byId(record.value.id);
@@ -406,11 +417,12 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
     return ok(result);
   }
 
-  async function updateRecord(location: string, file: RecordFile): Promise<Result<LoadedRecord, SaveError>> {
+  async function updateRecord(location: string, given: RecordFile): Promise<Result<LoadedRecord, SaveError>> {
     if (attention.some((item) => item.location === location))
       return err({ kind: "needs-attention", location });
     const current = loaded.find((r) => r.location === location);
     if (current === undefined) return err({ kind: "not-found", location });
+    const file = withProficiency(given);
     const record = parseProfileRecord(file.top);
     if (!record.ok) return err({ kind: "invalid", error: record.error });
     if (record.value.id !== current.record.id) return err({ kind: "id-changed", location });
@@ -632,6 +644,8 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
       return appendEntry(record, sealed.value);
     },
 
+    skillView: (vocabulary, filter) => skillView(loaded, vocabulary, filter),
+
     skillHistory: (skill) => {
       const current = skillRecord(skill);
       return current?.record.schema === "skill-record/1"
@@ -686,6 +700,14 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
     refreshOverview,
     overviewProblem: () => overviewProblem,
   };
+}
+
+// A skill record with its `proficiency` summary brought up to date from its history, so the file reads correctly
+// without Pharoam (MVP S9.2). A summary already up to date is left exactly as written; other records are unchanged.
+function withProficiency(file: RecordFile): RecordFile {
+  const record = parseProfileRecord(file.top);
+  if (!record.ok || record.value.schema !== "skill-record/1") return file;
+  return withTopFields(file, { proficiency: proficiencyOf(record.value.entries) });
 }
 
 function toLoaded(location: string, version: string, file: RecordFile, record: ProfileRecord): LoadedRecord {
