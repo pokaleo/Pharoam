@@ -37,6 +37,8 @@ export {
   type DeleteEvidenceError,
   type EditEvidenceError,
   type EvidenceReference,
+  type RecordLevelError,
+  type SelfRating,
   type OverviewError,
   type ProfileChangeError,
   type ProfileFields,
@@ -58,6 +60,7 @@ export {
   type EvidenceFormKind,
   type InvalidEvidenceError,
 } from "./evidence-form.ts";
+export { levelDescriptions, type Level, type LevelDescription } from "./levels.ts";
 export { type OverviewFacts, type OverviewWriter } from "./overview.ts";
 export {
   compileContentPack,
