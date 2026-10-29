@@ -8,6 +8,7 @@ import wordmark from "@brand/wordmark.svg";
 import { Link } from "@tanstack/react-router";
 import type { ReactElement, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import type { PlaceKind } from "../profile/places.ts";
 import { Button } from "../ui/button.tsx";
 
 // The router marks the current page's link with aria-current, which the style follows.
@@ -19,15 +20,18 @@ const NAV_LINK =
  *
  * @remarks An open plane: the sidebar sits on the page ground with one soft rule (the design system's app shell).
  * Under 1024px the sidebar stacks above the page.
- * @param props - The folder's name, how many files need attention, what disconnecting does, and the page.
+ * @param props - Where the profile is kept and its name, how many files need attention, what disconnecting does, and
+ * the page.
  * @returns The page in the shell.
  */
 export function AppShell({
+  kind,
   folder,
   attention,
   onDisconnect,
   children,
 }: {
+  readonly kind: PlaceKind;
   readonly folder: string;
   readonly attention: number;
   readonly onDisconnect: () => void;
@@ -47,8 +51,10 @@ export function AppShell({
           </picture>
         </Link>
         <div className="rounded-md border border-line bg-surface p-2">
-          <p className="text-meta text-ink-3">{t("shell.folder")}</p>
-          <p className="truncate font-semibold">{folder}</p>
+          <p className="text-meta text-ink-3">
+            {kind === "browser" ? t("shell.storedIn") : t("shell.folder")}
+          </p>
+          <p className="truncate font-semibold">{kind === "browser" ? t("shell.thisBrowser") : folder}</p>
         </div>
         <nav aria-label={t("shell.main")} className="grid gap-0.5">
           <Link to="/" className={NAV_LINK}>
@@ -79,8 +85,13 @@ export function AppShell({
           </Link>
         </nav>
         <div className="lg:mt-auto">
-          <Button variant="quiet" aria-label={t("shell.disconnect", { folder })} onClick={onDisconnect}>
-            {t("shell.disconnectLabel")}
+          {/* Browser storage keeps its files when closed, so it closes rather than disconnects (ADR-0020). */}
+          <Button
+            variant="quiet"
+            aria-label={kind === "browser" ? t("shell.closeLabel") : t("shell.disconnect", { folder })}
+            onClick={onDisconnect}
+          >
+            {kind === "browser" ? t("shell.close") : t("shell.disconnectLabel")}
           </Button>
         </div>
       </aside>

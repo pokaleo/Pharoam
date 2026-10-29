@@ -11,8 +11,8 @@ import { PageTitle } from "../ui/page-title.tsx";
 /**
  * Says the browser isn't supported yet, why, and which browsers work.
  *
- * @remarks v0.1 stores profiles only in a local folder, which needs the File System Access API of desktop Chromium
- * browsers (MVP §3).
+ * @remarks Profiles are kept in a folder (Chromium browsers) or in the browser's own storage (Safari, Firefox), so only
+ * a browser with neither sees this page (MVP §3, ADR-0020).
  * @returns The explanation and the browsers to use, in the plain layout.
  */
 export function UnsupportedPage(): ReactElement {

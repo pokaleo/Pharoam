@@ -18,5 +18,5 @@ Pharoam must hold no profile data on its infrastructure (Charter R11). It must w
 
 ## Consequences
 - Self-hosting is just serving static files.
-- Opening a real local folder works only in Chromium browsers; other browsers rely on other connectors.
+- Opening a real local folder works only in Chromium browsers. Other browsers keep the profile in their own storage, with a downloadable copy ([ADR-0020](0020-browser-storage-where-no-folder.md)), until other connectors arrive.
 - Which services a browser can call directly must be confirmed (spike S1).

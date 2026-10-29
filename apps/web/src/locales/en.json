@@ -11,7 +11,7 @@
     "reopen": "Open {{folder}} again",
     "choose": "Choose a folder",
     "chooseHint": "Choose the folder your profile is in, or an empty one to start a new profile. The browser will ask you to let Pharoam use it.",
-    "opening": "Opening your folder…",
+    "opening": "Opening your profile…",
     "denied": {
       "title": "Pharoam needs permission to read and write the folder",
       "text": "Your profile is the files in that folder, so Pharoam can't open or create it without your permission. Nothing was written. Choose the folder again and allow access when the browser asks."
@@ -24,6 +24,21 @@
       "title": "Pharoam couldn't read {{folder}}",
       "titleNoFolder": "Pharoam couldn't open that folder",
       "text": "The browser may have lost access to it, or it may have moved. Nothing was written. Choose the folder again."
+    },
+    "browser": {
+      "storage": "This browser can't open a folder on your computer, so Pharoam keeps your profile in the browser's own storage on this device, as the same Markdown files. It never leaves your device, and you can download a copy whenever you like.",
+      "choose": "Keep my profile in this browser",
+      "reopen": "Open my profile again",
+      "bringIn": "Start from a folder",
+      "bringInHint": "Bring in a copy you downloaded and unzipped, or any profile folder. Pharoam copies its files into this browser and leaves the folder as it is.",
+      "notEmpty": {
+        "title": "There's already a profile in this browser",
+        "text": "Open it instead. Pharoam never writes over it."
+      },
+      "unavailable": {
+        "title": "This browser won't keep files for Pharoam",
+        "text": "Private windows don't keep a website's files. Open Pharoam in a normal window to keep your profile."
+      }
     }
   },
   "createProfile": {
@@ -47,7 +62,9 @@
     "submit": "Create my profile",
     "creating": "Creating your profile…",
     "failed": "Pharoam couldn't create your profile. Nothing was overwritten. {{reason}}",
-    "chooseAnother": "Choose another folder"
+    "chooseAnother": "Choose another folder",
+    "leadBrowser": "There's no profile in this browser yet. Pharoam will keep pharoam.md and the folders skills, evidence and gaps in its storage on this device.",
+    "goBack": "Go back"
   },
   "unreadableProfile": {
     "title": "pharoam.md in {{folder}} can't be read",
@@ -60,7 +77,8 @@
     "filesCount_one": "{{count}} file read.",
     "filesCount_other": "{{count}} files read.",
     "attention_one": "{{count}} file needs your attention and is left out until it's fixed.",
-    "attention_other": "{{count}} files need your attention and are left out until they're fixed."
+    "attention_other": "{{count}} files need your attention and are left out until they're fixed.",
+    "leadBrowser": "Kept in this browser's storage on this device. Download a copy to keep it somewhere safe."
   },
   "shell": {
     "main": "Main",
@@ -72,12 +90,16 @@
     "evidence": "Evidence",
     "skills": "Skills",
     "pathways": "Pathways",
-    "attention": "Needs attention"
+    "attention": "Needs attention",
+    "storedIn": "Stored in",
+    "thisBrowser": "This browser",
+    "close": "Close",
+    "closeLabel": "Close the profile in this browser"
   },
   "unsupported": {
     "title": "This browser isn't supported yet",
-    "lead": "Pharoam keeps your profile in a folder on your computer, and only some browsers can open one.",
-    "browsers": "For now, use Chrome, Edge, Brave or Arc on a desktop or laptop. Other browsers will work once Pharoam can store your profile in other places."
+    "lead": "Pharoam keeps your profile in a folder on your computer or in the browser's own storage, and this browser can do neither.",
+    "browsers": "Use a recent version of Safari, Firefox, Chrome, Edge, Brave or Arc on a desktop or laptop. If you're in a private window, open a normal one."
   },
   "notFound": {
     "title": "There's nothing at this address",
@@ -416,5 +438,16 @@
       "duplicate-id": "Another file has the same ID: {{file}}. Give one of them a new ID.",
       "unavailable": "Pharoam couldn't read it from your folder."
     }
+  },
+  "place": {
+    "thisBrowser": "this browser"
+  },
+  "copy": {
+    "title": "Keep a copy somewhere safe",
+    "text": "Your profile is only in this browser. Some browsers, Safari among them, can delete a website's files after 7 days without a visit, unless you add Pharoam to the Dock (File > Add to Dock). Download a copy now and then, and keep it with your other files.",
+    "persisted": "This browser has agreed to keep your profile, but a copy somewhere else is still wise.",
+    "download": "Download a copy (.zip)",
+    "downloaded": "Copy downloaded.",
+    "failed": "Pharoam couldn't make the copy. Nothing was changed."
   }
 }

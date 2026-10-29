@@ -34,6 +34,7 @@
 | [0017](adr/0017-human-readable-user-data.md) | Everything in the user's storage is human-readable | Data model §0 |
 | [0018](adr/0018-tsdoc-api-reference-and-typed-results.md) | TSDoc on every export, a generated API reference, and typed results | AD23 |
 | [0019](adr/0019-adaptive-diagnostics.md) | Adaptive diagnostics; a tested level rests only on shown performance | PRD E, data model §6–§7 |
+| [0020](adr/0020-browser-storage-where-no-folder.md) | Browser storage where a folder can't be opened | AD1, MVP §3 |
 
 ## Principle: no server where possible, a relay where necessary
 
@@ -45,6 +46,7 @@ The core runs entirely in the browser. Some outside services don't allow direct 
 | OpenAI, OpenRouter | Yes | |
 | Ollama, LM Studio (local) | Yes | The user allows the app's address in the local server settings |
 | Local folder / Obsidian | Yes | Chromium browsers |
+| Browser storage (origin private file system) | Yes | Safari and Firefox, where a folder can't be opened (ADR-0020) |
 | GitHub | Yes with a personal token | Signing in with OAuth needs the relay |
 | Google Drive | Yes | Google's browser sign-in flow |
 | Notion | **No** | No browser access, and its OAuth needs a server-held secret, so it needs the relay |
@@ -56,7 +58,7 @@ The core runs entirely in the browser. Some outside services don't allow direct 
 
 | ID | Decision | Choice | Trade-off accepted |
 |---|---|---|---|
-| AD1 | **App shape** | A **web app** for now. A desktop wrapper is not planned. | Opening a real local folder works only in Chromium browsers; other browsers rely on other connectors. |
+| AD1 | **App shape** | A **web app** for now. A desktop wrapper is not planned. | Opening a real local folder works only in Chromium browsers; Safari and Firefox keep the profile in the browser's own storage, with a downloadable copy (ADR-0020). |
 | AD2 | **Language** | **TypeScript** everywhere: core, UI, relay and shared schemas. | Gives up the extra speed of a compiled core, which personal-scale use doesn't need. |
 | AD3 | **Code structure** | A **pure core package** (profile model, evidence shape, validation, shown-level and gap calculation, AI task definitions) with no browser or UI dependencies. Storage connectors, model providers and content sources plug in through small interfaces. The UI and the relay are separate packages in one monorepo. | More structure up front than a single app folder. |
 | AD4 | **AI task model** | Every AI feature is a **named, versioned task definition**: an input schema, a prompt template, an output schema, and label and disclaimer text. App and relay share the definitions. Output is validated against its schema before the user sees it. The relay runs only registered tasks (PRD L3). | Every AI feature takes more up-front work than writing a prompt directly in UI code. |

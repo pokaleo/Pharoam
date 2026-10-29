@@ -40,8 +40,8 @@ jobs:
         run: pnpm knip
       - name: API docs (every export documented)
         run: pnpm docs:api
-      - name: Chromium for the end-to-end tests
-        run: pnpm --filter @pharoam/web exec playwright install --with-deps chromium
+      - name: Browsers for the end-to-end tests (Chromium, Safari's WebKit, Firefox)
+        run: pnpm --filter @pharoam/web exec playwright install --with-deps chromium webkit firefox
       - name: End-to-end tests with accessibility checks (builds the app)
         run: pnpm test:e2e
       - name: Commit messages

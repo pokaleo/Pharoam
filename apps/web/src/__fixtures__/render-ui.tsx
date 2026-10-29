@@ -17,6 +17,7 @@ import { SessionProvider, type AppServices } from "../profile/session.tsx";
 
 /** Places that never open anything, for components that only need the content pack. */
 export const NO_PLACES: Places = {
+  kind: "folder",
   remembered: () => Promise.resolve(undefined),
   reopen: () => Promise.resolve({ ok: false, error: { kind: "forgotten" } }),
   choose: () => Promise.resolve({ ok: false, error: { kind: "cancelled" } }),

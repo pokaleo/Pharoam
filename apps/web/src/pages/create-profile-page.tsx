@@ -17,14 +17,16 @@ import { PageTitle } from "../ui/page-title.tsx";
 /**
  * The form that creates `pharoam.md` in the chosen folder.
  *
- * @remarks Files already in the folder are left as they are (MVP S1.3).
+ * @remarks Files already in the folder are left as they are (MVP S1.3). In browser storage the profile is made in
+ * the browser's own storage on this device (ADR-0020).
  * @param props - The folder's name.
  * @returns The profile form, in the plain layout.
  */
 export function CreateProfilePage({ folder }: { readonly folder: string }): ReactElement {
   const { t } = useTranslation();
   const titleId = useId();
-  const { session, profileCreated, disconnect } = useSession();
+  const { session, services, profileCreated, disconnect } = useSession();
+  const browser = services.places.kind === "browser";
 
   const create = useMutation({
     mutationFn: async (fields: ProfileFields) => {
@@ -39,7 +41,7 @@ export function CreateProfilePage({ folder }: { readonly folder: string }): Reac
     <PlainLayout>
       <PageTitle
         title={t("createProfile.title", { folder })}
-        lead={t("createProfile.lead")}
+        lead={browser ? t("createProfile.leadBrowser") : t("createProfile.lead")}
         titleId={titleId}
       />
       <ProfileForm
@@ -55,7 +57,9 @@ export function CreateProfilePage({ folder }: { readonly folder: string }): Reac
           <Button type="submit" variant="primary" disabled={create.isPending}>
             {create.isPending ? t("createProfile.creating") : t("createProfile.submit")}
           </Button>
-          <Button onClick={() => void disconnect()}>{t("createProfile.chooseAnother")}</Button>
+          <Button onClick={() => void disconnect()}>
+            {browser ? t("createProfile.goBack") : t("createProfile.chooseAnother")}
+          </Button>
         </div>
       </ProfileForm>
     </PlainLayout>

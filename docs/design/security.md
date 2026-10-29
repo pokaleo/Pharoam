@@ -56,6 +56,10 @@ The user's profile files are readable by design (data model §0). Their protecti
 
 ## 8. Data on the device
 
+**The profile itself** is plain Markdown wherever it is kept (hard rule 2): in the folder the person chose, or, where a folder can't be opened, in the browser's own storage for Pharoam's site on that device ([ADR-0020](../adr/0020-browser-storage-where-no-folder.md)). Either way it is protected by the device and the browser, not by Pharoam's encryption, and never leaves the device unless the person downloads a copy. Browser storage can be cleared by the browser (Safari after seven days without a visit, unless the site is added to the Dock) or by the person clearing site data, so the app asks the browser to keep it and reminds the person to keep a copy.
+
+The layers below cover the local cache, keys and tokens, which arrive with later releases.
+
 **Layer 1: always on, no friction**
 - The local cache and any remembered keys or tokens are **encrypted** (AES-GCM via WebCrypto).
 - The encryption key is created as **non-extractable**: no script can read its raw bytes. But any script running in Pharoam's page can still **use** it to decrypt, so it is **not a defence against XSS or malicious extensions** (§1).

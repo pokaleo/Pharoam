@@ -30,8 +30,8 @@ Order after v0.1 can change as v0.1 teaches us; §7 keeps the full list.
 ## 3. v0.1 scope
 
 **In:**
-- **One connector: a local folder**, chosen with the browser's File System Access API. An Obsidian vault is just a folder.
-- **Desktop Chromium browsers only** (Chrome, Edge, Brave, Arc). Other browsers see a clear "not supported yet" page.
+- **One connector: a local folder**, chosen with the browser's File System Access API, in desktop Chromium browsers (Chrome, Edge, Brave, Arc). An Obsidian vault is just a folder.
+- **Safari and Firefox keep the profile in the browser's own storage** on the device, as the same files, through the same connector ([ADR-0020](adr/0020-browser-storage-where-no-folder.md)). The person can start from a folder they pick and download a copy as a `.zip`, and is reminded to keep one. Browsers with neither see a clear "not supported yet" page.
 - **Profile records:** `pharoam.md`, evidence, skill records and stored gap analyses, in the folder layout of [data model](design/data-model.md) §8.
 - **Evidence by structured forms** for five kinds: project, job, course or module, certificate, other. Links, no attachments.
 - **Observations** labelled `self-reported` only, optionally citing evidence records. Corrections and retractions are appended, never edited.
@@ -198,7 +198,7 @@ Everything here is part of the product (PRD) but left out of v0.1 on purpose. Ea
 | More pathways and fields beyond computer science | I2, Charter §5 | Later | AI-drafted, founder-reviewed, then community contributions |
 | Learning resources | I4 | Later | Sources still an open question (PRD §8) |
 | More connectors: Git, Notion, cloud drives | A3, ADR-0013 | Later | Each passes the shared connector suite; Notion needs the relay |
-| Firefox, Safari and mobile browsers | N8 | Later | Need a connector that doesn't depend on the File System Access API |
+| Mobile browsers | N8 | Later | Browser storage works there too (ADR-0020); the screens aren't designed for phones yet |
 | Encrypted local cache, offline app, app lock | AD9, AD20, security §8 | Later | v0.1 reads the folder directly; the cache is never the master copy |
 | Career readiness: job-search literacy, CV guidance, job analysis, interview practice, jobs bank, generated CVs | H1–H7 | Later | Only from real evidence (R9); never bulk applications (R8) |
 | Self-hosted and operator-hosted deployments, relay | N4, L1–L5, ADR-0013 | Later | v0.1 is the Personal model on GitHub Pages only |

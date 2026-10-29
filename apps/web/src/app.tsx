@@ -18,8 +18,8 @@ import { createAppRouter } from "./router.tsx";
 export interface AppProps {
   /** Where addresses come from: hash URLs in the browser, memory in tests. */
   readonly history: RouterHistory;
-  /** Whether the browser can open a folder the person chooses (`supportsFolderAccess`). */
-  readonly supportsFolders: boolean;
+  /** Whether the browser can keep a profile at all, in a folder or its own storage (`storageKind`). */
+  readonly supported: boolean;
   /** Where profiles are kept: folders in the browser, memory in tests. */
   readonly places: Places;
   /** Loads the content pack. */
@@ -32,9 +32,9 @@ export interface AppProps {
  * @param props - The address history, what the browser supports, and the app's outside services.
  * @returns The running app.
  */
-export function App({ history, supportsFolders, places, content }: AppProps): ReactElement {
+export function App({ history, supported, places, content }: AppProps): ReactElement {
   const [translation] = useState(createI18n);
-  const [router] = useState(() => createAppRouter({ history, supportsFolders }));
+  const [router] = useState(() => createAppRouter({ history, supported }));
   const [queries] = useState(() => new QueryClient());
   const [services] = useState(() => ({ places, content }));
   useDocumentLanguage(translation);

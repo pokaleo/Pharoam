@@ -7,11 +7,17 @@
  * content security policy or Trusted Types violation, or requests anything outside the app itself (MVP S1.5).
  * @packageDocumentation
  */
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { test as base, expect, type Page } from "@playwright/test";
 
 /** The folder the picker offers, inside the origin private file system. */
 const FOLDER = "my-profile";
+
+/** Where the app keeps a profile in browser storage (src/composition/browser-places.ts). */
+export const BROWSER_PROFILE = "pharoam-profile";
 
 /** The WCAG 2.2 A and AA rules, and axe's best practices, as the component tests run them (ADR-0015). */
 const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"];
@@ -20,14 +26,18 @@ const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-
 export class App {
   /** The page the app runs in. */
   readonly page: Page;
+  /** The profile's directory in the origin private file system. */
+  readonly folder: string;
 
   /**
    * Wraps the test's page.
    *
    * @param page - The page the app runs in.
+   * @param folder - The profile's directory in the origin private file system.
    */
-  constructor(page: Page) {
+  constructor(page: Page, folder: string) {
     this.page = page;
+    this.folder = folder;
   }
 
   /**
@@ -47,7 +57,7 @@ export class App {
         await writable.write(text);
         await writable.close();
       },
-      { folder: FOLDER, path, text },
+      { folder: this.folder, path, text },
     );
   }
 
@@ -65,12 +75,14 @@ export class App {
           const parts = path.split("/");
           const name = parts.pop() ?? path;
           for (const part of parts) dir = await dir.getDirectoryHandle(part);
-          return await (await (await dir.getFileHandle(name)).getFile()).text();
+          return new TextDecoder().decode(
+            await (await (await dir.getFileHandle(name)).getFile()).arrayBuffer(),
+          );
         } catch {
           return undefined;
         }
       },
-      { folder: FOLDER, path },
+      { folder: this.folder, path },
     );
   }
 
@@ -88,13 +100,13 @@ export class App {
             await (await navigator.storage.getDirectory()).getDirectoryHandle(folder)
           ).getDirectoryHandle(path);
           const names: string[] = [];
-          for await (const name of dir.keys()) names.push(name);
+          for await (const entry of dir.values()) names.push(entry.name);
           return names.sort();
         } catch {
           return [];
         }
       },
-      { folder: FOLDER, path },
+      { folder: this.folder, path },
     );
   }
 
@@ -137,28 +149,72 @@ export class App {
   }
 }
 
+/**
+ * WebKit's own `<select>` control applies a built-in stylesheet that the content security policy refuses, with this
+ * message, on any page with a select, Pharoam's or not. Nothing of Pharoam's is refused and the control works (the
+ * WebKit journey chooses from one and checks the file), so only this message, only in WebKit, is let through. Allowing
+ * inline styles to quiet it would weaken the policy everywhere.
+ */
+const WEBKIT_SELECT_STYLE =
+  "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive";
+
+/** The test's options: whether the browser offers a folder picker, as Chromium does, or keeps profiles itself. */
+interface Options {
+  /** True to offer a folder in the private file system through the picker; false to test browser storage. */
+  readonly picker: boolean;
+}
+
 /** Playwright's test, with the app and its checks. */
-export const test = base.extend<{ app: App }>({
-  app: async ({ page, baseURL }, use) => {
+export const test = base.extend<Options & { app: App }>({
+  picker: [true, { option: true }],
+
+  // WebKit keeps no files in a throwaway session, as Safari keeps none in a private window, so its tests get a
+  // persistent profile, as a normal Safari window has. Its storage is shared, so they also run one at a time.
+  page: async ({ page, browserName, playwright, baseURL }, use) => {
+    if (browserName !== "webkit") {
+      await use(page);
+      return;
+    }
+    const profile = await mkdtemp(path.join(tmpdir(), "pharoam-webkit-"));
+    const context = await playwright.webkit.launchPersistentContext(profile, {
+      ...(baseURL === undefined ? {} : { baseURL }),
+    });
+    const webkitPage = context.pages()[0] ?? (await context.newPage());
+    // Playwright's WebKit shares the private file system between profiles, so each test starts by emptying it.
+    await webkitPage.goto(baseURL ?? "/");
+    await webkitPage.evaluate(`(async () => {
+      const root = await navigator.storage.getDirectory();
+      for await (const name of root.keys()) await root.removeEntry(name, { recursive: true });
+    })()`);
+    await use(webkitPage);
+    await context.close();
+    await rm(profile, { recursive: true, force: true });
+  },
+
+  app: async ({ page, baseURL, picker, browserName }, use) => {
     const problems: string[] = [];
     const outside: string[] = [];
     const origin = new URL(baseURL ?? "http://localhost").origin;
     page.on("console", (message) => {
-      if (message.type() === "error" || message.type() === "warning") problems.push(message.text());
+      if (message.type() !== "error" && message.type() !== "warning") return;
+      if (browserName === "webkit" && message.text().startsWith(WEBKIT_SELECT_STYLE)) return;
+      problems.push(message.text());
     });
     page.on("pageerror", (error) => problems.push(error.message));
     page.on("request", (request) => {
       const url = new URL(request.url());
       if (url.protocol.startsWith("http") && url.origin !== origin) outside.push(request.url());
     });
-    await page.addInitScript((folder) => {
-      Object.assign(window, {
-        showDirectoryPicker: async () =>
-          (await navigator.storage.getDirectory()).getDirectoryHandle(folder, { create: true }),
-      });
-    }, FOLDER);
+    if (picker) {
+      await page.addInitScript((folder) => {
+        Object.assign(window, {
+          showDirectoryPicker: async () =>
+            (await navigator.storage.getDirectory()).getDirectoryHandle(folder, { create: true }),
+        });
+      }, FOLDER);
+    }
 
-    await use(new App(page));
+    await use(new App(page, picker ? FOLDER : BROWSER_PROFILE));
 
     expect(problems, "console errors and warnings").toEqual([]);
     expect(outside, "requests outside the app (MVP S1.5)").toEqual([]);

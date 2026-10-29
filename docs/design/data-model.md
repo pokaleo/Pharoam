@@ -182,6 +182,8 @@ Each evidence item is **one `.md` file**. Evidence records what the person did; 
 
 ## 8. Folder layout (file connectors)
 
+The same layout is used wherever the files live: a folder the person chooses, or the `pharoam-profile` directory in the browser's own storage where a folder can't be opened ([ADR-0020](../adr/0020-browser-storage-where-no-folder.md)). A downloaded copy (`.zip`) holds the files at these paths.
+
 ```
 Pharoam/                              ← the folder the user chooses
 ├── pharoam.md                        ← the central record about the person

@@ -8,7 +8,7 @@
 
 ## 1. Storage connectors
 
-**Connectors exchange records in the standard shape, not raw files.** File-based connectors (local folder, Obsidian, Git) share one **Markdown codec** that turns a record into a `.md` file (top block plus body) and back. The Notion connector maps records to database properties and page content. The core never knows which backend it is using.
+**Connectors exchange records in the standard shape, not raw files.** File-based connectors (local folder, Obsidian, Git, and the browser's own storage where a folder can't be opened, [ADR-0020](../adr/0020-browser-storage-where-no-folder.md)) share one **Markdown codec** that turns a record into a `.md` file (top block plus body) and back. The Notion connector maps records to database properties and page content. The core never knows which backend it is using.
 
 ```ts
 interface StorageConnector {                         // packages/core/src/core-service.ts; every call is async
