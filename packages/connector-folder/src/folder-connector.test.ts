@@ -1,4 +1,4 @@
-import { createRecordFile, printRecordFile } from "@pharoam/core";
+import { createCoreService, createRecordFile, printRecordFile } from "@pharoam/core";
 import { CONNECTOR_CHECKS, type ConnectorHarness } from "@pharoam/core/testing";
 import { describe, expect, it } from "vitest";
 import { memoryFolder, type MemoryFolder } from "./__fixtures__/memory-folder.ts";
@@ -52,6 +52,26 @@ describe("the folder connector", () => {
     expect(decoder.decode(folder.files.get("evidence/backend-engineer--6a7b8c9d.md"))).toBe(
       printRecordFile(RECORD),
     );
+  });
+
+  it("stores evidence from the form in evidence/, named from its title and short ID (MVP S4.3)", async () => {
+    const folder = memoryFolder();
+    const service = createCoreService({
+      storage: createFolderConnector(folder.handle),
+      ids: { now: () => Date.UTC(2026, 9, 29, 9, 30, 0), fillRandom: (bytes) => bytes.fill(7) },
+      overview: () => "",
+    });
+    const draft = service.draftEvidence({
+      kind: "job",
+      title: "Backend Engineer",
+      organisation: "Example Co",
+    });
+    if (!draft.ok) throw new Error(draft.error.kind);
+    expect(await service.create(draft.value)).toMatchObject({
+      ok: true,
+      value: { location: "evidence/backend-engineer-example-co--07070707.md" },
+    });
+    expect([...folder.files.keys()]).toEqual(["evidence/backend-engineer-example-co--07070707.md"]);
   });
 
   it("prepares a folder for a new profile with skills/, evidence/ and gaps/ (MVP S1.1)", async () => {

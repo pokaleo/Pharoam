@@ -46,6 +46,14 @@ export {
   type UnreadableError,
   type WriteError,
 } from "./core-service.ts";
+export {
+  EVIDENCE_FORM_KINDS,
+  evidenceFormFields,
+  type EvidenceForm,
+  type EvidenceFormField,
+  type EvidenceFormKind,
+  type InvalidEvidenceError,
+} from "./evidence-form.ts";
 export { type OverviewFacts, type OverviewWriter } from "./overview.ts";
 export {
   compileContentPack,

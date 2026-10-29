@@ -533,3 +533,28 @@ describe("the overview in pharoam.md (MVP S3.2, S3.3)", () => {
     expect(await service.refreshOverview()).toEqual({ ok: false, error: { kind: "no-profile" } });
   });
 });
+
+describe("recording evidence with a form (MVP S4)", () => {
+  it("drafts a preview exactly as it will be stored, writing nothing until confirmed (S4.2, S4.3)", async () => {
+    const { service, storage } = await opened({});
+    const draft = service.draftEvidence({ kind: "project", title: "Payments API", skills: ["python"] });
+    if (!draft.ok) throw new Error(draft.error.kind);
+    expect(draft.value.top).toMatchObject({
+      schema: "evidence/1",
+      id: expect.stringMatching(/^01a186fe-adc0-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/) as unknown,
+      created: "2026-10-29T09:30:00Z",
+      ai: null,
+      source: "manual",
+    });
+    expect(storage.writes()).toBe(0);
+    const created = await service.create(draft.value);
+    expect(created.ok && storage.text(created.value.location)).toBe(printRecordFile(draft.value));
+  });
+
+  it("explains a form that can't be stored, and writes nothing (S4.4)", async () => {
+    const { service, storage } = await opened({});
+    const draft = service.draftEvidence({ kind: "project", title: "" });
+    expect(draft.ok ? null : draft.error.kind).toBe("invalid");
+    expect(storage.writes()).toBe(0);
+  });
+});

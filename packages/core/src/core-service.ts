@@ -7,6 +7,7 @@
  * is never silently overwritten (AD10, MVP S12).
  * @packageDocumentation
  */
+import { evidenceDraft, type EvidenceForm, type InvalidEvidenceError } from "./evidence-form.ts";
 import { createProfileRecordIdGenerator, type IdSource } from "./ids.ts";
 import { canonicalJson, checkEntry, type IntegrityStatus } from "./integrity.ts";
 import { overviewFacts, withOverview, type OverviewWriter } from "./overview.ts";
@@ -194,6 +195,13 @@ export interface CoreService {
    */
   readonly update: (location: string, file: RecordFile) => Promise<Result<LoadedRecord, SaveError>>;
   /**
+   * Turns a filled evidence form into the record it will be stored as, writing nothing (MVP S4.2).
+   *
+   * @remarks The draft has its own new ID and time; show it as a preview and save it with
+   * {@link CoreService.create} when the person confirms.
+   */
+  readonly draftEvidence: (form: EvidenceForm) => Result<RecordFile, InvalidEvidenceError>;
+  /**
    * Saves the person's headline, situation, country and focus, and the time of the change (MVP S3.1).
    *
    * @remarks The fields given replace those in `pharoam.md`; a field left out is removed. Unchanged fields, the
@@ -351,6 +359,7 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
 
     create: createRecord,
     update: updateRecord,
+    draftEvidence: (form) => evidenceDraft(form, nextId(), timestamp(ids.now())),
 
     createProfile: async (fields) => {
       const existing = profile();
