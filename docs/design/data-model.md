@@ -267,6 +267,7 @@ Profile records reference skills by **Pharoam inventory slug only** (for example
 - `prerequisites`, `transferable` skills, `uncertainties`.
 - `investment`: time and cost ranges, **each with sources**.
 - Linked ESCO occupations, `sources`, `review` (who reviewed it and when), and the AI block if AI drafted it.
+- The Markdown body says what the work is, for reading. The compiled pack keeps it, and the gap view shows it as "About this pathway", without the file's title heading and rendered as untrusted Markdown.
 
 ### `assessment-item`
 - `slug`, `skills`, targeted `level`, `format` (mcq, practical or open), `prompt`.

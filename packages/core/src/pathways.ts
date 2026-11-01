@@ -38,6 +38,8 @@ export type PathwayDetail = Omit<PathwayRecord, "requirements" | "transferable">
   readonly requirements: readonly PathwayRequirementView[];
   /** Skills that carry over from other pathways, with their names. */
   readonly transferable: readonly { readonly skill: string; readonly name: string }[];
+  /** What the pathway is, as Markdown from the pack, or an empty string when its file has no text. */
+  readonly about: string;
 };
 
 /**
@@ -53,13 +55,16 @@ export function pathwaySummaries(pack: ContentPack): readonly PathwaySummary[] {
 /**
  * One pathway in full, with skill and level names filled in (MVP S10.2, S10.3).
  *
+ * @remarks `about` is the pathway file's body without the title heading it starts with, so it reads under the
+ * app's own heading. It is the pack's text, so the app renders it as untrusted Markdown (hard rule 10).
  * @param pack - The content pack.
  * @param slug - Which pathway, such as `ml-engineer`.
  * @returns The pathway, or `undefined` if the pack doesn't have it.
  */
 export function pathwayDetail(pack: ContentPack, slug: string): PathwayDetail | undefined {
-  const pathway = pack.pathways.find((p) => p.slug === slug);
-  if (pathway === undefined) return undefined;
+  const found = pack.pathways.find((p) => p.slug === slug);
+  if (found === undefined) return undefined;
+  const { body, ...pathway } = found;
   const names = new Map<string, string>(pack.skills.map((s) => [s.slug, s.name]));
   const levelNames = levelDescriptions(pack.levels, undefined).map((level) => level.name);
   // A compiled pack has every skill its pathways name, and levels are 0–4, so these fallbacks are never used.
@@ -72,5 +77,6 @@ export function pathwayDetail(pack: ContentPack, slug: string): PathwayDetail | 
       levelName: levelNames[requirement.level] ?? String(requirement.level),
     })),
     transferable: pathway.transferable.map((skill) => ({ skill, name: name(skill) })),
+    about: body.replace(/^\s*# [^\n]*\n+/, ""),
   };
 }

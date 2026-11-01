@@ -14,6 +14,11 @@ import { PackManifest } from "./schemas/pack.ts";
 import { PathwayRecord } from "./schemas/pathway.ts";
 import { SkillEntry } from "./schemas/skill.ts";
 
+// A pathway in a compiled pack: its file's top block, and the Markdown body that describes it for reading. A pack
+// built before bodies were kept has none, so the body defaults to empty.
+const PackPathway = PathwayRecord.extend({ body: z.string().default("") });
+type PackPathway = z.output<typeof PackPathway>;
+
 /** A compiled content pack, as the app loads it. */
 export const ContentPack = z.object({
   /** The compiled format and its version. */
@@ -25,7 +30,7 @@ export const ContentPack = z.object({
   /** Every skill in the vocabulary, by slug. */
   skills: z.array(SkillEntry),
   /** Every pathway, by slug. */
-  pathways: z.array(PathwayRecord),
+  pathways: z.array(PackPathway),
 });
 
 /** A compiled content pack as Pharoam reads it. */
@@ -74,7 +79,7 @@ interface Found<T> {
 export function compileContentPack(files: readonly ContentFile[]): Result<ContentPack, InvalidContentError> {
   const problems: ContentProblem[] = [];
   const skills = new Map<string, Found<SkillEntry>>();
-  const pathways = new Map<string, Found<PathwayRecord>>();
+  const pathways = new Map<string, Found<PackPathway>>();
   let manifest: Found<PackManifest> | undefined;
   let levels: Found<LevelScale> | undefined;
 
@@ -94,7 +99,7 @@ export function compileContentPack(files: readonly ContentFile[]): Result<Conten
       problems.push({ path, message: `Isn't a record file: ${file.error.kind}.` });
       continue;
     }
-    const { top } = file.value;
+    const { top, body } = file.value;
     switch (top.schema) {
       case "skill/1": {
         const skill = validate(SkillEntry, top, path);
@@ -108,7 +113,7 @@ export function compileContentPack(files: readonly ContentFile[]): Result<Conten
         const pathway = validate(PathwayRecord, top, path);
         if (pathway === undefined) break;
         const earlier = pathways.get(pathway.slug);
-        if (earlier === undefined) pathways.set(pathway.slug, { path, value: pathway });
+        if (earlier === undefined) pathways.set(pathway.slug, { path, value: { ...pathway, body } });
         else
           problems.push({ path, message: `Repeats the pathway ${pathway.slug}, also in ${earlier.path}.` });
         break;

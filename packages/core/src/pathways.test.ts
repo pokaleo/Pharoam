@@ -22,6 +22,11 @@ review:
   by: A reviewer
   at: 2026-10-25
 ---
+# Data analyst
+
+Analysts answer questions with data, for people who [decide](https://example.com/decide).
+
+**Core:** SQL.
 `;
 
 function pack(): ContentPack {
@@ -122,6 +127,13 @@ describe("one pathway (MVP S10.2, S10.3)", () => {
       uncertainties: ["Demand for specialised roles shifts quickly as tooling changes."],
       investment: { time: { min: 6, max: 18, unit: "months" }, cost: { currency: "GBP", region: "GB" } },
     });
+  });
+
+  it("describes the pathway from its file's text, without the title heading the file starts with", () => {
+    expect(pathwayDetail(pack(), "data-analyst")?.about).toBe(
+      "Analysts answer questions with data, for people who [decide](https://example.com/decide).\n\n**Core:** SQL.\n",
+    );
+    expect(pathwayDetail(pack(), "ml-engineer")?.about).toBe("");
   });
 
   it("is nothing for a pathway the pack doesn't have", () => {
