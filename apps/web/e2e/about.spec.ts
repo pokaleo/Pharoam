@@ -8,7 +8,7 @@ test("S3: edits the person's fields and brings the overview up to date, leaving 
   await app.start();
   await app.put("pharoam.md", PHAROAM);
   await app.choose();
-  await page.getByRole("link", { name: "About you" }).click();
+  await app.nav("About you").click();
 
   await expect(page.getByRole("heading", { level: 1, name: "About you" })).toBeVisible();
   await app.expectAccessible("about you");

@@ -7,7 +7,7 @@ test("S10, S11: browses pathways and stores the gap to one, with no score", asyn
   await app.put("evidence/payments-api--0192f3a1.md", PAYMENTS_API);
   await app.put("skills/sql.md", sqlRecord(3));
   await app.choose();
-  await page.getByRole("link", { name: "Pathways" }).click();
+  await app.nav("Pathways").click();
 
   await expect(page.getByRole("list", { name: "Pathways" }).getByRole("link")).toHaveCount(4);
   await app.expectAccessible("pathways");

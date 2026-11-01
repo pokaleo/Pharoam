@@ -67,7 +67,17 @@ export function CustomSkillPage({ service }: { readonly service: CoreService }):
 
   return (
     <>
-      <PageTitle title={t("skills.customPage.title")} lead={t("skills.customPage.lead")} titleId={titleId} />
+      <PageTitle
+        title={t("skills.customPage.title")}
+        lead={t("skills.customPage.lead")}
+        titleId={titleId}
+        crumbs={[
+          <Link key="skills" to="/skills">
+            {t("skills.title")}
+          </Link>,
+        ]}
+        crumbsLabel={t("app.crumbs")}
+      />
       <form
         aria-labelledby={titleId}
         onSubmit={submit}

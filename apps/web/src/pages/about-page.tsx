@@ -47,7 +47,7 @@ export function AboutPage({ service }: { readonly service: CoreService }): React
   return (
     <>
       <PageTitle title={t("about.title")} lead={t("about.lead")} titleId={titleId} />
-      <div className="grid max-w-[72ch] gap-(--space-7)">
+      <div className="grid items-start gap-(--space-6) lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-(--gap)">
         <ProfileForm
           labelledBy={titleId}
           initial={current ?? {}}
@@ -104,7 +104,10 @@ function OverviewBlock({ service }: { readonly service: CoreService }): ReactEle
   const problem = service.overviewProblem();
 
   return (
-    <section aria-labelledby={titleId} className="grid gap-(--space-3) rounded-lg bg-panel p-(--pad)">
+    <section
+      aria-labelledby={titleId}
+      className="grid gap-(--space-3) rounded-lg bg-panel p-(--pad) lg:sticky lg:top-4"
+    >
       <h2 id={titleId} className="text-section font-bold">
         {t("about.overview.title")}
       </h2>

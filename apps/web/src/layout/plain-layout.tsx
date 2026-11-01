@@ -21,15 +21,19 @@ export function PlainLayout({ children }: { readonly children: ReactNode }): Rea
   const { t } = useTranslation();
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="px-(--pad) pt-(--space-5) mx-auto max-w-(--canvas-max)">
-        <Link to="/" aria-label={t("app.home")} className="inline-flex rounded-md">
-          <picture>
-            <source srcSet={wordmarkReversed} media="(prefers-color-scheme: dark)" />
-            <img src={wordmark} alt="" className="h-[26px] w-auto" />
-          </picture>
-        </Link>
+      <header className="border-b border-line-soft px-4 lg:px-[clamp(16px,3vw,40px)]">
+        <div className="mx-auto flex min-h-16 max-w-(--canvas-max) items-center">
+          <Link to="/" aria-label={t("app.home")} className="inline-flex rounded-md">
+            <picture>
+              <source srcSet={wordmarkReversed} media="(prefers-color-scheme: dark)" />
+              <img src={wordmark} alt="" className="h-[26px] w-auto" />
+            </picture>
+          </Link>
+        </div>
       </header>
-      <main className="px-(--pad) py-(--space-7) mx-auto max-w-(--canvas-max)">{children}</main>
+      <main className="mx-auto max-w-(--canvas-max) px-4 pt-(--space-7) pb-12 lg:box-content lg:px-[clamp(16px,3vw,40px)]">
+        {children}
+      </main>
     </div>
   );
 }

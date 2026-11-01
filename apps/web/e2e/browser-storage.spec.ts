@@ -62,7 +62,7 @@ test("starts from a folder the person picks, copying its files in", async ({ app
   await expect(page.getByRole("heading", { level: 1, name: "Backend developer" })).toBeVisible();
   expect(await app.read("pharoam.md")).toBe(PHAROAM);
   expect(await app.read("evidence/payments-api--0192f3a1.md")).toBe(PAYMENTS_API);
-  await page.getByRole("link", { name: "Evidence" }).click();
+  await app.nav("Evidence").click();
   await expect(page.getByRole("link", { name: "Payments API" })).toBeVisible();
   await app.expectAccessible("evidence, browser storage");
   await rm(folder, { recursive: true, force: true });

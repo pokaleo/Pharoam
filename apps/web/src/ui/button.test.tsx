@@ -38,5 +38,10 @@ describe("buttonClassName", () => {
     expect(buttonClassName("primary")).toContain("bg-primary");
     expect(buttonClassName("secondary")).toContain("border-line-strong");
     expect(buttonClassName("quiet")).toContain("bg-transparent");
+    expect(buttonClassName("problem")).toContain("text-problem");
+  });
+
+  it("has a small size for actions inside rows and notices", () => {
+    expect(buttonClassName("secondary", "sm")).toContain("min-h-7");
   });
 });

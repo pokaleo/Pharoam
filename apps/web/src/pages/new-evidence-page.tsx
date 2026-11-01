@@ -5,7 +5,8 @@
  */
 import { printRecordFile, type CoreService, type RecordFile } from "@pharoam/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { FileCode } from "lucide-react";
 import { useEffect, useId, useRef, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -19,6 +20,7 @@ import { EvidenceFormView } from "../evidence/evidence-form-view.tsx";
 import { useSession } from "../profile/session.tsx";
 import { skillChoices } from "../profile/skills.ts";
 import { Button } from "../ui/button.tsx";
+import { Icon } from "../ui/icon.tsx";
 import { Notice } from "../ui/notice.tsx";
 import { PageTitle } from "../ui/page-title.tsx";
 
@@ -84,7 +86,17 @@ export function NewEvidencePage({ service }: { readonly service: CoreService }):
 
   return (
     <>
-      <PageTitle title={t("evidence.newTitle")} lead={t("evidence.newLead")} titleId={titleId} />
+      <PageTitle
+        title={t("evidence.newTitle")}
+        lead={t("evidence.newLead")}
+        titleId={titleId}
+        crumbs={[
+          <Link key="evidence" to="/evidence">
+            {t("evidence.title")}
+          </Link>,
+        ]}
+        crumbsLabel={t("app.crumbs")}
+      />
       <EvidenceFormView
         labelledBy={titleId}
         answers={answers}
@@ -117,6 +129,7 @@ function Preview({
   readonly onBack: () => void;
 }): ReactElement {
   const { t } = useTranslation();
+  const barId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
   // The page changed in place, so focus moves to its new title for keyboard and screen reader users.
   useEffect(() => {
@@ -125,20 +138,25 @@ function Preview({
 
   return (
     <>
-      <div className="mb-(--space-5) grid gap-(--space-2)">
-        <h1 ref={heading} tabIndex={-1} className="text-title font-extrabold tracking-[-0.025em]">
-          {t("evidence.preview.title")}
-        </h1>
-        <p className="max-w-[72ch] text-lead text-ink-2">{t("evidence.preview.lead")}</p>
-      </div>
-      <div className="grid max-w-[72ch] gap-(--space-4)">
-        <pre
-          role="region"
-          aria-label={t("evidence.preview.file")}
-          className="rounded-lg border border-line bg-surface p-(--pad) font-mono text-meta whitespace-pre-wrap"
-        >
-          {printRecordFile(file)}
-        </pre>
+      <PageTitle title={t("evidence.preview.title")} lead={t("evidence.preview.lead")} titleRef={heading} />
+      <div className="grid max-w-[880px] gap-(--space-4)">
+        {/* The design system's file view: the Markdown and YAML behind a record, under a bar that names it. */}
+        <div className="overflow-hidden rounded-lg border border-line bg-surface">
+          <p
+            id={barId}
+            className="flex items-center gap-(--space-2) border-b border-line bg-panel px-3 py-2 text-meta text-ink-2"
+          >
+            <Icon of={FileCode} size="sm" />
+            {t("evidence.preview.file")}
+          </p>
+          <pre
+            role="region"
+            aria-labelledby={barId}
+            className="overflow-x-auto px-4 py-3 font-mono text-[13px] leading-5 whitespace-pre-wrap text-ink [direction:ltr] [text-align:left]"
+          >
+            {printRecordFile(file)}
+          </pre>
+        </div>
         {failed ? <Notice tone="problem" title={t("evidence.saveFailed")} /> : null}
         <div className="flex flex-wrap gap-(--space-2)">
           <Button variant="primary" disabled={saving} onClick={onSave}>

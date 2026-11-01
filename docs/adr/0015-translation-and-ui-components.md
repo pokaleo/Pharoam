@@ -13,6 +13,7 @@ English first, but built for translation (PRD N9) and accessibility (N5).
 - Automated accessibility checks (axe) for WCAG 2.2 AA.
 - **The design system** is the founder's, made with dedicated design tools outside this repository (AD14a). The app takes its finished token file and artwork, copied unchanged into `brand/`, through the `@brand/` alias (`apps/web/src/build/brand.ts`). Its fonts are third-party (SIL OFL) and live in `fonts/`, listed in `THIRD_PARTY_NOTICES.md`.
 - **Components are AGPL code**, written with Tailwind against the design system's token names (including the shadcn/ui names it maps onto Pharoam's roles), so they look whole with either theme. The design system's own stylesheets are a reference, not a dependency.
+- **Icons are Lucide** (ISC), the set the design system draws with, from the `lucide-react` package at the release the design system records. The AI monogram is the design system's own glyph, so it is brand artwork in `brand/ai-monogram.svg`, with a neutral stand-in.
 
 ## Alternatives rejected
 - **React Aria Components:** slightly stronger on accessibility, but slower to build with for a solo developer.

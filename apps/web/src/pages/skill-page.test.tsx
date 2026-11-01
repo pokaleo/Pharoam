@@ -16,8 +16,12 @@ describe("SkillPage (MVP S7)", () => {
     const user = userEvent.setup();
     const { container } = await openSql(user);
 
-    screen.getByText(/Working/, { selector: "[data-shown-level]" });
-    screen.getByText("Self-reported · since 3 Oct 2026");
+    const shown = screen.getByText(/Working/, { selector: "[data-shown-level]" });
+    const panel = shown.closest("section");
+    if (panel === null) throw new Error("expected the shown level's panel");
+    within(panel).getByText("Self-reported");
+    within(panel).getByText("since 3 Oct 2026");
+    within(panel).getByText("skills/sql.md");
     await expectNoAxeViolations(container);
   });
 

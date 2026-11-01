@@ -26,4 +26,22 @@ describe("Notice", () => {
     expect(attention?.className).toContain("bg-notice-wash");
     expect(problem?.className).toContain("bg-problem-wash");
   });
+
+  it("leads with an icon in the tone's colour, which screen readers skip", () => {
+    const { container } = render(<Notice tone="problem" title="Wrong" />);
+    const icon = container.querySelector("svg");
+    expect(icon?.getAttribute("aria-hidden")).toBe("true");
+    expect(icon?.getAttribute("class")).toContain("text-problem");
+  });
+
+  it("can be a quiet note, on the panel and not announced, for information rather than a problem", () => {
+    const { container } = render(<Notice tone="info" title="This is your own rating." />);
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(container.firstElementChild?.className).toContain("bg-panel");
+  });
+
+  it("puts its actions at the end", () => {
+    render(<Notice tone="attention" title="Look" actions={<button type="button">{"Compare"}</button>} />);
+    expect(screen.getByRole("button", { name: "Compare" })).toBeTruthy();
+  });
 });

@@ -2,7 +2,8 @@
   "app": {
     "name": "Pharoam",
     "locale": "en-GB",
-    "home": "Pharoam home"
+    "home": "Pharoam home",
+    "crumbs": "Breadcrumb"
   },
   "start": {
     "title": "Your skills, in files you own",
@@ -94,7 +95,23 @@
     "storedIn": "Stored in",
     "thisBrowser": "This browser",
     "close": "Close",
-    "closeLabel": "Close the profile in this browser"
+    "closeLabel": "Close the profile in this browser",
+    "keptFolder": "Kept in your folder",
+    "keptBrowser": "Kept in this browser",
+    "whereNext": "Where next",
+    "review": "Review",
+    "assess": "Assess",
+    "plan": "Learning plan",
+    "prepare": "Prepare",
+    "activity": "Activity log",
+    "settings": "Settings",
+    "help": "Help",
+    "lock": "Lock now",
+    "later": "Later",
+    "laterLabel": "not in this version yet",
+    "menu": "Menu",
+    "footer": "Pharoam · open source · your files stay in your folder",
+    "footerBrowser": "Pharoam · open source · your files stay in this browser"
   },
   "unsupported": {
     "title": "This browser isn't supported yet",
@@ -277,13 +294,32 @@
     "domain": "Domain",
     "allDomains": "All domains",
     "table": "Your skills",
+    "whichLevel": "One level each: latest diagnostic, then an accepted AI judgement, then your own",
+    "find": "Find skills",
+    "count_one": "{{count}} skill",
+    "count_other": "{{count}} skills",
+    "noDomain": "Other skills",
+    "detail": {
+      "linked": "Linked evidence",
+      "linkedCount_one": "{{count}} record, no level",
+      "linkedCount_other": "{{count}} records, no level",
+      "noLinked": "No evidence is linked to this skill yet.",
+      "allEntries_one": "See the full history ({{count}} entry)",
+      "allEntries_other": "See the full history ({{count}} entries)",
+      "open": "See the skill's page"
+    },
     "columns": {
       "skill": "Skill",
       "level": "Level",
-      "source": "Where it came from"
+      "source": "Source",
+      "evidence": "Evidence",
+      "evidenceHint": ", linked records"
     },
+    "evidenceCount_one": "{{count}} record",
+    "evidenceCount_other": "{{count}} records",
+    "noEvidence": "No linked records",
     "own": "Your own skill",
-    "since": "{{source}} · since {{date}}",
+    "since": "since {{date}}",
     "noLevel": "No level counts",
     "level": "Level",
     "sources": {
@@ -310,6 +346,9 @@
     "skillPage": {
       "missing": "There's nothing in your profile for this skill.",
       "back": "Back to your skills",
+      "shownTitle": "The level shown",
+      "levelNumber": "level {{level}}",
+      "newestFirst": "Newest first",
       "noRecord": "You haven't recorded a level for this skill yet.",
       "noCount": "No level counts for this skill now.",
       "history": "Skill history",
@@ -387,21 +426,44 @@
     "updated": "Updated {{date}}",
     "refresh": "Bring the gap up to date",
     "stored": "Saved in your folder as {{file}}.",
-    "groups": {
+    "about": {
+      "title": "About this pathway",
+      "from": "From the pack"
+    },
+    "meaning": {
+      "title": "What this gap might mean",
+      "mark": "Coming with AI-assisted mode",
+      "lead": "With a model set up, an AI will be able to read this gap and the evidence it cites, and suggest what it might mean for you and places you could start.",
+      "disclaimer": "Nothing here is written by AI yet. When it is, it will name the model, never change a level, and be saved only if you accept it."
+    },
+    "tags": {
       "supported": "Supported",
       "claimed": "Claimed",
-      "below": "Below the level asked, for now",
+      "below": "Below",
+      "unknown": "Unknown"
+    },
+    "groups": {
+      "supported": "Shown in a diagnostic",
+      "claimed": "Your word, or an AI judgement you accepted",
+      "below": "Under the level asked, for now",
       "unknown": "Nothing in your profile yet"
     },
     "groupLeads": {
-      "supported": "A level tested in a diagnostic meets what's asked.",
-      "claimed": "A level you or an AI judgement gave meets what's asked. It hasn't been tested.",
-      "below": "What your profile shows is under the level asked.",
-      "unknown": "Your profile has no level for these skills."
+      "supported": "At or above the level asked. Only a tested level supports a requirement.",
+      "claimed": "At or above the level asked, by your word or an AI judgement. It hasn't been tested.",
+      "below": "The clearest places to learn next.",
+      "unknown": "Not a gap until you know. You may already have these."
     },
-    "asks": "Asks for {{level}} {{number}} · {{importance}}",
-    "shows": "Shows {{level}} {{number}} · {{source}}",
-    "ownRating": "Self-reported, your own rating",
+    "columns": {
+      "requirement": "Requirement",
+      "asked": "Asked for",
+      "yours": "Your level",
+      "next": "Next step"
+    },
+    "importanceLabel": "{{importance}}:",
+    "noLevel": "No level in your profile",
+    "sayWhere": "Say where you stand",
+    "ownRating": "your own rating",
     "cites": "Cites {{evidence}}",
     "removedEvidence": "evidence that has been removed",
     "changedOutside": "The stored gap was changed in your folder since Pharoam read it. Nothing has been overwritten.",
@@ -413,6 +475,7 @@
     "lead": "Files Pharoam can't use as they are, and files changed in your folder while Pharoam was saving them.",
     "none": "Nothing needs your attention.",
     "brokenTitle": "Files Pharoam can't read",
+    "leftOut": "Left out until fixed",
     "brokenLead": "Each one is left out until it's fixed, and Pharoam never changes or deletes it. Open it in an editor to fix it.",
     "conflictsTitle": "Two versions",
     "conflictsLead": "These files were changed in your folder since Pharoam read them. Nothing has been overwritten. Choose which version to keep.",

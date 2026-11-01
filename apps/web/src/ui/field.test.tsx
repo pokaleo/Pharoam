@@ -26,6 +26,15 @@ describe("TextField", () => {
     await expectNoAxeViolations(container);
   });
 
+  it("puts the hint and what to fix under the field, the error after an icon screen readers skip", () => {
+    const { container } = render(<TextField label="Title" hint="What it was." error="Give it a title." />);
+    const field = screen.getByLabelText("Title");
+    expect(field.nextElementSibling?.textContent).toBe("What it was.");
+    const error = screen.getByText("Give it a title.");
+    expect(error.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+    expect(container.querySelector("svg")).toBe(error.querySelector("svg"));
+  });
+
   it("has no description when there is neither hint nor error", () => {
     render(<TextField label="Title" />);
     expect(screen.getByLabelText("Title").getAttribute("aria-describedby")).toBeNull();

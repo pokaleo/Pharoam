@@ -14,6 +14,9 @@ export const BRAND_FILES: readonly string[] = [
   "wordmark.svg",
   "wordmark-reversed.svg",
   "favicon.svg",
+  "seal.svg",
+  "seal-reversed.svg",
+  "ai-monogram.svg",
 ];
 
 /**

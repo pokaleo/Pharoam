@@ -9,11 +9,13 @@ import {
   type EvidenceFormField,
   type EvidenceFormKind,
 } from "@pharoam/core";
+import { X } from "lucide-react";
 import { useId, useState, type ReactElement, type ReactNode, type SubmitEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { findSkill, skillName, type SkillChoice } from "../profile/skills.ts";
 import { Button } from "../ui/button.tsx";
 import { TextAreaField, TextField } from "../ui/field.tsx";
+import { Icon } from "../ui/icon.tsx";
 import type { EvidenceAnswers, FieldErrors, TextAnswer } from "./answers.ts";
 
 /**
@@ -137,11 +139,15 @@ export function EvidenceFormView({
       noValidate
       className="grid max-w-[72ch] gap-(--space-5)"
     >
-      <fieldset className="grid gap-(--space-2)">
-        <legend className="mb-(--space-1) font-semibold">{t("evidence.kindQuestion")}</legend>
-        <div className="flex flex-wrap gap-x-(--space-4) gap-y-(--space-2)">
+      <fieldset>
+        <legend className="mb-1.5 font-semibold">{t("evidence.kindQuestion")}</legend>
+        {/* The design system's segmented control: as wide as its options, the chosen one raised on the sheet. */}
+        <div className="inline-flex flex-wrap gap-0.5 rounded-md bg-panel p-0.5">
           {EVIDENCE_FORM_KINDS.map((kind: EvidenceFormKind) => (
-            <label key={kind} className="flex items-center gap-(--space-2)">
+            <label
+              key={kind}
+              className="relative inline-flex min-h-[calc(var(--control)-4px)] cursor-pointer items-center rounded-sm px-3 font-semibold text-ink-2 has-checked:bg-surface has-checked:text-ink has-checked:outline-1 has-checked:-outline-offset-1 has-checked:outline-line has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-(--focus)"
+            >
               <input
                 type="radio"
                 name="kind"
@@ -150,7 +156,7 @@ export function EvidenceFormView({
                 onChange={() => {
                   onChange({ ...answers, kind });
                 }}
-                className="size-4 accent-(--primary)"
+                className="absolute inset-0 m-0 size-full cursor-pointer appearance-none opacity-0"
               />
               {t(`evidence.kinds.${kind}`)}
             </label>
@@ -197,18 +203,21 @@ function SkillPicker({
           {picked.map((slug) => {
             const name = skillName(skills, slug);
             return (
-              <li key={slug} className="flex items-center gap-1 rounded-sm bg-panel ps-2 text-meta">
+              <li
+                key={slug}
+                className="inline-flex min-h-(--chip) items-center gap-0.5 rounded-sm bg-panel ps-2 text-meta font-semibold"
+              >
                 {name}
-                <Button
-                  variant="quiet"
-                  className="min-h-6 px-1"
+                <button
+                  type="button"
                   aria-label={t("evidence.removeSkill", { skill: name })}
                   onClick={() => {
                     onChange(picked.filter((p) => p !== slug));
                   }}
+                  className="inline-grid size-6 cursor-pointer place-items-center rounded-sm text-ink-2 hover:bg-panel-2 hover:text-ink"
                 >
-                  ×
-                </Button>
+                  <Icon of={X} size="sm" />
+                </button>
               </li>
             );
           })}

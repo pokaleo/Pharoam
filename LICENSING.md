@@ -72,7 +72,7 @@ The design system may *choose* third-party fonts and icon sets. The choice is ou
 - **Not allowed:** "free for personal use", licences that forbid redistribution or web embedding, and commercial licences that do not cover open-source redistribution.
 - **Get them from the official source** (the foundry's or author's own repository), not from download mirrors.
 - **Self-host them.** No font or icon CDN, because the app makes no third-party requests (AGENTS hard rule 7).
-- **Keep the licence text beside the files**, in the font's or icon set's own folder, and **never inside `brand/`** (the brand notice must not appear to cover them).
+- **Keep the licence text beside the files**, in the font's or icon set's own folder, and **never inside `brand/`** (the brand notice must not appear to cover them). An icon set installed as a package, such as Lucide, keeps its licence in the package.
 - **Respect Reserved Font Names:** if a font under the SIL OFL is changed, subsetting included, it must not keep a Reserved Font Name. Ship it under a new name, or use the unchanged files.
 - **List each one** in a `THIRD_PARTY_NOTICES.md` file at the repository root, created with the first such asset: name, author, licence, source URL and where it is kept.
 

@@ -8,7 +8,7 @@ test("S4, S5: records evidence after a preview, renders it safely, edits it and 
   await app.start();
   await app.put("pharoam.md", PHAROAM);
   await app.choose();
-  await page.getByRole("link", { name: "Evidence" }).click();
+  await app.nav("Evidence").click();
   await expect(page.getByRole("heading", { level: 1, name: "Evidence" })).toBeVisible();
   await app.expectAccessible("evidence list, empty");
 

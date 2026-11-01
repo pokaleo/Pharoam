@@ -6,16 +6,22 @@
 import type { ContentPack, CoreService, HistoryItem, Observation, SkillEntry } from "@pharoam/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { Pencil, Undo2, UserRoundPen } from "lucide-react";
 import { useEffect, useId, useRef, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { useSession } from "../profile/session.tsx";
-import { dayName, levelName, sourceName } from "../skills/labels.ts";
+import { dayName, levelName } from "../skills/labels.ts";
 import { LevelChoice } from "../skills/level-choice.tsx";
+import { Level } from "../skills/level.tsx";
+import { SourceTag } from "../skills/source-tag.tsx";
+import { ObservationLine, ReviewLine, Timeline, TimelineEntry } from "../skills/timeline.tsx";
 import { Button, buttonClassName } from "../ui/button.tsx";
 import { ChangedOutsideNotice } from "../ui/changed-outside.tsx";
 import { TextAreaField } from "../ui/field.tsx";
+import { Icon } from "../ui/icon.tsx";
 import { Notice } from "../ui/notice.tsx";
 import { PageTitle } from "../ui/page-title.tsx";
+import { Tag } from "../ui/tag.tsx";
 
 /** What the person is doing to one observation. */
 interface Change {
@@ -56,6 +62,7 @@ function SkillDetail({
   readonly content: ContentPack;
 }): ReactElement {
   const { t } = useTranslation();
+  const shownId = useId();
   const [change, setChange] = useState<Change | undefined>(undefined);
   const item = service.skillView(content.skills).find((view) => view.skill === skill);
   const entry = content.skills.find((s) => s.slug === skill);
@@ -69,63 +76,95 @@ function SkillDetail({
     return (
       <>
         <PageTitle title={t("skills.title")} lead={t("skills.skillPage.missing")} />
-        <Link to="/skills" className="text-channel underline">
-          {t("skills.skillPage.back")}
-        </Link>
+        <Link to="/skills">{t("skills.skillPage.back")}</Link>
       </>
     );
   }
   const name = item?.name ?? entry?.name ?? skill;
+  const domain = item?.domain ?? entry?.domain;
 
   return (
     <>
-      <PageTitle title={name} lead={description ?? item?.domain ?? entry?.domain ?? ""} />
-      <div className="grid max-w-[72ch] gap-(--space-5)">
-        {item?.custom === true ? (
-          <p>
-            <span className="rounded-sm bg-panel px-1.5 text-meta text-ink-2">{t("skills.own")}</span>
-          </p>
-        ) : null}
-        <div className="grid gap-(--space-1) rounded-lg bg-panel p-(--pad)">
+      <PageTitle
+        title={name}
+        lead={description ?? domain ?? ""}
+        crumbs={[
+          <Link key="skills" to="/skills">
+            {t("skills.title")}
+          </Link>,
+        ]}
+        crumbsLabel={t("app.crumbs")}
+        actions={
+          <Link to="/skills/record" search={{ skill }} className={buttonClassName("primary")}>
+            {t("skills.record")}
+          </Link>
+        }
+      />
+      <div className="grid items-start gap-(--gap) lg:grid-cols-[minmax(0,1fr)_360px]">
+        <section
+          aria-labelledby={shownId}
+          className="grid gap-(--space-3) rounded-lg bg-panel p-(--pad) lg:sticky lg:top-4 lg:order-2"
+        >
+          <div className="grid gap-1">
+            <h2 id={shownId} className="text-meta font-semibold text-ink-2">
+              {t("skills.skillPage.shownTitle")}
+            </h2>
+            {item?.custom === true ? (
+              <p>
+                <Tag tone="custom" icon={UserRoundPen}>
+                  {t("skills.own")}
+                </Tag>
+              </p>
+            ) : null}
+          </div>
           {item?.shown === undefined ? (
             <p className="text-ink-2">
               {item === undefined ? t("skills.skillPage.noRecord") : t("skills.skillPage.noCount")}
             </p>
           ) : (
             <>
-              <p data-shown-level className="text-section font-bold">
-                {levelName(content, item.shown.level)}{" "}
-                <span className="font-normal text-ink-3">{item.shown.level}</span>
+              <p className="flex flex-wrap items-baseline gap-x-(--space-3)">
+                <Level
+                  data-shown-level
+                  level={item.shown.level}
+                  name={levelName(content, item.shown.level)}
+                  source={item.shown.provenance}
+                  size="lg"
+                />
+                <span className="text-ink-3">
+                  {t("skills.skillPage.levelNumber", { level: item.shown.level })}
+                </span>
               </p>
-              <p className="text-meta text-ink-2">
-                {t("skills.since", {
-                  source: sourceName(t, item.shown.provenance),
-                  date: dayName(t, item.shown.since),
-                })}
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-meta text-ink-2">
+                <SourceTag provenance={item.shown.provenance} />
+                <span>{t("skills.since", { date: dayName(t, item.shown.since) })}</span>
               </p>
             </>
           )}
+          {item === undefined ? null : (
+            <p className="text-meta text-ink-2">
+              {domain === undefined ? null : `${domain} · `}
+              <code className="font-mono text-[12px] text-ink">{item.location}</code>
+            </p>
+          )}
+        </section>
+        <div className="grid min-w-0 gap-(--gap)">
+          {change === undefined ? null : (
+            <ChangePanel
+              key={`${change.kind}-${change.observation.id}`}
+              service={service}
+              content={content}
+              entry={entry}
+              change={change}
+              onDone={() => {
+                setChange(undefined);
+              }}
+            />
+          )}
+          {history.length === 0 ? null : (
+            <History service={service} content={content} history={history} onChange={setChange} />
+          )}
         </div>
-        <div>
-          <Link to="/skills/record" search={{ skill }} className={buttonClassName("primary")}>
-            {t("skills.record")}
-          </Link>
-        </div>
-        {change === undefined ? null : (
-          <ChangePanel
-            key={`${change.kind}-${change.observation.id}`}
-            service={service}
-            content={content}
-            entry={entry}
-            change={change}
-            onDone={() => {
-              setChange(undefined);
-            }}
-          />
-        )}
-        {history.length === 0 ? null : (
-          <History service={service} content={content} history={history} onChange={setChange} />
-        )}
       </div>
     </>
   );
@@ -145,9 +184,6 @@ function History({
   const { t } = useTranslation();
   const titleId = useId();
   const list = new Intl.ListFormat(t("app.locale"), { type: "conjunction" });
-  const observations = new Map(
-    history.flatMap((item) => (item.kind === "observation" ? [[item.entry.id, item.entry] as const] : [])),
-  );
   const describe = (observation: Observation): string =>
     t("skills.skillPage.entry", {
       level: levelName(content, observation.level),
@@ -155,103 +191,74 @@ function History({
     });
 
   return (
-    <section aria-labelledby={titleId} className="grid gap-(--space-3)">
-      <h2 id={titleId} className="text-section font-bold">
-        {t("skills.skillPage.history")}
-      </h2>
-      <p className="text-ink-2">{t("skills.skillPage.historyLead")}</p>
-      <ul
-        aria-label={t("skills.skillPage.history")}
-        className="grid divide-y divide-line-soft rounded-lg bg-surface"
-      >
+    <section aria-labelledby={titleId} className="rounded-lg border border-line bg-surface p-(--pad)">
+      <div className="mb-(--space-3) flex flex-wrap items-baseline justify-between gap-(--space-3)">
+        <h2 id={titleId} className="text-section font-bold tracking-[-0.01em]">
+          {t("skills.skillPage.history")}
+        </h2>
+        <span className="text-meta text-ink-3">{t("skills.skillPage.newestFirst")}</span>
+      </div>
+      <p className="mb-(--space-4) max-w-[72ch] text-ink-2">{t("skills.skillPage.historyLead")}</p>
+      <Timeline label={t("skills.skillPage.history")}>
         {history.map((item) => {
-          const marks = [
-            ...(item.kind === "observation" && item.shown ? [t("skills.skillPage.shownMark")] : []),
-            ...(item.kind === "observation" && item.status === "superseded"
-              ? [t("skills.skillPage.superseded")]
-              : []),
-            ...(item.kind === "observation" && item.status === "retracted"
-              ? [t("skills.skillPage.retracted")]
-              : []),
-            ...(item.integrity.kind === "intact" ? [] : [t("skills.skillPage.editedOutside")]),
-          ];
           if (item.kind === "review") {
-            const target = observations.get(item.entry.target);
-            const date = target === undefined ? item.entry.target : dayName(t, target.observed_at);
             return (
-              <li key={item.entry.id} className="grid gap-1 px-(--pad) py-(--space-3)">
-                <p>
-                  {item.entry.note === undefined
-                    ? t("skills.skillPage.retraction", { date })
-                    : t("skills.skillPage.retractionNote", { date, note: item.entry.note })}
-                </p>
-                <p className="text-meta text-ink-2">{dayName(t, item.entry.reviewed_at)}</p>
-                <Marks marks={marks} />
-              </li>
+              <TimelineEntry key={item.entry.id} dot="retracted" when={dayName(t, item.entry.reviewed_at)}>
+                <ReviewLine item={item} history={history} />
+              </TimelineEntry>
             );
           }
           const observation = item.entry;
+          const counts = item.status === "counts";
           const cited = observation.evidence.map((id) => {
             const evidence = service.find(id)?.record;
             return evidence?.schema === "evidence/1" ? evidence.title : t("skills.skillPage.removedEvidence");
           });
           return (
-            <li key={observation.id} className="grid gap-1 px-(--pad) py-(--space-3)">
-              <p>
-                <span className="font-semibold">{levelName(content, observation.level)}</span>{" "}
-                <span className="text-ink-3">{observation.level}</span>
-              </p>
-              <p className="text-meta text-ink-2">
-                {sourceName(t, observation.provenance)} · {dayName(t, observation.observed_at)}
-              </p>
+            <TimelineEntry
+              key={observation.id}
+              dot={counts ? observation.provenance : "retracted"}
+              when={dayName(t, observation.observed_at)}
+            >
+              <ObservationLine item={item} content={content} />
               {cited.length === 0 ? null : (
-                <p className="text-meta text-ink-2">
+                <p className="mt-1 text-meta text-ink-2">
                   {t("skills.skillPage.cites", { evidence: list.format([...new Set(cited)]) })}
                 </p>
               )}
-              <Marks marks={marks} />
-              {item.status !== "counts" ? null : (
-                <div className="flex flex-wrap gap-(--space-2)">
+              {counts ? (
+                <div className="mt-1.5 flex flex-wrap gap-(--space-1)">
                   {observation.provenance === "self-reported" ? (
                     <Button
                       variant="quiet"
+                      size="sm"
                       aria-label={t("skills.skillPage.correctLabel", { entry: describe(observation) })}
                       onClick={() => {
                         onChange({ kind: "correct", observation });
                       }}
                     >
+                      <Icon of={Pencil} size="sm" />
                       {t("skills.skillPage.correct")}
                     </Button>
                   ) : null}
                   <Button
                     variant="quiet"
+                    size="sm"
                     aria-label={t("skills.skillPage.retractLabel", { entry: describe(observation) })}
                     onClick={() => {
                       onChange({ kind: "retract", observation });
                     }}
                   >
+                    <Icon of={Undo2} size="sm" />
                     {t("skills.skillPage.retract")}
                   </Button>
                 </div>
-              )}
-            </li>
+              ) : null}
+            </TimelineEntry>
           );
         })}
-      </ul>
+      </Timeline>
     </section>
-  );
-}
-
-function Marks({ marks }: { readonly marks: readonly string[] }): ReactElement | null {
-  if (marks.length === 0) return null;
-  return (
-    <p className="flex flex-wrap gap-(--space-1)">
-      {marks.map((mark) => (
-        <span key={mark} className="rounded-sm bg-panel px-1.5 text-meta text-ink-2">
-          {mark}
-        </span>
-      ))}
-    </p>
   );
 }
 

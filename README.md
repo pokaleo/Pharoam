@@ -23,12 +23,14 @@ What v0.1 does:
 
 - **About you:** a headline, what you're doing now, your country and the pathways you're exploring. Never your name or contact details.
 - **Evidence:** projects, jobs, courses and certificates, recorded with a form; you see the file before it's saved.
-- **Skills:** your own level for each skill, from a vocabulary of about 300 skills or your own, with every correction and retraction kept in its history.
+- **Skills:** your own level for each skill, from a vocabulary of about 300 skills or your own, with every correction and retraction kept in its history. The overview groups them by area and shows the one you pick beside the list, with its linked evidence.
 - **Pathways:** frontend, backend, machine-learning and applied AI engineer, each requirement with its sources.
 - **Your gap to a pathway:** each requirement grouped as supported, claimed, below or not in your profile yet. No score, no ranking.
 - **Edits made outside Pharoam** are noticed, never overwritten: you see both versions and choose.
 
-Diagnostics, AI assistance and learning plans come in later releases ([MVP](docs/MVP.md)).
+Diagnostics, AI assistance and learning plans come in later releases ([MVP](docs/MVP.md)); the sidebar already shows where they will go, marked "Later".
+
+The interface follows the Pharoam design system: light or dark as your system is set, every level shown as a named step rather than a score, and a label on every level that says where it came from.
 
 ## Run it yourself
 
@@ -50,7 +52,7 @@ The app builds without `brand/`, with a neutral look, so forks can follow the AG
 | `packages/connector-folder` | Reads and writes the profile's files in a folder, or in the browser's own storage |
 | `apps/web` | The web app (React and Vite), with its end-to-end tests in `e2e/` |
 | `content/`, `data/` | The pathways and the skill vocabulary, compiled into the app |
-| `brand/`, `fonts/` | The design system's finished files and its typefaces, under their own licences |
+| `brand/`, `fonts/` | The design system's finished files (theme, wordmark, seal and AI monogram) and its typefaces, under their own licences |
 
 ---
 

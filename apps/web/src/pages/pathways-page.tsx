@@ -6,10 +6,14 @@
 import { pathwaySummaries } from "@pharoam/core";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { ChevronRight, Compass } from "lucide-react";
 import type { ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { useSession } from "../profile/session.tsx";
+import { AiMark } from "../ui/ai-mark.tsx";
+import { Icon } from "../ui/icon.tsx";
 import { PageTitle } from "../ui/page-title.tsx";
+import { Tag } from "../ui/tag.tsx";
 
 /**
  * Lists every pathway with its summary, each opening its own page.
@@ -27,24 +31,34 @@ export function PathwaysPage(): ReactElement {
   return (
     <>
       <PageTitle title={t("pathways.title")} lead={t("pathways.lead")} />
-      <ul aria-label={t("pathways.list")} className="grid max-w-[72ch] gap-(--space-3)">
+      <ul
+        aria-label={t("pathways.list")}
+        className="rounded-lg border border-line bg-surface px-(--pad) py-1"
+      >
         {pathways.map((pathway) => (
-          <li key={pathway.slug} className="grid gap-(--space-1) rounded-lg bg-surface p-(--pad)">
-            <Link
-              to="/pathways/$slug"
-              params={{ slug: pathway.slug }}
-              className="text-section font-bold text-ink underline-offset-[0.18em] hover:underline"
-            >
-              {pathway.title}
-            </Link>
-            <p className="text-ink-2">{pathway.summary}</p>
-            {pathway.ai === null ? null : (
-              <p className="text-meta">
-                <span className="rounded-sm border border-dashed border-(--ai-edge) px-1.5 text-ink-2">
-                  {t("pathways.aiMark")}
-                </span>
-              </p>
-            )}
+          <li
+            key={pathway.slug}
+            className="flex min-h-(--row-2) items-center gap-(--space-3) border-b border-line-soft py-3 last:border-b-0"
+          >
+            <Icon of={Compass} className="self-start text-ink-2 max-sm:hidden sm:mt-0.5" />
+            <span className="grid min-w-0 flex-1 gap-1">
+              <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <Link
+                  to="/pathways/$slug"
+                  params={{ slug: pathway.slug }}
+                  className="font-semibold text-ink no-underline hover:underline"
+                >
+                  {pathway.title}
+                </Link>
+                {pathway.ai === null ? null : (
+                  <Tag tone="ai-judged" mark={<AiMark />}>
+                    {t("pathways.aiMark")}
+                  </Tag>
+                )}
+              </span>
+              <span className="max-w-[72ch] text-ink-2">{pathway.summary}</span>
+            </span>
+            <Icon of={ChevronRight} className="text-ink-3 rtl:-scale-x-100" />
           </li>
         ))}
       </ul>

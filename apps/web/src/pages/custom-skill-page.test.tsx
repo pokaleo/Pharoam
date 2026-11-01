@@ -1,7 +1,7 @@
 import { screen, within } from "@testing-library/react";
 import { userEvent, type UserEvent } from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { fileContaining, fullProfile, openProfile } from "../__fixtures__/profiles.ts";
+import { fileContaining, fullProfile, openProfile, navLink } from "../__fixtures__/profiles.ts";
 import { expectNoAxeViolations } from "../testing/axe.ts";
 
 async function addSkill(user: UserEvent, name: string, description?: string) {
@@ -19,7 +19,7 @@ describe("CustomSkillPage (MVP S8)", () => {
     await user.click(await screen.findByRole("link", { name: "Add your own skill" }));
     await screen.findByRole("heading", { level: 1, name: "Add your own skill" });
     await expectNoAxeViolations(container);
-    await user.click(screen.getByRole("link", { name: "Skills" }));
+    await user.click(await navLink("Skills"));
 
     await addSkill(user, "Kdb+", "Time-series database and the q language.");
 
@@ -35,7 +35,7 @@ describe("CustomSkillPage (MVP S8)", () => {
     await user.click(screen.getByRole("button", { name: "Record my level" }));
     await screen.findByText(/Working/, { selector: "[data-shown-level]" });
 
-    await user.click(screen.getByRole("link", { name: "Skills" }));
+    await user.click(await navLink("Skills"));
     within(await screen.findByRole("row", { name: /Kdb\+/ })).getByText("Your own skill");
   });
 
@@ -44,7 +44,7 @@ describe("CustomSkillPage (MVP S8)", () => {
     await openProfile(user, fullProfile(), "Skills");
     await addSkill(user, "Kdb+");
     await screen.findByRole("heading", { level: 1, name: "Kdb+" });
-    await user.click(screen.getByRole("link", { name: "Skills" }));
+    await user.click(await navLink("Skills"));
 
     await addSkill(user, "KDB+");
 

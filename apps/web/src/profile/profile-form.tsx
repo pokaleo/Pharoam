@@ -84,13 +84,13 @@ export function ProfileForm({
       <fieldset className="grid gap-(--space-2)">
         <legend className="mb-(--space-1) font-semibold">{t("createProfile.focus")}</legend>
         {(content.data === undefined ? [] : pathwaySummaries(content.data)).map((pathway) => (
-          <label key={pathway.slug} className="flex items-center gap-(--space-2)">
+          <label key={pathway.slug} className="flex min-h-6 cursor-pointer items-start gap-(--space-2)">
             <input
               type="checkbox"
               name="pathways"
               value={pathway.slug}
               defaultChecked={focus.includes(pathway.slug)}
-              className="size-4 accent-(--primary)"
+              className="size-[18px] shrink-0 accent-(--primary)"
             />
             {pathway.title}
           </label>
