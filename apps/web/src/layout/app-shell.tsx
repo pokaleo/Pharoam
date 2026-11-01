@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { useId, useState, type ReactElement, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { LICENCES_FILE } from "../build/licences-file.ts";
 import type { PlaceKind } from "../profile/places.ts";
 import { Icon } from "../ui/icon.tsx";
 
@@ -185,6 +186,9 @@ export function AppShell({
             <Seal className="size-4" />
             {browser ? t("shell.footerBrowser") : t("shell.footer")}
           </span>
+          <a href={`${import.meta.env.BASE_URL}${LICENCES_FILE}`} className="text-ink-2">
+            {t("app.licences")}
+          </a>
         </footer>
       </div>
     </div>

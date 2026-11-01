@@ -8,6 +8,7 @@ import { brandDirectory } from "./src/build/brand.ts";
 import { chunkGroup, chunkSizeLimit } from "./src/build/chunks.ts";
 import { contentPack } from "./src/build/content-pack.ts";
 import { contentSecurityPolicy } from "./src/build/csp.ts";
+import { thirdPartyLicences } from "./src/build/licences.ts";
 
 const repoRoot = path.resolve(import.meta.dirname, "../..");
 
@@ -20,6 +21,20 @@ export default defineConfig({
     contentSecurityPolicy(),
     contentPack(() => readContentFiles(repoRoot)),
     chunkSizeLimit(),
+    // The notices the minified bundle no longer carries, beside the app (src/build/licences.ts).
+    thirdPartyLicences({
+      fontsDir: path.join(repoRoot, "fonts"),
+      compiled: [
+        {
+          title: "Skill vocabulary (data/)",
+          files: [path.join(repoRoot, "data/NOTICE"), path.join(repoRoot, "data/LICENSE")],
+        },
+        {
+          title: "Pathways (content/)",
+          files: [path.join(repoRoot, "content/NOTICE"), path.join(repoRoot, "content/LICENSE")],
+        },
+      ],
+    }),
   ],
   resolve: {
     // The Pharoam theme and artwork, or the neutral ones when brand/ is absent (LICENSING.md).

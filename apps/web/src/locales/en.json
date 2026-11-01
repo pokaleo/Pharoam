@@ -3,7 +3,8 @@
     "name": "Pharoam",
     "locale": "en-GB",
     "home": "Pharoam home",
-    "crumbs": "Breadcrumb"
+    "crumbs": "Breadcrumb",
+    "licences": "Third-party licences"
   },
   "start": {
     "title": "Your skills, in files you own",

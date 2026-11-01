@@ -19,4 +19,16 @@ describe("PlainLayout", () => {
     expect(screen.getByRole("main").textContent).toBe("Page");
     await expectNoAxeViolations(container);
   });
+
+  it("links to the third-party licences from the footer, before a profile is open too", async () => {
+    renderUi(
+      <PlainLayout>
+        <h1>{"Page"}</h1>
+      </PlainLayout>,
+    );
+
+    const link = await screen.findByRole("link", { name: "Third-party licences" });
+    expect(link.getAttribute("href")).toMatch(/third-party-licences\.txt$/);
+    expect(link.closest("footer")).not.toBeNull();
+  });
 });

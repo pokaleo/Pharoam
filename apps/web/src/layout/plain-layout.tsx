@@ -8,6 +8,7 @@ import wordmark from "@brand/wordmark.svg";
 import { Link } from "@tanstack/react-router";
 import type { ReactElement, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { LICENCES_FILE } from "../build/licences-file.ts";
 
 /**
  * Lays out a page with the brand above one column of content.
@@ -34,6 +35,11 @@ export function PlainLayout({ children }: { readonly children: ReactNode }): Rea
       <main className="mx-auto max-w-(--canvas-max) px-4 pt-(--space-7) pb-12 lg:box-content lg:px-[clamp(16px,3vw,40px)]">
         {children}
       </main>
+      <footer className="mx-auto max-w-(--canvas-max) px-4 pb-10 text-meta lg:box-content lg:px-[clamp(16px,3vw,40px)]">
+        <a href={`${import.meta.env.BASE_URL}${LICENCES_FILE}`} className="text-ink-2">
+          {t("app.licences")}
+        </a>
+      </footer>
     </div>
   );
 }

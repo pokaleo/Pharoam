@@ -1,6 +1,8 @@
 # Third-party notices
 
-Fonts, icons and other assets by others that ship in this repository. Each keeps its own licence, kept beside its files, and none of them is a Pharoam asset ([LICENSING.md](LICENSING.md)). Libraries installed by pnpm are listed in `pnpm-lock.yaml` with their own licences.
+Fonts, icons and other assets by others that ship in this repository or in the built app. Each keeps its own licence, kept beside its files, and none of them is a Pharoam asset ([LICENSING.md](LICENSING.md)). Libraries installed by pnpm are listed in `pnpm-lock.yaml` with their own licences.
+
+**The built app carries its own list.** Every build writes `third-party-licences.txt` beside the app (`apps/web/src/build/licences.ts`), linked from the footer of every page: the licence text of each library bundled into it, of each typeface it ships, and the notices of the skill vocabulary and pathways compiled into it. Minifying strips the notices from the bundled code, so this file is where they live in the deployed app.
 
 ## Icons
 
