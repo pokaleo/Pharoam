@@ -25,4 +25,15 @@ describe("PathwayPage (MVP S10.2, S10.3)", () => {
     screen.getByRole("link", { name: "See my gap to this pathway" });
     await expectNoAxeViolations(container);
   });
+
+  it("gives a list on its own the full width, rather than half of an empty pair", async () => {
+    const user = userEvent.setup();
+    await openProfile(user, fullProfile(), "Pathways");
+    await user.click(await screen.findByRole("link", { name: "Backend engineer" }));
+
+    // Backend engineer states what's uncertain but lists nothing to have before you start.
+    const uncertain = await screen.findByRole("region", { name: "What's uncertain" });
+    expect(screen.queryByRole("region", { name: "Before you start" })).toBeNull();
+    expect(uncertain.parentElement?.className).not.toContain("grid-cols-2");
+  });
 });

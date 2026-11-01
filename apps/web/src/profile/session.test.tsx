@@ -101,6 +101,30 @@ describe("SessionProvider", () => {
     expect(session.service.records()).toEqual([]);
   });
 
+  it("shows the start page only once the folder is forgotten, so it is never offered again (MVP S2.4)", async () => {
+    let forgotten: () => void = () => undefined;
+    const forget = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          forgotten = resolve;
+        }),
+    );
+    const controls = renderSession({ ...NO_PLACES, forget });
+    await connect(controls, createMemoryConnector({ "pharoam.md": PHAROAM }));
+
+    let disconnected: Promise<void> | undefined;
+    act(() => {
+      disconnected = controls().disconnect();
+    });
+    // Still forgetting: the start page, which offers a remembered folder again, isn't shown yet.
+    expect(screen.queryByText("closed")).toBeNull();
+    await act(async () => {
+      forgotten();
+      await disconnected;
+    });
+    screen.getByText("closed");
+  });
+
   it("re-renders the screens after a save", async () => {
     const controls = renderSession();
     await connect(controls, createMemoryConnector({ "pharoam.md": PHAROAM }));

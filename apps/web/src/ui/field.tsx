@@ -3,6 +3,7 @@
  *
  * @packageDocumentation
  */
+import { CircleAlert } from "lucide-react";
 import {
   useId,
   type InputHTMLAttributes,
@@ -11,9 +12,14 @@ import {
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
 } from "react";
+import { Icon } from "./icon.tsx";
 
-const CONTROL =
-  "min-h-(--control) w-full rounded-md border border-input bg-surface px-(--space-2) text-ink placeholder:text-ink-3 aria-invalid:border-problem disabled:opacity-60";
+/**
+ * The look of every text control: on the white sheet, with a boundary strong enough to see (WCAG 1.4.11), darker on
+ * hover, and a double-weight red edge when it needs fixing.
+ */
+export const CONTROL =
+  "min-h-(--control) w-full rounded-md border border-line-strong bg-surface px-2.5 text-ink transition-[border-color] duration-(--dur-feedback) ease-(--ease) placeholder:text-ink-3 hover:border-ink-2 aria-invalid:border-2 aria-invalid:border-problem disabled:cursor-not-allowed disabled:bg-panel disabled:text-ink-3";
 
 interface FieldProps {
   /** What the field asks for. */
@@ -43,22 +49,23 @@ function Field({
     .filter((part) => part !== "")
     .join(" ");
   return (
-    <div className="grid max-w-[56ch] gap-(--space-1)">
+    <div className="grid max-w-[56ch] gap-1.5">
       <label htmlFor={id} className="font-semibold">
         {label}
       </label>
-      {hint === undefined ? null : (
-        <p id={`${id}-hint`} className="text-meta text-ink-2">
-          {hint}
-        </p>
-      )}
       {control({
         id,
         "aria-describedby": described === "" ? undefined : described,
         "aria-invalid": error === undefined ? undefined : true,
       })}
+      {hint === undefined ? null : (
+        <p id={`${id}-hint`} className="text-meta text-ink-2">
+          {hint}
+        </p>
+      )}
       {error === undefined ? null : (
-        <p id={`${id}-error`} className="text-meta font-semibold text-problem">
+        <p id={`${id}-error`} className="flex items-center gap-1.5 text-meta text-problem">
+          <Icon of={CircleAlert} size="sm" />
           {error}
         </p>
       )}
@@ -106,7 +113,7 @@ export function TextAreaField({
       hint={hint}
       error={error}
       control={(tied) => (
-        <textarea rows={4} className={`${CONTROL} py-(--space-1)`} {...textarea} {...tied} />
+        <textarea rows={4} className={`${CONTROL} min-h-24 resize-y py-2`} {...textarea} {...tied} />
       )}
     />
   );
@@ -133,7 +140,7 @@ export function SelectField({
       hint={hint}
       error={error}
       control={(tied) => (
-        <select className={CONTROL} {...select} {...tied}>
+        <select className={`${CONTROL} select-chevron`} {...select} {...tied}>
           {options.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}

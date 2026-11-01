@@ -9,7 +9,7 @@
 
 ## Where v0.1 stands
 
-*29 October 2026.* Phases 1–7 are done: the core, the folder connector, the content, every story's behaviour, the design system and the web app, with end-to-end tests in Chromium, WebKit and Firefox. **The app is live at [pokaleo.github.io/Pharoam](https://pokaleo.github.io/Pharoam/)**, deployed from `main`. Chromium browsers keep the profile in a folder; Safari and Firefox keep it in the browser's own storage, with a downloadable copy ([ADR-0020](adr/0020-browser-storage-where-no-folder.md)). Next is phase 8, the founder trial.
+*29 October 2026.* Phases 1–7 are done: the core, the folder connector, the content, every story's behaviour, the design system and the web app, with end-to-end tests in Chromium, WebKit and Firefox. **The app is live at [pokaleo.github.io/Pharoam](https://pokaleo.github.io/Pharoam/)**, deployed from `main`. Chromium browsers keep the profile in a folder; Safari and Firefox keep it in the browser's own storage, with a downloadable copy ([ADR-0020](adr/0020-browser-storage-where-no-folder.md)). Every screen now follows the design system's components and samples: the sidebar with places for later areas, levels as named steps, source labels, gap groups, tables that stack on a phone, and the selected skill beside the skills overview. Next is phase 8, the founder trial.
 
 ## 1. How the plan works
 

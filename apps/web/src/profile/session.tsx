@@ -110,8 +110,9 @@ export function SessionProvider({
       },
       disconnect: async () => {
         closeService(session);
-        setSession({ status: "closed" });
+        // Forgotten before the start page shows, which would otherwise still find the folder and offer it again.
         await services.places.forget();
+        setSession({ status: "closed" });
       },
     };
   }, [session, services, t]);

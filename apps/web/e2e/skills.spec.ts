@@ -9,7 +9,7 @@ test("S6–S9: records, corrects and retracts levels, adds the person's own skil
   await app.put("pharoam.md", PHAROAM);
   await app.put("evidence/payments-api--0192f3a1.md", PAYMENTS_API);
   await app.choose();
-  await page.getByRole("link", { name: "Skills" }).click();
+  await app.nav("Skills").click();
   await expect(page.getByRole("heading", { level: 1, name: "Skills" })).toBeVisible();
   await app.expectAccessible("skills, empty");
 
@@ -38,7 +38,7 @@ test("S6–S9: records, corrects and retracts levels, adds the person's own skil
   expect(python).toMatch(/supersedes: [0-9a-f-]{36}/);
   expect(python).toMatch(/decision: retract/);
 
-  await page.getByRole("link", { name: "Skills" }).click();
+  await app.nav("Skills").click();
   await page.getByRole("link", { name: "Add your own skill" }).click();
   await app.expectAccessible("add your own skill");
   await page.getByLabel("Name").fill("Kdb+");
@@ -49,9 +49,10 @@ test("S6–S9: records, corrects and retracts levels, adds the person's own skil
   await page.getByRole("button", { name: "Record my level" }).click();
   await expect(page.locator("[data-shown-level]")).toContainText("Beginner");
 
-  await page.getByRole("link", { name: "Skills" }).click();
+  await app.nav("Skills").click();
   await expect(page.getByRole("row", { name: /Kdb\+/ })).toContainText("Your own skill");
   await page.getByLabel("Search your skills").fill("pyth");
-  await expect(page.getByRole("row")).toHaveCount(2);
+  // The skills' own rows, each named by its row header; the column and domain rows have none.
+  await expect(page.getByRole("row").filter({ has: page.getByRole("rowheader") })).toHaveCount(1);
   await app.expectAccessible("skills overview");
 });

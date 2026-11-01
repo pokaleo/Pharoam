@@ -2,6 +2,7 @@ import { createMemoryConnector, type MemoryConnector } from "@pharoam/core/testi
 import { screen } from "@testing-library/react";
 import { userEvent, type UserEvent } from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
+import { navLink } from "../__fixtures__/profiles.ts";
 import { expectNoAxeViolations } from "../testing/axe.ts";
 import { renderApp } from "../__fixtures__/render-app.tsx";
 
@@ -36,7 +37,7 @@ function folder(body = MY_WORDS): MemoryConnector {
 async function openAbout(user: UserEvent, memory: MemoryConnector) {
   const rendered = renderApp({ name: "my-profile", memory });
   await user.click(await screen.findByRole("button", { name: "Choose a folder" }));
-  await user.click(await screen.findByRole("link", { name: "About you" }));
+  await user.click(await navLink("About you"));
   await screen.findByRole("heading", { level: 1, name: "About you" });
   return rendered;
 }

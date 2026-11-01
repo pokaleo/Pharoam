@@ -11,7 +11,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import AxeBuilder from "@axe-core/playwright";
-import { test as base, expect, type Page } from "@playwright/test";
+import { test as base, expect, type Locator, type Page } from "@playwright/test";
 
 /** The folder the picker offers, inside the origin private file system. */
 const FOLDER = "my-profile";
@@ -108,6 +108,16 @@ export class App {
       },
       { folder: this.folder, path },
     );
+  }
+
+  /**
+   * Finds a link in the sidebar's main navigation, apart from any link of the same name on the page, such as a crumb.
+   *
+   * @param name - The link's name, such as `Skills`.
+   * @returns The link.
+   */
+  nav(name: string): Locator {
+    return this.page.getByRole("navigation", { name: "Main" }).getByRole("link", { name, exact: true });
   }
 
   /** Opens the start page, so files can be put in the folder before choosing it. */

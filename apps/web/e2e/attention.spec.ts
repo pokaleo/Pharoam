@@ -11,7 +11,7 @@ test("S12: lists a broken file and shows both versions of a file edited in the f
   await app.choose();
   await expect(page.getByRole("link", { name: "Needs attention 1" })).toBeVisible();
 
-  await page.getByRole("link", { name: "About you" }).click();
+  await app.nav("About you").click();
   await page.getByLabel("Headline").fill("Written in Pharoam");
   const edited = PHAROAM.replace("Backend developer", "Written in an editor");
   await app.put("pharoam.md", edited);

@@ -198,7 +198,7 @@ Everything here is part of the product (PRD) but left out of v0.1 on purpose. Ea
 | More pathways and fields beyond computer science | I2, Charter §5 | Later | AI-drafted, founder-reviewed, then community contributions |
 | Learning resources | I4 | Later | Sources still an open question (PRD §8) |
 | More connectors: Git, Notion, cloud drives | A3, ADR-0013 | Later | Each passes the shared connector suite; Notion needs the relay |
-| Mobile browsers | N8 | Later | Browser storage works there too (ADR-0020); the screens aren't designed for phones yet |
+| Mobile browsers | N8 | Later | Browser storage works there too (ADR-0020), and the screens follow the design system's phone layout, but phones aren't tested or supported yet |
 | Encrypted local cache, offline app, app lock | AD9, AD20, security §8 | Later | v0.1 reads the folder directly; the cache is never the master copy |
 | Career readiness: job-search literacy, CV guidance, job analysis, interview practice, jobs bank, generated CVs | H1–H7 | Later | Only from real evidence (R9); never bulk applications (R8) |
 | Self-hosted and operator-hosted deployments, relay | N4, L1–L5, ADR-0013 | Later | v0.1 is the Personal model on GitHub Pages only |

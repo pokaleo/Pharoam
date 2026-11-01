@@ -6,15 +6,18 @@
 import type { CoreService } from "@pharoam/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { Pencil, Trash2 } from "lucide-react";
 import { useEffect, useId, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { answersOf } from "../evidence/answers.ts";
 import { useSession } from "../profile/session.tsx";
 import { skillChoices, skillName } from "../profile/skills.ts";
 import { Button, buttonClassName } from "../ui/button.tsx";
+import { Icon } from "../ui/icon.tsx";
 import { Markdown } from "../ui/markdown.tsx";
 import { Notice } from "../ui/notice.tsx";
 import { PageTitle } from "../ui/page-title.tsx";
+import { Tag } from "../ui/tag.tsx";
 import { kindName } from "./evidence-list-page.tsx";
 
 /**
@@ -59,22 +62,33 @@ export function EvidencePage({
       <PageTitle
         title={record.title}
         lead={[kindName(t, record.kind), record.organisation].filter(Boolean).join(" · ")}
+        crumbs={[
+          <Link key="evidence" to="/evidence">
+            {t("evidence.title")}
+          </Link>,
+        ]}
+        crumbsLabel={t("app.crumbs")}
+        actions={
+          <>
+            {editable ? (
+              <Link to="/evidence/$id/edit" params={{ id }} className={buttonClassName("secondary")}>
+                <Icon of={Pencil} />
+                {t("evidence.page.edit")}
+              </Link>
+            ) : null}
+            <Button
+              variant="problem"
+              onClick={() => {
+                setDeleting(true);
+              }}
+            >
+              <Icon of={Trash2} />
+              {t("evidence.page.delete")}
+            </Button>
+          </>
+        }
       />
-      <div className="grid max-w-[72ch] gap-(--space-5)">
-        <div className="flex flex-wrap gap-(--space-2)">
-          {editable ? (
-            <Link to="/evidence/$id/edit" params={{ id }} className={buttonClassName("secondary")}>
-              {t("evidence.page.edit")}
-            </Link>
-          ) : null}
-          <Button
-            onClick={() => {
-              setDeleting(true);
-            }}
-          >
-            {t("evidence.page.delete")}
-          </Button>
-        </div>
+      <div className="grid items-start gap-(--gap) lg:grid-cols-[minmax(0,1fr)_360px]">
         {deleting ? (
           <DeleteConfirmation
             service={service}
@@ -86,20 +100,14 @@ export function EvidencePage({
             }}
           />
         ) : null}
-        {editable ? null : <p className="text-ink-2">{t("evidence.page.notEditable")}</p>}
-        <dl className="grid gap-(--space-3) sm:grid-cols-[10rem_1fr]">
+        <dl className="grid grid-cols-[max-content_1fr] gap-x-(--space-4) gap-y-1.5 rounded-lg bg-panel p-(--pad) lg:order-2">
           <Detail label={t("evidence.page.when")}>{when === "" ? null : when}</Detail>
           <Detail label={t("evidence.page.links")}>
             {record.links.length === 0 ? null : (
               <ul className="grid gap-1">
                 {record.links.map((link) => (
                   <li key={link}>
-                    <a
-                      href={link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="break-all text-channel underline"
-                    >
+                    <a href={link} target="_blank" rel="noopener noreferrer" className="break-all">
                       {link}
                     </a>
                   </li>
@@ -109,24 +117,30 @@ export function EvidencePage({
           </Detail>
           <Detail label={t("evidence.page.skills")}>
             {record.skills.length === 0 ? null : (
-              <ul className="flex flex-wrap gap-(--space-2)">
+              <ul className="flex flex-wrap gap-1">
                 {record.skills.map((slug) => (
-                  <li key={slug} className="rounded-sm bg-panel px-2 text-meta">
-                    {skillName(skills, slug)}
+                  <li key={slug}>
+                    <Tag tone="skill">{skillName(skills, slug)}</Tag>
                   </li>
                 ))}
               </ul>
             )}
           </Detail>
           <Detail label={t("evidence.page.file")}>
-            <code className="font-mono text-meta">{loaded.location}</code>
+            <code className="font-mono text-[12px] break-all">{loaded.location}</code>
           </Detail>
         </dl>
-        {loaded.file.body.trim() === "" ? null : (
-          <section aria-label={t("evidence.page.description")}>
-            <Markdown text={loaded.file.body} />
-          </section>
-        )}
+        <div className="grid min-w-0 gap-(--gap)">
+          {editable ? null : <Notice tone="info" title={t("evidence.page.notEditable")} />}
+          {loaded.file.body.trim() === "" ? null : (
+            <section
+              aria-label={t("evidence.page.description")}
+              className="rounded-lg border border-line bg-surface p-(--pad)"
+            >
+              <Markdown text={loaded.file.body} />
+            </section>
+          )}
+        </div>
       </div>
     </>
   );
@@ -143,8 +157,8 @@ function Detail({
   if (children === null) return null;
   return (
     <>
-      <dt className="font-semibold">{label}</dt>
-      <dd className="m-0">{children}</dd>
+      <dt className="text-ink-2">{label}</dt>
+      <dd className="m-0 min-w-0">{children}</dd>
     </>
   );
 }

@@ -2,6 +2,7 @@ import { createMemoryConnector, type MemoryConnector } from "@pharoam/core/testi
 import { screen, within } from "@testing-library/react";
 import { userEvent, type UserEvent } from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
+import { navLink } from "../__fixtures__/profiles.ts";
 import { expectNoAxeViolations } from "../testing/axe.ts";
 import { renderApp } from "../__fixtures__/render-app.tsx";
 
@@ -54,7 +55,7 @@ describe("S12: never lose an edit made outside Pharoam", () => {
     expect(memory.writes()).toBe(0);
     await expectNoAxeViolations(container);
 
-    await user.click(screen.getByRole("link", { name: "Evidence" }));
+    await user.click(await navLink("Evidence"));
     screen.getByText(/No evidence yet/);
   });
 
@@ -62,7 +63,7 @@ describe("S12: never lose an edit made outside Pharoam", () => {
     const user = userEvent.setup();
     const memory = createMemoryConnector({ "pharoam.md": PHAROAM });
     const { container } = await open(user, memory);
-    await user.click(screen.getByRole("link", { name: "About you" }));
+    await user.click(await navLink("About you"));
     const headline = await screen.findByLabelText("Headline");
     await user.clear(headline);
     await user.type(headline, "Written in Pharoam");
@@ -89,7 +90,7 @@ describe("S12: never lose an edit made outside Pharoam", () => {
     const user = userEvent.setup();
     const memory = createMemoryConnector({ "pharoam.md": PHAROAM });
     await open(user, memory);
-    await user.click(screen.getByRole("link", { name: "About you" }));
+    await user.click(await navLink("About you"));
     const headline = await screen.findByLabelText("Headline");
     await user.clear(headline);
     await user.type(headline, "Written in Pharoam");

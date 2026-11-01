@@ -9,4 +9,24 @@ describe("PageTitle", () => {
     expect(heading.id).toBe("title");
     expect(heading.nextElementSibling?.textContent).toBe("Every level says where it came from.");
   });
+
+  it("puts the page's actions beside the title, and the way back above it", () => {
+    render(
+      <PageTitle
+        title="Python"
+        lead="Programming languages"
+        crumbs={[
+          <a key="skills" href="#/skills">
+            {"Skills"}
+          </a>,
+        ]}
+        crumbsLabel="Breadcrumb"
+        actions={<button type="button">{"Record a level"}</button>}
+      />,
+    );
+    const crumbs = screen.getByRole("navigation", { name: "Breadcrumb" });
+    expect(crumbs.textContent).toContain("Skills");
+    expect(crumbs.textContent).toContain("Python");
+    expect(screen.getByRole("button", { name: "Record a level" })).toBeTruthy();
+  });
 });

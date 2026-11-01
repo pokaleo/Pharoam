@@ -111,7 +111,20 @@ function EditForm({
 
   return (
     <>
-      <PageTitle title={t("evidence.editTitle", { title })} lead={t("evidence.editLead")} titleId={titleId} />
+      <PageTitle
+        title={t("evidence.editTitle", { title })}
+        lead={t("evidence.editLead")}
+        titleId={titleId}
+        crumbs={[
+          <Link key="evidence" to="/evidence">
+            {t("evidence.title")}
+          </Link>,
+          <Link key="record" to="/evidence/$id" params={{ id }}>
+            {title}
+          </Link>,
+        ]}
+        crumbsLabel={t("app.crumbs")}
+      />
       <EvidenceFormView
         labelledBy={titleId}
         answers={answers}

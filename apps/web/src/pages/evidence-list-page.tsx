@@ -4,11 +4,18 @@
  * @packageDocumentation
  */
 import type { CoreService } from "@pharoam/core";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useRouterState } from "@tanstack/react-router";
+import { FileText, Paperclip } from "lucide-react";
 import type { ReactElement } from "react";
 import { useTranslation } from "react-i18next";
+import { useSession } from "../profile/session.tsx";
+import { skillChoices, skillName } from "../profile/skills.ts";
 import { buttonClassName } from "../ui/button.tsx";
+import { Empty } from "../ui/empty.tsx";
+import { Icon } from "../ui/icon.tsx";
 import { PageTitle } from "../ui/page-title.tsx";
+import { Tag } from "../ui/tag.tsx";
 
 /**
  * Lists every piece of evidence, each opening its own page, with the way to add more.
@@ -19,46 +26,67 @@ import { PageTitle } from "../ui/page-title.tsx";
  */
 export function EvidenceListPage({ service }: { readonly service: CoreService }): ReactElement {
   const { t } = useTranslation();
+  const { services } = useSession();
+  const content = useQuery({ queryKey: ["content"], queryFn: services.content, staleTime: Infinity });
   const deleted = useRouterState({ select: (state) => state.location.state.deleted });
   const evidence = service
     .records()
     .flatMap((loaded) => (loaded.record.schema === "evidence/1" ? [loaded.record] : []));
+  const skills = content.data === undefined ? [] : skillChoices(content.data, service.records());
 
   return (
     <>
-      <div className="flex flex-wrap items-end justify-between gap-(--space-3)">
-        <PageTitle title={t("evidence.title")} lead={t("evidence.lead", { count: evidence.length })} />
-        <Link to="/evidence/new" className={`${buttonClassName("primary")} mb-(--space-5)`}>
-          {t("evidence.add")}
-        </Link>
-      </div>
-      <div className="grid max-w-[72ch] gap-(--space-4)">
+      <PageTitle
+        title={t("evidence.title")}
+        lead={t("evidence.lead", { count: evidence.length })}
+        actions={
+          <Link to="/evidence/new" className={buttonClassName("primary")}>
+            <Icon of={Paperclip} />
+            {t("evidence.add")}
+          </Link>
+        }
+      />
+      <div className="grid gap-(--gap)">
         <p role="status" className="text-ink-2 empty:hidden">
           {deleted === undefined ? "" : t("evidence.deleted", { title: deleted })}
         </p>
         {evidence.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-line-strong p-(--pad) text-ink-2">
-            {t("evidence.empty")}
-          </p>
+          <Empty text={t("evidence.empty")} />
         ) : (
           <ul
             aria-label={t("evidence.list")}
-            className="grid divide-y divide-line-soft rounded-lg bg-surface"
+            className="rounded-lg border border-line bg-surface px-(--pad) py-1"
           >
             {evidence.map((record) => (
-              <li key={record.id} className="grid gap-0.5 px-(--pad) py-(--space-3)">
-                <Link
-                  to="/evidence/$id"
-                  params={{ id: record.id }}
-                  className="font-semibold text-ink underline-offset-[0.18em] hover:underline"
-                >
-                  {record.title}
-                </Link>
-                <span className="text-meta text-ink-2">
-                  {[kindName(t, record.kind), record.organisation]
-                    .filter((part) => part !== undefined)
-                    .join(" · ")}
+              <li
+                key={record.id}
+                className="flex min-h-(--row-2) flex-wrap items-center gap-x-(--space-3) gap-y-1.5 border-b border-line-soft py-2 last:border-b-0"
+              >
+                <Icon of={FileText} className="text-ink-2" />
+                <span className="min-w-0 flex-1">
+                  <Link
+                    to="/evidence/$id"
+                    params={{ id: record.id }}
+                    className="font-semibold text-ink no-underline hover:underline"
+                  >
+                    {record.title}
+                  </Link>
+                  <span className="mt-0.5 block text-meta text-ink-2">
+                    {[kindName(t, record.kind), record.organisation]
+                      .filter((part) => part !== undefined)
+                      .join(" · ")}
+                  </span>
                 </span>
+                {record.skills.length === 0 ? null : (
+                  <span className="flex flex-wrap items-center gap-1 max-sm:ps-7">
+                    <span className="sr-only">{t("evidence.page.skills")}</span>
+                    {record.skills.map((slug) => (
+                      <Tag key={slug} tone="skill">
+                        {skillName(skills, slug)}
+                      </Tag>
+                    ))}
+                  </span>
+                )}
               </li>
             ))}
           </ul>

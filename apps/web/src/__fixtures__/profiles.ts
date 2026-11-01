@@ -1,6 +1,6 @@
 // Profiles in memory for the web app's tests, written as Pharoam writes them, and ways to open them.
 import { createMemoryConnector, type MemoryConnector } from "@pharoam/core/testing";
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
 import { renderApp, type RenderedApp } from "./render-app.tsx";
 
@@ -97,8 +97,18 @@ export async function openProfile(user: UserEvent, memory: MemoryConnector, link
   const rendered = renderApp({ name: "my-profile", memory });
   await user.click(await screen.findByRole("button", { name: "Choose a folder" }));
   await screen.findByRole("link", { name: "Profile" });
-  if (link !== undefined) await user.click(screen.getByRole("link", { name: link }));
+  if (link !== undefined) await user.click(await navLink(link));
   return rendered;
+}
+
+/**
+ * Finds a link in the sidebar's main navigation, apart from any link of the same name on the page, such as a crumb.
+ *
+ * @param name - The link's name, such as `Skills`.
+ * @returns The link, once the navigation is there.
+ */
+export async function navLink(name: string): Promise<HTMLElement> {
+  return within(await screen.findByRole("navigation", { name: "Main" })).getByRole("link", { name });
 }
 
 /** The text of the first stored file that contains `marker`, or an empty string. */

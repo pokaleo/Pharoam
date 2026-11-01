@@ -4,13 +4,15 @@
  * @packageDocumentation
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { FolderInput, FolderOpen, HardDrive } from "lucide-react";
 import { useId, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { PlainLayout } from "../layout/plain-layout.tsx";
 import { filesFromFolder } from "../profile/copy-files.ts";
 import type { PlaceError, ProfilePlace } from "../profile/places.ts";
 import { useSession } from "../profile/session.tsx";
-import { Button } from "../ui/button.tsx";
+import { Button, buttonClassName } from "../ui/button.tsx";
+import { Icon } from "../ui/icon.tsx";
 import { Notice } from "../ui/notice.tsx";
 import { PageTitle } from "../ui/page-title.tsx";
 import type { Result } from "@pharoam/core";
@@ -60,8 +62,11 @@ export function StartPage(): ReactElement {
   return (
     <PlainLayout>
       <PageTitle title={t("start.title")} lead={t("start.lead")} />
-      <div className="grid max-w-[72ch] gap-(--space-5)">
-        <p className="text-ink-2">{browser ? t("start.browser.storage") : t("start.storage")}</p>
+      <div className="grid max-w-[72ch] gap-(--space-4) rounded-lg border border-line bg-surface p-(--pad)">
+        <p className="flex items-start gap-(--space-3)">
+          <Icon of={browser ? HardDrive : FolderOpen} className="mt-0.5 text-ink-2" />
+          <span>{browser ? t("start.browser.storage") : t("start.storage")}</span>
+        </p>
         {open.data === undefined ? null : <OpenFailureNotice failure={open.data} browser={browser} />}
         <div className="grid gap-(--space-3)">
           <div className="flex flex-wrap gap-(--space-2)">
@@ -121,8 +126,9 @@ function BringInFolder({
       <div>
         <label
           htmlFor={id}
-          className="inline-flex min-h-(--control) cursor-pointer items-center rounded-md border border-line-strong bg-surface px-[calc(var(--control)*0.4)] font-semibold has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-(--focus)"
+          className={`${buttonClassName("secondary")} cursor-pointer has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-(--focus)`}
         >
+          <Icon of={FolderInput} />
           {t("start.browser.bringIn")}
           <input
             id={id}

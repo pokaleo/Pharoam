@@ -5,11 +5,13 @@
  */
 import type { CoreService } from "@pharoam/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { Download, FileText, HardDrive } from "lucide-react";
 import { useId, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { useSession } from "../profile/session.tsx";
 import { downloadCopy } from "../profile/copy-files.ts";
 import { Button } from "../ui/button.tsx";
+import { Icon } from "../ui/icon.tsx";
 import { Notice } from "../ui/notice.tsx";
 import { PageTitle } from "../ui/page-title.tsx";
 
@@ -44,18 +46,23 @@ export function ProfileHomePage({
         lead={browser ? t("profileHome.leadBrowser") : t("profileHome.lead", { folder })}
       />
       {browser ? <KeepACopy /> : null}
-      <section
-        aria-label={filesLabel}
-        className="grid max-w-[72ch] gap-(--space-3) rounded-lg bg-panel p-(--pad)"
-      >
-        <h2 className="text-section font-bold">{filesLabel}</h2>
-        <p className="text-ink-2">
-          {t("profileHome.filesCount", { count: records.length })}
-          {attention.length === 0 ? "" : ` ${t("profileHome.attention", { count: attention.length })}`}
-        </p>
-        <ul aria-label={filesLabel} className="grid gap-1 font-mono text-meta">
+      <section aria-label={filesLabel} className="rounded-lg border border-line bg-surface p-(--pad)">
+        <div className="mb-(--space-2) flex flex-wrap items-baseline justify-between gap-(--space-3)">
+          <h2 className="text-section font-bold tracking-[-0.01em]">{filesLabel}</h2>
+          <p className="text-meta text-ink-2">
+            {t("profileHome.filesCount", { count: records.length })}
+            {attention.length === 0 ? "" : ` ${t("profileHome.attention", { count: attention.length })}`}
+          </p>
+        </div>
+        <ul aria-label={filesLabel} className="sm:columns-2 sm:gap-(--space-6) xl:columns-3">
           {records.map((record) => (
-            <li key={record.location}>{record.location}</li>
+            <li
+              key={record.location}
+              className="flex min-h-8 break-inside-avoid items-center gap-2 border-b border-line-soft"
+            >
+              <Icon of={FileText} size="sm" className="text-ink-3" />
+              <code className="min-w-0 truncate font-mono text-[13px]">{record.location}</code>
+            </li>
           ))}
         </ul>
       </section>
@@ -85,16 +92,22 @@ function KeepACopy(): ReactElement {
   return (
     <section
       aria-labelledby={titleId}
-      className="mb-(--space-5) grid max-w-[72ch] gap-(--space-3) rounded-lg border border-notice-edge bg-surface p-(--pad)"
+      className="mb-(--gap) grid grid-cols-[auto_1fr] items-start gap-(--space-3) rounded-lg border border-notice-edge bg-notice-wash px-(--pad) py-(--space-3) md:grid-cols-[auto_1fr_auto]"
     >
-      <h2 id={titleId} className="text-section font-bold">
-        {t("copy.title")}
-      </h2>
-      <p className="text-ink-2">{persisted.data === true ? t("copy.persisted") : t("copy.text")}</p>
-      {download.data === false || download.isError ? (
-        <Notice tone="problem" title={t("copy.failed")} />
-      ) : null}
-      <div className="flex flex-wrap items-center gap-(--space-3)">
+      <Icon of={HardDrive} className="mt-0.5 text-notice" />
+      <div className="grid gap-(--space-1)">
+        <h2 id={titleId} className="font-semibold">
+          {t("copy.title")}
+        </h2>
+        <p className="text-ink-2">{persisted.data === true ? t("copy.persisted") : t("copy.text")}</p>
+        {download.data === false || download.isError ? (
+          <Notice tone="problem" title={t("copy.failed")} />
+        ) : null}
+        <p role="status" className="text-meta text-ink-2 empty:hidden">
+          {download.data === true ? t("copy.downloaded") : ""}
+        </p>
+      </div>
+      <div className="col-start-2 md:col-start-3">
         <Button
           variant="primary"
           disabled={download.isPending}
@@ -102,11 +115,9 @@ function KeepACopy(): ReactElement {
             download.mutate();
           }}
         >
+          <Icon of={Download} />
           {t("copy.download")}
         </Button>
-        <p role="status" className="text-meta text-ink-2">
-          {download.data === true ? t("copy.downloaded") : ""}
-        </p>
       </div>
     </section>
   );

@@ -5,7 +5,7 @@
  */
 import type { ContentPack, CoreService } from "@pharoam/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useId, useState, type ReactElement, type SubmitEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useSession } from "../profile/session.tsx";
@@ -80,14 +80,24 @@ function RecordLevelForm({
 
   return (
     <>
-      <PageTitle title={t("skills.recordPage.title")} lead={t("skills.recordPage.lead")} titleId={titleId} />
+      <PageTitle
+        title={t("skills.recordPage.title")}
+        lead={t("skills.recordPage.lead")}
+        titleId={titleId}
+        crumbs={[
+          <Link key="skills" to="/skills">
+            {t("skills.title")}
+          </Link>,
+        ]}
+        crumbsLabel={t("app.crumbs")}
+      />
       <form
         aria-labelledby={titleId}
         onSubmit={submit}
         noValidate
-        className="grid max-w-[72ch] gap-(--space-5)"
+        className="grid max-w-[880px] gap-(--space-5)"
       >
-        <p className="rounded-lg bg-panel p-(--pad)">{t("skills.recordPage.own")}</p>
+        <Notice tone="info" title={t("skills.recordPage.own")} />
         <TextField
           label={t("skills.recordPage.skill")}
           hint={t("skills.recordPage.skillHint")}
@@ -118,7 +128,7 @@ function RecordLevelForm({
           <legend className="mb-(--space-1) font-semibold">{t("skills.recordPage.evidence")}</legend>
           {evidence.length === 0 ? <p className="text-ink-2">{t("skills.recordPage.noEvidence")}</p> : null}
           {evidence.map((record) => (
-            <label key={record.id} className="flex items-center gap-(--space-2)">
+            <label key={record.id} className="flex min-h-6 cursor-pointer items-start gap-(--space-2)">
               <input
                 type="checkbox"
                 checked={cited.includes(record.id)}
@@ -126,7 +136,7 @@ function RecordLevelForm({
                   const on = event.currentTarget.checked;
                   setCited((now) => (on ? [...now, record.id] : now.filter((id) => id !== record.id)));
                 }}
-                className="size-4 accent-(--primary)"
+                className="size-[18px] shrink-0 accent-(--primary)"
               />
               {record.title}
             </label>
