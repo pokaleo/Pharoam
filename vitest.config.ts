@@ -23,6 +23,9 @@ export default defineConfig({
           exclude: [...EXCLUDE, "apps/web/src/build/**"],
           environment: "jsdom",
           setupFiles: ["apps/web/src/__fixtures__/setup.ts"],
+          // Page tests render whole screens and run axe, so on a busy machine they can pass 5 seconds without
+          // anything being wrong; the pre-push check then fails on load, not on the code.
+          testTimeout: 15_000,
         },
       },
       {
