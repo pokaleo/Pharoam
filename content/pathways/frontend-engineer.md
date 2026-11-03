@@ -145,6 +145,10 @@ requirements:
     importance: helpful
     sources:
       - *survey-frameworks
+sources:
+  - title: "MDN Curriculum: the essential skillset for new front-end developers"
+    url: https://developer.mozilla.org/en-US/curriculum/
+    accessed: 2026-11-03
 uncertainties:
   - The levels describe a typical first frontend role. Employers set the bar differently, and senior roles expect more.
   - React is the most used framework among professional developers, but many teams use Angular, Vue or Svelte; the skills transfer, the details don't.
@@ -155,18 +159,31 @@ review:
 ai:
   task: draft-pathway@1
   model: anthropic/claude-opus-5-5
-  at: 2026-10-28T21:17:07Z
+  at: 2026-11-03T12:37:42Z
 ---
 # Frontend engineer
 
 Builds the parts of websites and web apps that people see and use, so they work well on every device and for
 everyone, including people who use assistive technology.
 
-**Core:** HTML, CSS and JavaScript at a proficient level; TypeScript, React, responsive design, web accessibility,
-browser APIs, HTTP, Git and unit testing at a working level; the basics of UI design.
+Most of the work happens in the browser. A frontend engineer turns designs into pages and screens: content
+structured with [semantic HTML](https://developer.mozilla.org/en-US/curriculum/core/semantic-html/), laid out with
+[CSS that adapts to any screen](https://developer.mozilla.org/en-US/curriculum/core/css-layout/), and made
+interactive with [JavaScript](https://developer.mozilla.org/en-US/curriculum/core/javascript-fundamentals/). Many
+teams build with a framework, and React is the one professional developers use most
+([Stack Overflow Developer Survey 2025](https://survey.stackoverflow.co/2025/technology)). Screens get their data
+from servers [over HTTP](https://developer.mozilla.org/en-US/curriculum/core/web-standards/), and automated
+[tests](https://developer.mozilla.org/en-US/curriculum/extensions/testing/) check that they keep working.
 
-**Helpful:** frontend state management, build tools such as Vite, linting, performance, web security, end-to-end
-testing and Next.js.
+Accessibility is part of the job, not an extra. A page should work by keyboard and with a screen reader, and the
+[Web Content Accessibility Guidelines](https://www.w3.org/TR/WCAG22/) are the standard teams check against
+([MDN: Accessibility](https://developer.mozilla.org/en-US/curriculum/core/accessibility/)). So is
+[performance](https://developer.mozilla.org/en-US/curriculum/extensions/performance/): how quickly a page loads and
+responds affects everyone who uses it, most of all on slow devices and connections.
 
-Most requirements follow the MDN Curriculum, Mozilla's summary of the essential skills for new front-end
-developers. Framework and language choices follow the Stack Overflow Developer Survey 2025.
+The work is shared. Frontend engineers work with designers on how things look and behave
+([MDN: Design for developers](https://developer.mozilla.org/en-US/curriculum/core/design-for-developers/)), with
+backend engineers on the data each screen needs, and with the whole team through
+[version control](https://developer.mozilla.org/en-US/curriculum/core/version-control/). The
+[MDN Curriculum](https://developer.mozilla.org/en-US/curriculum/), Mozilla's summary of the
+essential skills for new front-end developers, covers each part.

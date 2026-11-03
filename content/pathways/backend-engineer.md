@@ -157,18 +157,25 @@ review:
 ai:
   task: draft-pathway@1
   model: anthropic/claude-opus-5-5
-  at: 2026-10-28T21:31:24Z
+  at: 2026-11-03T12:37:42Z
 ---
 # Backend engineer
 
 Builds and runs the services behind apps, such as APIs, data storage and background work, so they are correct,
 secure and keep working under real use.
 
-**Core:** SQL, Python and HTTP at a proficient level; REST API design, PostgreSQL, data modelling, authentication
-and authorisation, secure coding, unit testing, Git, Docker and Linux at a working level.
+When someone opens an app, much of what they see is data a server sends back for that moment. A backend engineer
+builds that server side: the APIs an app calls over HTTP, the database that keeps its data, and the code that checks
+what comes in, saves it and decides who may see what. Much of it is a few operations done well: reading and writing
+data, validating what people enter, logging them in and checking their permissions
+([MDN: Server-side website programming](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Server-side)).
 
-**Helpful:** integration testing, a web framework such as FastAPI, Node.js, Redis, message queues, AWS, Kubernetes,
-CI/CD, observability and infrastructure as code.
+Security runs through all of it, because a backend holds the data an attacker wants. The
+[OWASP Top 10](https://top10.owasp.org/) lists the weaknesses that most often let attackers in, and backend
+engineers design and test against them. A service also has to keep running under real use: packaged so it runs the
+same everywhere, configured from its environment, and watched through its logs
+([The Twelve-Factor App](https://12factor.net/)).
 
-Requirements follow the Stack Overflow Developer Survey 2025, O*NET's technology skills for software developers,
-MDN's server-side programming module, the OWASP Top 10 and the Twelve-Factor App.
+The work is shared. Backend engineers work out with others what a system must do and what limits it has, agree the
+shape of APIs with the people who call them, and change existing code to fix errors and improve performance
+([O*NET: Software Developers](https://www.onetonline.org/link/details/15-1252.00)).
