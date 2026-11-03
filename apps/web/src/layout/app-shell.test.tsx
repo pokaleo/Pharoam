@@ -75,6 +75,18 @@ describe("AppShell", () => {
     }
   });
 
+  it("links to the third-party licences from the footer", async () => {
+    renderUi(
+      <AppShell kind="folder" folder="my-profile" attention={0} onDisconnect={vi.fn()}>
+        {null}
+      </AppShell>,
+    );
+
+    const link = await screen.findByRole("link", { name: "Third-party licences" });
+    expect(link.getAttribute("href")).toMatch(/third-party-licences\.txt$/);
+    expect(link.closest("footer")).not.toBeNull();
+  });
+
   it("says where the profile is kept, in the browser's own storage or a folder", async () => {
     renderUi(
       <AppShell kind="browser" folder="This browser" attention={0} onDisconnect={vi.fn()}>
