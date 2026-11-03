@@ -138,20 +138,29 @@ review:
 ai:
   task: draft-pathway@1
   model: anthropic/claude-opus-5-5
-  at: 2026-10-28T21:39:45Z
+  at: 2026-11-03T12:37:42Z
 ---
 # Applied AI engineer
 
 Builds products and features on top of language models, such as assistants, retrieval and agents, and makes them
 reliable, measurable and safe to use.
 
-**Core:** Python and prompt engineering at a proficient level; language model evaluation, retrieval-augmented
-generation, embeddings and vector search, tool use, a model provider's API, hallucination mitigation, web application
-security and Git at a working level.
+An applied AI engineer usually builds with models that already exist, through a provider's API or run locally,
+rather than training new ones. The basic building block is a language model given extra abilities: retrieval to
+look things up, tools to act, and memory
+([Anthropic: Building effective agents](https://www.anthropic.com/engineering/building-effective-agents)).
+Retrieval-augmented generation lets a model answer from a body of documents it is given, not only from what it
+learnt in training ([Lewis et al., 2020](https://arxiv.org/abs/2005.11401)).
 
-**Helpful:** a second provider's API, AI agents, the Model Context Protocol, responsible AI, how transformers work,
-running models locally with Ollama, Docker and FastAPI.
+Measuring comes first. The work starts from clear criteria for success and tests that check the model against them,
+and only then turns to improving prompts
+([Anthropic: Prompt engineering overview](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/overview);
+[OpenAI: Working with evals](https://developers.openai.com/api/docs/guides/evals)). Teams that build agents well tend to
+use simple designs made of small parts rather than elaborate frameworks, and keep agents that act on their own for
+tasks that need them, since they cost more and their mistakes compound
+([Anthropic: Building effective agents](https://www.anthropic.com/engineering/building-effective-agents)).
 
-Requirements follow Anthropic's and OpenAI's documentation, Anthropic's guide to building effective agents, the
-OWASP Top 10 for LLM Applications, the original retrieval-augmented generation paper and the Stack Overflow
-Developer Survey 2025.
+Safety is part of the build. A model can be steered by instructions hidden in what it reads, can state false things
+confidently, and can be given more power to act than it should have. The
+[OWASP Top 10 for LLM Applications](https://genai.owasp.org/llm-top-10/) lists these risks, from prompt injection to
+excessive agency, and applied AI engineers design against them.

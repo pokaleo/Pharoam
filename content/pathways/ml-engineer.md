@@ -150,18 +150,28 @@ review:
 ai:
   task: draft-pathway@1
   model: anthropic/claude-opus-5-5
-  at: 2026-10-28T21:35:55Z
+  at: 2026-11-03T12:37:42Z
 ---
 # Machine-learning engineer
 
 Builds, ships and runs machine-learning systems in production, from preparing data and training models to serving
 them and watching how they behave.
 
-**Core:** Python, machine-learning fundamentals and model evaluation at a proficient level; statistics, linear
-algebra, calculus, feature engineering, data cleaning, deep learning, PyTorch, SQL, Git, Docker, MLOps and model
-serving at a working level.
+In a working machine-learning system, the model is only a small part. Most of it is the code around the model that
+gathers and checks data, trains and tests models, serves predictions and keeps watch once they are live
+([Google: MLOps](https://docs.cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning)).
+A machine-learning engineer builds that whole path.
 
-**Helpful:** Linux, model monitoring, TensorFlow, Apache Spark, Apache Airflow, Kubernetes, AWS and responsible AI.
+Much of the day is spent on data and evidence: cleaning raw data and shaping it into features, training models,
+comparing them with sound measures, and testing that their predictions hold up
+([O*NET: Data Scientists](https://www.onetonline.org/link/details/15-2051.00);
+[Google Machine Learning Crash Course](https://developers.google.com/machine-learning/crash-course)). The crash course
+also covers checking that a model treats different groups of people fairly. Statistics, linear algebra and calculus
+explain why models behave as they do, and help when they don't
+([Mathematics for Machine Learning](https://mml-book.github.io/)).
 
-Requirements follow Google's Machine Learning Crash Course, O*NET's profile of data scientists, *Mathematics for
-Machine Learning*, Google's MLOps guidance and the Stack Overflow Developer Survey 2025.
+Unlike most software, a model can get worse without any change to its code, as the data it sees drifts away from the
+data it learnt from. So live models are monitored and retrained, often automatically
+([Google: MLOps](https://docs.cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning)).
+Keeping models running like this takes the role further into engineering than a data scientist's, which O*NET
+describes as analysing data and reporting what it shows.
