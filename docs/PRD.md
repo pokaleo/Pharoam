@@ -94,8 +94,7 @@ Every requirement must satisfy the Charter's design rules **R1–R16**. In short
 - **C3** Observations are never silently changed. Corrections and retractions are recorded as history.
 - **C4** Each skill shows **one level** with its source and date, chosen by this order:
   1. the latest diagnostic result (`demonstrated` or `ai-correlated`);
-  2. otherwise, the latest accepted `ai-judged` level;
-  3. otherwise, the latest `self-reported` level.
+  2. otherwise, the latest claim: an accepted `ai-judged` level or a `self-reported` one, whichever is newer. The person's own newer rating is never hidden behind an AI judgement they accepted earlier.
 
   A claim newer than a tested level that differs from it is shown as a note on the level ("You've since rated yourself 4. Check it?"), never as the level. An `ai-judged` level not yet accepted is shown as a prompt to review it. There is no blended or calculated level (R4).
 - **C5** Skills come from a shared vocabulary (see I1).
@@ -103,7 +102,7 @@ Every requirement must satisfy the Charter's design rules **R1–R16**. In short
 
 ### D. AI assistance (all steps)
 - **D1** AI can scan the person's evidence and give a level for each skill it finds (`ai-judged`), and propose which skills each evidence record involves (B6). Each AI judgement comes with an explanation, its limits and the AI disclaimer (D6). **There are no confidence levels anywhere in Pharoam.**
-- **D2** AI judgements and proposed skill links wait in a readable review session (data model §10) until the user decides. For each one, or for all at once, the user can accept, adjust or skip. Accepting writes the `ai-judged` observation or the link. Adjusting means running a diagnostic (E) or recording their own level, and the AI judgement is then dropped; if the diagnostic is abandoned, the judgement stays pending. Skipped items stay pending in the session and never count (R5).
+- **D2** AI judgements and proposed skill links wait in a readable review session (data model §10) until the user decides. For each one, or for all at once, the user can accept, adjust, skip or discard. Accepting writes the `ai-judged` observation or the link. Adjusting means running a diagnostic (E) or recording their own level, and the AI judgement is then dropped; if the diagnostic is abandoned, the judgement stays pending. Skipped items stay pending in the session and never count (R5); discarded items are dropped, and the session notes it.
 - **D3** AI can explain pathways, suggest learning resources and explain diagnostic results. All of it is advisory and labelled as AI output.
 - **D4** Each AI task declares the data it reads (R12). That may be one skill's evidence or, where the task needs it, the whole profile; the user is told before a whole-profile send. Skill links the user confirms from a whole-profile scan are stored in the evidence records, so later tasks find a skill's evidence without sending everything again. The user can inspect what every call sent and what came back.
 - **D5** The user chooses the model provider, including self-hosted models.
