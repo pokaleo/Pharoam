@@ -24,6 +24,7 @@
 | | `plan` | A learning plan toward a chosen pathway |
 | | `session` | A **readable progress record** of an unfinished workflow (for example a diagnostic, or AI judgements awaiting review): what has happened so far and what comes next. Pharoam rebuilds its working state from it, so it can be resumed on any device. It contains no engine checkpoint (§0). |
 | | `gap` | A stored gap analysis for one pathway being explored, readable outside Pharoam (§10) |
+| | `note` | An AI explanation of a gap that the person accepted, kept as written (§10) |
 | **Content** (packs) | `skill` | Skill-inventory entry |
 | | `pathway` | Career pathway |
 | | `assessment-item` | A question or task |
@@ -134,8 +135,7 @@ Review entries hold `id`, `target` (an observation ID), `decision: retract`, `re
 Each skill shows **one level**, chosen from the observations that count (retracted and superseded ones never do) in this order:
 
 1. the latest `demonstrated` or `ai-correlated` observation;
-2. otherwise, the latest `ai-judged` observation;
-3. otherwise, the latest `self-reported` observation.
+2. otherwise, the latest claim: the newer of the latest `ai-judged` and the latest `self-reported` observation.
 
 "Latest" means the most recent `observed_at`, so a retaken diagnostic replaces the earlier result. When the shown level is tested, the latest claim (`self-reported` or `ai-judged`) newer than it that differs from it is recorded as `newer-claim` and shown as a note on the level, never as the level. The order is a fixed rule, not a calculation: no level is ever blended from several entries (Charter R4).
 
@@ -169,7 +169,7 @@ What each level means for a specific skill comes from that skill's **level descr
 ## 7. Evidence
 
 Each evidence item is **one `.md` file**. Evidence records what the person did; it **carries no level** (Charter R4).
-- **Common fields:** `kind`, `title`, `organisation`, `start`/`end` or `date` (to the year, month or day: `2024`, `2024-09` or `2024-09-30`), `links` (`http` or `https` only), `skills`, `attachments`, and `source` (`manual`, `paste` or `import`; where the original input is kept goes in `original_input`).
+- **Common fields:** `kind`, `title`, `organisation`, `start`/`end` or `date` (to the year, month or day: `2024`, `2024-09` or `2024-09-30`), `links` (`http` or `https` only), `skills`, `attachments` (files of any type, up to 10 MB each, kept in `_attachments/<id>/` and never shown inside the page), and `source` (`manual`, `paste` or `import`; where the original input is kept goes in `original_input`).
 - **`skills`** lists the skills the item involved. They are entered by hand or proposed by AI and confirmed by the person (PRD B6). Confirmed AI-proposed links are also listed under `ai-skill-links` with the task, model, time and `confirmed_by_user`, so the record shows which links came from AI without labelling the whole record AI-made. AI tasks use these links to find a skill's evidence locally, without sending the whole profile (PRD D4).
 - **Extra fields per kind:** for example a module's course code, credits and grade; a certificate's issuer, credential ID and expiry; a repository's URL and the person's role.
 - **`assessment` evidence** is the full record of one diagnostic, in the top block for exact proof:
@@ -197,6 +197,7 @@ Pharoam/                              ← the folder the user chooses
 ├── aspirations/
 ├── plans/
 ├── gaps/                             ← stored gap analyses, one per pathway explored
+├── notes/                            ← accepted AI explanations of a gap
 └── sessions/                         ← unfinished workflows (e.g. a paused diagnostic)
 ```
 
@@ -244,9 +245,14 @@ Profile records reference skills by **Pharoam inventory slug only** (for example
 - **Regenerated automatically** when the profile or the pathway changes, always shown to the user ("Updated just now"), with a manual refresh button. It needs no AI.
 - The body shows a readable summary, so the analysis is useful in Obsidian or Notion.
 
+### `note`
+- An AI explanation of a gap (PRD D3) that the person accepted, as they accepted or edited it, with its `ai` block and the disclaimer at the top of its body (§5).
+- `pathway`, pinned to a version (`pack@version:pathway`), and `gap_updated`: the `updated` time of the gap it explained.
+- **Never rewritten.** Asking again writes a new note. The gap view shows the latest one, and says so when the profile has changed since `gap_updated`.
+
 ### `session`
 - Workflow name and version, `status` (in progress, completed or abandoned), started and updated times.
-- **AI review session:** the AI judgements and skill links from an evidence scan that await the person's decision (PRD D2), each with its explanation, limits and `ai` block, and the decision once made. Accepted items are written to the skill and evidence records; skipped items stay here, pending.
+- **AI review session:** one per scan. It holds the suggestions that await the person's decision (PRD D2): skill links for each evidence record read, or a level for each skill judged, each with its explanation, limits, the evidence it cites and its `ai` block, and the decision once made. **Accept** writes the observation or link to the skill and evidence records; **skip** leaves it pending, never counting; **discard** drops it, writing nothing else. A suggestion whose evidence changed after the scan read it can't be accepted, only scanned again. Suggestions that would change nothing are listed as already so, not offered. The session completes when nothing is pending, and is then kept as a readable record unless the person deletes it.
 - **A readable log of what has happened so far**: for a diagnostic, the items asked, the answers given and the marking so far, plus what the next step is.
 - Pharoam rebuilds its working state (for example a LangGraph checkpoint) from this log. Any engine checkpoint is kept only in the local cache.
 - When the session completes, its results are written as evidence and observations. The session is then archived as a readable record, or deleted if the person chooses.
