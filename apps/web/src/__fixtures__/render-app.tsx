@@ -4,7 +4,8 @@
  * @packageDocumentation
  */
 import { err, ok, type StorageConnector } from "@pharoam/core";
-import type { MemoryConnector } from "@pharoam/core/testing";
+import { fakeProvider, type MemoryConnector } from "@pharoam/core/testing";
+import type { LoadProvider } from "../ai/providers.ts";
 import { createMemoryHistory } from "@tanstack/react-router";
 import { render, type RenderResult } from "@testing-library/react";
 import { App } from "../app.tsx";
@@ -27,6 +28,8 @@ export interface TestFolder {
   readonly persisted?: boolean;
   /** Whether the browser can keep a profile at all; true by default. */
   readonly supported?: boolean;
+  /** Loads the chosen model provider; by default one that can't be reached, so no test touches the network. */
+  readonly providers?: LoadProvider;
 }
 
 /** The rendered app, and what the test can inspect. */
@@ -38,6 +41,9 @@ export interface RenderedApp extends RenderResult {
 }
 
 const encoder = new TextEncoder();
+
+// A provider loader for tests that don't set up a model: every call fails as if the provider were offline.
+const UNREACHABLE: LoadProvider = () => Promise.resolve(fakeProvider(() => err({ kind: "unreachable" })));
 
 /**
  * Renders the app with one place the person can open.
@@ -108,6 +114,7 @@ export function renderApp(folder: TestFolder, path = "/"): RenderedApp {
       supported={folder.supported ?? true}
       places={folder.kind === "browser" ? browserPlaces : folderPlaces}
       content={loadContentPack}
+      providers={folder.providers ?? UNREACHABLE}
     />,
   );
   return { ...rendered, lists: () => lists, forgotten: () => forgotten };

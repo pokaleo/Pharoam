@@ -2,8 +2,8 @@
  * The web app's content security policy, written into the built page.
  *
  * @remarks Scripts only from the app itself, no third-party requests, remote images blocked and Trusted Types
- * required (security §2, §4; AGENTS.md hard rules 7 and 10). v0.1 talks to no outside service, so every request
- * stays on the app's own origin (MVP S1.5); model providers and the relay are added here when they arrive. A static
+ * required (security §2, §4; AGENTS.md hard rules 7 and 10). Network calls go only to the app itself and the model
+ * providers the person can choose (MVP S13.5); with no model set up, the app calls nothing else (S1.5, S13.1). A static
  * host can't send headers, so the policy is a `<meta>` tag; `frame-ancestors` and reporting need headers and are
  * left out. Only the build gets the policy: the development server's hot reload needs inline scripts.
  * @packageDocumentation
@@ -18,7 +18,17 @@ const DIRECTIVES: readonly (readonly [string, ...string[]])[] = [
   // The theme draws its AI hatching with a data: SVG; remote images are blocked.
   ["img-src", "'self'", "data:"],
   ["font-src", "'self'"],
-  ["connect-src", "'self'"],
+  // The app itself and the fixed list of model providers, with any port on this machine for a local server
+  // (security §4, spike S1). Any other provider needs a self-hosted build with its own list (ADR-0011).
+  [
+    "connect-src",
+    "'self'",
+    "https://api.anthropic.com",
+    "https://api.openai.com",
+    "https://openrouter.ai",
+    "http://localhost:*",
+    "http://127.0.0.1:*",
+  ],
   ["object-src", "'none'"],
   ["base-uri", "'none'"],
   ["form-action", "'none'"],

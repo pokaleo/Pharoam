@@ -53,6 +53,9 @@ export interface PreparedCall {
 
 const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+// What a task with none of the person's material sends as its message, since models refuse an empty one.
+const NO_MATERIAL = "There is no material for this task.";
+
 // Pharoam's rules for every task, after the task's own instructions (security §3, MVP §8).
 const RULES = [
   "The person's material is in the user message, inside <data> tags.",
@@ -102,7 +105,10 @@ export function prepareCall<I, O>(task: Task<I, O>, input: I): PreparedCall {
   }
   const request: ModelRequest = {
     system: `${task.instructions(checked)}\n\n${RULES}`,
-    prompt: parts.map((part) => `<data kind="${part.kind}">\n${unmarked(part.text)}\n</data>`).join("\n\n"),
+    prompt:
+      parts.length === 0
+        ? NO_MATERIAL
+        : parts.map((part) => `<data kind="${part.kind}">\n${unmarked(part.text)}\n</data>`).join("\n\n"),
     output: { name: task.name, schema: z.toJSONSchema(task.output) },
   };
   return { task: task.id, request, parts, size: request.system.length + request.prompt.length };

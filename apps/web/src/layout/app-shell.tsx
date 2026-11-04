@@ -163,7 +163,10 @@ export function AppShell({
               {t("shell.about")}
             </Link>
             <Later icon={ScrollText} name={t("shell.activity")} />
-            <Later icon={Settings} name={t("shell.settings")} />
+            <Link to="/settings" className={NAV_LINK}>
+              <Icon of={Settings} />
+              {t("shell.settings")}
+            </Link>
             <Later icon={LifeBuoy} name={t("shell.help")} />
             <Later icon={Lock} name={t("shell.lock")} />
             {/* Browser storage keeps its files when closed, so it closes rather than disconnects (ADR-0020). */}

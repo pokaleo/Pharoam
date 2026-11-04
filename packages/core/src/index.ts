@@ -67,6 +67,7 @@ export {
   type ModelRequest,
   type ProviderError,
 } from "./ai/provider.ts";
+export { checkModel } from "./ai/tasks/check-model.ts";
 export {
   runTask,
   type CallRecord,

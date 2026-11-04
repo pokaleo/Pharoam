@@ -18,6 +18,7 @@ describe("createAppRouter (ADR-0008)", () => {
         "/pathways",
         "/pathways/$slug",
         "/pathways/$slug/gap",
+        "/settings",
         "/skills",
         "/skills/$skill",
         "/skills/custom",

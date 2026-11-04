@@ -20,6 +20,7 @@ import { createContext, useContext, useMemo, useState, type ReactElement, type R
 import { useTranslation } from "react-i18next";
 import type { Places, ProfilePlace } from "./places.ts";
 import { gapWriter, overviewWriter } from "./writers.ts";
+import type { LoadProvider, ModelSetup } from "../ai/providers.ts";
 
 /**
  * Where the person is with their profile.
@@ -39,12 +40,14 @@ export type Session =
       readonly revision: number;
     };
 
-/** What the app needs from outside: where profiles are kept, and the content it is built with. */
+/** What the app needs from outside: where profiles are kept, the content it is built with, and model providers. */
 export interface AppServices {
   /** Choosing, reopening and forgetting the profile's place. */
   readonly places: Places;
   /** Loads the content pack. */
   readonly content: () => Promise<ContentPack>;
+  /** Loads the model provider the person chooses (MVP S13). */
+  readonly providers: LoadProvider;
 }
 
 /** The session and what changes it. */
@@ -61,6 +64,12 @@ export interface SessionControls {
   readonly changed: () => void;
   /** Forgets the folder and everything read from it (MVP S2.4). */
   readonly disconnect: () => Promise<void>;
+  /** The model set up for this session, or `undefined`; kept in memory only, never written (MVP S13.4). */
+  readonly model: ModelSetup | undefined;
+  /** Sets up a model, with its key, for the rest of the session. */
+  readonly chooseModel: (setup: ModelSetup) => void;
+  /** Removes the model and forgets its key (MVP S13.8). */
+  readonly removeModel: () => void;
 }
 
 const SessionContext = createContext<SessionControls | undefined>(undefined);
@@ -80,6 +89,8 @@ export function SessionProvider({
 }): ReactElement {
   const { t } = useTranslation();
   const [session, setSession] = useState<Session>({ status: "closed" });
+  // The model and its key, held only here: a reload or closing the profile forgets them (ADR-0011, MVP S13.4).
+  const [model, setModel] = useState<ModelSetup | undefined>(undefined);
 
   const controls = useMemo<SessionControls>(() => {
     const closeService = (current: Session): void => {
@@ -99,6 +110,7 @@ export function SessionProvider({
         const opened = await service.open();
         if (!opened.ok) return err(opened.error);
         closeService(session);
+        setModel(undefined);
         setSession(sessionFor(place.name, service));
         return ok(undefined);
       },
@@ -112,10 +124,16 @@ export function SessionProvider({
         closeService(session);
         // Forgotten before the start page shows, which would otherwise still find the folder and offer it again.
         await services.places.forget();
+        setModel(undefined);
         setSession({ status: "closed" });
       },
+      model,
+      chooseModel: setModel,
+      removeModel: () => {
+        setModel(undefined);
+      },
     };
-  }, [session, services, t]);
+  }, [session, services, t, model]);
 
   return <SessionContext value={controls}>{children}</SessionContext>;
 }

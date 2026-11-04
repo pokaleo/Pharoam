@@ -2,6 +2,7 @@
 import { createMemoryConnector, type MemoryConnector } from "@pharoam/core/testing";
 import { screen, within } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
+import type { LoadProvider } from "../ai/providers.ts";
 import { renderApp, type RenderedApp } from "./render-app.tsx";
 
 export const PROFILE_ID = "0192f3a1-0000-7000-8000-000000000001";
@@ -91,10 +92,16 @@ export function emptyProfile(): MemoryConnector {
  * @param user - The user events.
  * @param memory - The profile's files.
  * @param link - The sidebar link to follow, such as "Skills"; none stays on the profile's home.
+ * @param providers - Loads the model provider the person chooses; by default one that can't be reached.
  * @returns The rendered app.
  */
-export async function openProfile(user: UserEvent, memory: MemoryConnector, link?: string): Promise<RenderedApp> {
-  const rendered = renderApp({ name: "my-profile", memory });
+export async function openProfile(
+  user: UserEvent,
+  memory: MemoryConnector,
+  link?: string,
+  providers?: LoadProvider,
+): Promise<RenderedApp> {
+  const rendered = renderApp({ name: "my-profile", memory, ...(providers === undefined ? {} : { providers }) });
   await user.click(await screen.findByRole("button", { name: "Choose a folder" }));
   await screen.findByRole("link", { name: "Profile" });
   if (link !== undefined) await user.click(await navLink(link));

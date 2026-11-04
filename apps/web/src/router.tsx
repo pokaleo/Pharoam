@@ -28,6 +28,7 @@ import { EvidenceListPage } from "./pages/evidence-list-page.tsx";
 import { EvidencePage } from "./pages/evidence-page.tsx";
 import { NewEvidencePage } from "./pages/new-evidence-page.tsx";
 import { HomePage } from "./pages/home-page.tsx";
+import { SettingsPage } from "./pages/settings-page.tsx";
 import { UnsupportedPage } from "./pages/unsupported-page.tsx";
 
 /** What every route can read. */
@@ -147,11 +148,18 @@ const attentionRoute = createRoute({
   component: () => <ProfileRoute page={(service) => <AttentionPage service={service} />} />,
 });
 
+const settingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/settings",
+  component: () => <ProfileRoute page={() => <SettingsPage />} />,
+});
+
 const routeTree = rootRoute.addChildren([
   pathwaysRoute,
   pathwayRoute,
   gapRoute,
   attentionRoute,
+  settingsRoute,
   skillsRoute,
   recordLevelRoute,
   customSkillRoute,

@@ -20,6 +20,7 @@ import type { Places } from "../profile/places.ts";
 import "../styles.css";
 import { createBrowserPlaces } from "./browser-places.ts";
 import { createFolderPlaces } from "./folder-places.ts";
+import { loadProvider } from "./providers.ts";
 
 // The parts of the File System Access API the app uses, typed as the folder connector reads them. TypeScript's DOM
 // types don't include the picker yet, and type the private file system's handles more loosely.
@@ -62,6 +63,7 @@ createRoot(root).render(
       supported={kind !== undefined}
       places={places}
       content={loadContentPack}
+      providers={loadProvider}
     />
   </StrictMode>,
 );

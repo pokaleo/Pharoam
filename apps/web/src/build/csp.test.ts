@@ -12,12 +12,25 @@ const directives = new Map(
 describe("the content security policy (security §4)", () => {
   it("allows scripts only from the app itself, never inline or evaluated", () => {
     expect(directives.get("script-src")).toEqual(["'self'"]);
-    expect(CONTENT_SECURITY_POLICY).not.toMatch(/unsafe-inline|unsafe-eval|https?:/);
+    expect(CONTENT_SECURITY_POLICY).not.toMatch(/unsafe-inline|unsafe-eval/);
   });
 
-  it("allows network requests only to the app itself in v0.1 (MVP S1.5)", () => {
-    expect(directives.get("connect-src")).toEqual(["'self'"]);
+  it("lets the app call only itself and the fixed list of model providers (security §4, spike S1)", () => {
+    expect(directives.get("connect-src")).toEqual([
+      "'self'",
+      "https://api.anthropic.com",
+      "https://api.openai.com",
+      "https://openrouter.ai",
+      "http://localhost:*",
+      "http://127.0.0.1:*",
+    ]);
     expect(directives.get("default-src")).toEqual(["'self'"]);
+  });
+
+  it("names outside addresses nowhere but in the network calls the app makes", () => {
+    for (const [name, values] of directives) {
+      if (name !== "connect-src") expect(values.join(" ")).not.toMatch(/https?:/);
+    }
   });
 
   it("blocks remote images; data URIs are allowed for the theme's own patterns (hard rule 10)", () => {

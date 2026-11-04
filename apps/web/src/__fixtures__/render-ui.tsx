@@ -1,4 +1,6 @@
 // Renders one component for a test, with the translations and a router around it, and optionally a session.
+import { err } from "@pharoam/core";
+import { fakeProvider } from "@pharoam/core/testing";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
@@ -24,8 +26,12 @@ export const NO_PLACES: Places = {
   forget: () => Promise.resolve(),
 };
 
-/** The services a test session uses by default: the real content pack, and no places. */
-export const TEST_SERVICES: AppServices = { places: NO_PLACES, content: loadContentPack };
+/** The services a test session uses by default: the real content pack, no places, and no reachable model. */
+export const TEST_SERVICES: AppServices = {
+  places: NO_PLACES,
+  content: loadContentPack,
+  providers: () => Promise.resolve(fakeProvider(() => err({ kind: "unreachable" }))),
+};
 
 /**
  * Renders a component inside the translations, a query client, a session and a router at `/`.

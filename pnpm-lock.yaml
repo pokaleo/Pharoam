@@ -275,6 +275,12 @@ importers:
       '@pharoam/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@pharoam/provider-anthropic':
+        specifier: workspace:*
+        version: link:../../packages/provider-anthropic
+      '@pharoam/provider-openai-compatible':
+        specifier: workspace:*
+        version: link:../../packages/provider-openai-compatible
       '@tanstack/react-query':
         specifier: 5.105.0
         version: 5.105.0(@types/react@19.3.0)(react@19.3.1)

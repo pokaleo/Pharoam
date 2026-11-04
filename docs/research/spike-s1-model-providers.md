@@ -75,3 +75,13 @@ By package, in the bundle with both adapters (minified): `zod` 503 KB, `openai` 
 With a real key, in the first end-to-end call of phase 11:
 - **Anthropic's model list** (`GET /v1/models`) returns a reply the browser can read. If not, the person types the model ID, which S13.2 already allows.
 - **OpenAI's chat endpoint** (`POST /v1/chat/completions`) returns a reply the browser can read. If not, OpenAI is used through OpenRouter, and the policy drops `api.openai.com`.
+
+## Update, 4 November 2026: what phase 11 found
+
+Building the AI code into the app changed three of the recommendations above:
+
+- **The AI chunks take only the AI packages, not their dependencies.** When the Anthropic group took its dependencies, it took libraries the app shares with it, such as Zod. The app then loaded the AI chunk at start, and Zod's own check for whether it may compile code ran before the app turned compiling off, which Trusted Types blocks. The AI packages now have a group of their own that takes no dependencies (`aiChunkGroup`), and the build keeps every module starting in the order its source imports it (`strictExecutionOrder`), as Rolldown asks for such groups.
+- **AI chunks have a limit of their own, 800 KB minified**, instead of being split further. They load only once a model is set up, and splitting them by size broke the order the app's own libraries start in. Minified, the AI code is LangChain's core 249 KB, the Anthropic adapter 230 KB, and the OpenAI adapter 519 KB (`apps/web/src/build/chunks.ts`).
+- **The `langsmith` stand-in works.** LangChain keeps each step's context in a `RunTree` even with tracing off, so the stand-in holds that context rather than refusing it. The LangSmith client is not in the build. `@langchain/core` still names LangSmith's gateway address for an option that only an environment variable can turn on; a browser has none, and the content security policy blocks the address.
+
+An end-to-end journey checks all three in the built app (`apps/web/e2e/settings.spec.ts`).

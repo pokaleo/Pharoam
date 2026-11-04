@@ -14,6 +14,8 @@
   "dependencies": {
     "@pharoam/connector-folder": "workspace:*",
     "@pharoam/core": "workspace:*",
+    "@pharoam/provider-anthropic": "workspace:*",
+    "@pharoam/provider-openai-compatible": "workspace:*",
     "@tanstack/react-query": "5.105.0",
     "@tanstack/react-router": "1.170.46",
     "i18next": "26.5.11",
