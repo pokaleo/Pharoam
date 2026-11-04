@@ -61,6 +61,7 @@ export {
 export { isCustomSkill } from "./custom-skills.ts";
 export {
   modelName,
+  providerErrorFrom,
   type ModelInfo,
   type ModelProvider,
   type ModelRequest,

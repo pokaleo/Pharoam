@@ -83,3 +83,28 @@ export interface ModelProvider {
 export function modelName(provider: Pick<ModelProvider, "id">, model: string): string {
   return `${provider.id}/${model}`;
 }
+
+/**
+ * Turns whatever a provider's SDK or `fetch` threw into a kind of failure the app can explain.
+ *
+ * @remarks Provider SDKs throw errors that carry the HTTP status. A network failure is a `TypeError` from
+ * `fetch`, or an SDK connection error, which has no status and keeps that `TypeError` as its cause. Providers
+ * return the result, so the app never sees a raw error (ADR-0018).
+ * @param error - What was thrown, or an object with the reply's `status` and `message`.
+ * @returns The failure: unauthorised (401, 403), rate-limited (429), unreachable, or failed with the message.
+ */
+export function providerErrorFrom(error: unknown): ProviderError {
+  const status = typeof error === "object" && error !== null && "status" in error ? error.status : undefined;
+  const message =
+    typeof error === "object" && error !== null && "message" in error && typeof error.message === "string"
+      ? error.message
+      : String(error);
+  if (status === 401 || status === 403) return { kind: "unauthorised" };
+  if (status === 429) return { kind: "rate-limited" };
+  if (typeof status === "number") return { kind: "failed", message: `${String(status)}: ${message}` };
+  const network =
+    error instanceof TypeError ||
+    (error instanceof Error && (error.name === "APIConnectionError" || error.cause instanceof TypeError));
+  if (network) return { kind: "unreachable" };
+  return { kind: "failed", message };
+}

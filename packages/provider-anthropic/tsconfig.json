@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "../../tsconfig.base.json",
+  // The provider runs in the browser and calls Anthropic's API with fetch: DOM types, no Node types (AD11).
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM"],
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true
+  },
+  "include": ["src/**/*"]
+}
