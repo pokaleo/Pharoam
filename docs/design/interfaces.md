@@ -36,18 +36,18 @@ Every AI feature is one task definition in `packages/core`, shared by the app an
 ```ts
 defineTask({
   name: "normalise-evidence", version: 1,
-  input:  z.object({ text: z.string(), kindHint: … }),   // Zod (AD7)
-  output: EvidenceShape,                                  // validated before the user sees it
-  prompt: "…template…",
-  label:  "AI-normalised evidence",                       // shown in the UI (PRD D6)
-  disclaimer: "AI-generated from your input… AI can make mistakes.",
-  dataUsed: ["pasted text"],                              // shown in the transparency view (PRD D4, J3)
+  input:  z.object({ text: z.string(), kindHint: … }),   // Zod (AD7), checked before anything is sent
+  output: EvidenceShape,                                  // checked before the user sees the answer
+  instructions: (input) => "…",                           // Pharoam's own text only, never the person's
+  data: ({ text }) => [{ kind: "pasted-text", text }],    // all the task reads (PRD D4)
 })
 ```
 
-`dataUsed` says exactly what the task reads: for example one skill's evidence, found through the evidence records' skill links, or the whole profile. A task that reads the whole profile makes the app tell the user before it sends anything (PRD D4).
+- **`data` is exactly what the task reads**: for example pasted text, or one skill's evidence, found through the evidence records' skill links. `prepareCall` builds the request without sending it, so the app can show the parts and their size first (PRD D4). The person's material goes only into the prompt, each part inside `<data>` tags, with instructions to treat it as data (security §3).
+- **The label and disclaimer are interface text**, so they live in the web app's translation files under the task's name, not in the core (hard rule 12).
+- **`runTask` sends the prepared request and checks the answer** against `output`. Every call, answered or not, comes back with a call record (§3).
 
-Validation, labelling, transparency and the relay's allow-list all come from this one definition.
+Validation, transparency and the relay's allow-list all come from this one definition.
 
 ## 3. Model providers
 
@@ -55,12 +55,13 @@ A thin interface over LangChain chat models (AD11a):
 
 ```ts
 interface ModelProvider {
-  id: "anthropic" | "openai-compatible" | …
-  capabilities: { structuredOutput: boolean; toolCalling: boolean; streaming: boolean }
-  listModels(): Model[]
-  run(task, input, { model, signal }): TaskResult   // validated output + call record
+  id: string                                          // "anthropic", "openai-compatible", …
+  listModels(): Promise<Result<ModelInfo[], ProviderError>>
+  complete(request: ModelRequest, { model }): Promise<Result<unknown, ProviderError>>   // unchecked JSON
 }
 ```
+
+A provider only sends what the core prepared and returns the parsed answer. **The core's `runTask` checks it** against the task's schema and makes the call record, so no provider can skip either. There is no cancelling a call in flight in v0.2: a scan stops between calls (MVP S16.5).
 
 - The user configures the provider type, base URL (OpenRouter, Ollama, LM Studio), key and model.
 - Every call produces a **call record** (task, model, time, data sent). It is shown in the transparency view, and its summary goes into the resulting record's AI block.

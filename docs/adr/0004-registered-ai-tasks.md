@@ -22,3 +22,9 @@ The app and the relay share these definitions. Output is validated against the o
 
 ## Consequences
 Every AI feature takes more up-front work. In return, validation, labelling, transparency and abuse protection all come from one definition.
+
+## Update, 4 November 2026 (v0.2)
+- **The label and disclaimer move out of the task definition** into the web app's translation files, under the task's name. They are interface text, which hard rule 12 keeps out of code.
+- **The list of data used is the task's `data` function**: it returns exactly the parts the task sends, so what the person is shown and what is sent can't drift apart.
+- **The core runs the task, not the provider**: `runTask` checks the answer against the output schema and makes the call record, and providers only send the request the core prepared (interfaces §2, §3).
+
