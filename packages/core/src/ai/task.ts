@@ -83,24 +83,33 @@ export function defineTask<I, O>(definition: TaskDefinition<I, O>): Task<I, O> {
  * Builds exactly what a task will send for an input, without sending it.
  *
  * @remarks The app shows the parts and the size before the person agrees to send (MVP S15.1, S16.1, S18.1), and
- * `runTask` sends this same request. The person's text goes only into the prompt, each part marked as data; a
- * closing tag inside it is broken up, so it can't end the marked data early (security §3).
+ * `runTask` sends this same request. The person's text goes only into the prompt, each part marked as data;
+ * anything in it that could read as a data tag, in any case or spacing, is neutralised, so it can't open or close
+ * the marked data (security §3).
  * @typeParam I - What the task takes.
  * @typeParam O - What the task's answer holds.
  * @param task - The task to prepare.
  * @param input - The task's input.
  * @returns The request, the parts of the person's material in it, and its size in characters.
  * @throws ZodError when the input doesn't match the task's input schema, which is a bug in the caller.
+ * @throws Error when a part's kind isn't kebab case, which is a bug in the task.
  */
 export function prepareCall<I, O>(task: Task<I, O>, input: I): PreparedCall {
   const checked = task.input.parse(input);
   const parts = task.data(checked);
+  for (const part of parts) {
+    if (!NAME.test(part.kind)) throw new Error(`A data part's kind must be kebab case, not ${part.kind}.`);
+  }
   const request: ModelRequest = {
     system: `${task.instructions(checked)}\n\n${RULES}`,
-    prompt: parts
-      .map((part) => `<data kind="${part.kind}">\n${part.text.replaceAll("</data", "<\\/data")}\n</data>`)
-      .join("\n\n"),
+    prompt: parts.map((part) => `<data kind="${part.kind}">\n${unmarked(part.text)}\n</data>`).join("\n\n"),
     output: { name: task.name, schema: z.toJSONSchema(task.output) },
   };
   return { task: task.id, request, parts, size: request.system.length + request.prompt.length };
+}
+
+// Writes the `<` of anything in the person's text that could read as a data tag, in any case or spacing, as
+// `&lt;`, so the text can't open or close the marked data. The rest of the text is sent as written.
+function unmarked(text: string): string {
+  return text.replace(/<(?=\s*\/?\s*data\b)/gi, "&lt;");
 }
