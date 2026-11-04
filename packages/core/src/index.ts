@@ -60,6 +60,28 @@ export {
 } from "./core-service.ts";
 export { isCustomSkill } from "./custom-skills.ts";
 export {
+  modelName,
+  type ModelInfo,
+  type ModelProvider,
+  type ModelRequest,
+  type ProviderError,
+} from "./ai/provider.ts";
+export {
+  runTask,
+  type CallRecord,
+  type TaskAnswer,
+  type TaskError,
+  type TaskFailure,
+} from "./ai/run-task.ts";
+export {
+  defineTask,
+  prepareCall,
+  type DataPart,
+  type PreparedCall,
+  type Task,
+  type TaskDefinition,
+} from "./ai/task.ts";
+export {
   EVIDENCE_FORM_KINDS,
   evidenceFormFields,
   evidenceFormOf,
