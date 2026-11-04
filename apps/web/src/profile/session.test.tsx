@@ -2,7 +2,7 @@ import { createMemoryConnector, type MemoryConnector } from "@pharoam/core/testi
 import { act, render, screen } from "@testing-library/react";
 import { I18nextProvider } from "react-i18next";
 import { describe, expect, it, vi } from "vitest";
-import { NO_PLACES } from "../__fixtures__/render-ui.tsx";
+import { NO_PLACES, TEST_SERVICES } from "../__fixtures__/render-ui.tsx";
 import { PHAROAM } from "../__fixtures__/profiles.ts";
 import { loadContentPack } from "../content.ts";
 import { createI18n } from "../i18n.ts";
@@ -17,7 +17,7 @@ function renderSession(places = NO_PLACES): () => SessionControls {
   }
   render(
     <I18nextProvider i18n={createI18n()}>
-      <SessionProvider services={{ places, content: loadContentPack }}>
+      <SessionProvider services={{ ...TEST_SERVICES, places, content: loadContentPack }}>
         <Probe />
       </SessionProvider>
     </I18nextProvider>,
@@ -36,7 +36,33 @@ async function connect(controls: () => SessionControls, memory: MemoryConnector)
   return result;
 }
 
+const MODEL = {
+  choice: { kind: "anthropic", address: "https://api.anthropic.com", apiKey: "sk-ant-secret" },
+  model: "claude-test",
+} as const;
+
 describe("SessionProvider", () => {
+  it("holds the chosen model and key in memory, and forgets them when the profile closes (MVP S13.4)", async () => {
+    const controls = renderSession();
+    await connect(controls, createMemoryConnector({ "pharoam.md": PHAROAM }));
+
+    expect(controls().model).toBeUndefined();
+    act(() => {
+      controls().chooseModel(MODEL);
+    });
+    expect(controls().model).toEqual(MODEL);
+    act(() => {
+      controls().removeModel();
+    });
+    expect(controls().model).toBeUndefined();
+
+    act(() => {
+      controls().chooseModel(MODEL);
+    });
+    await act(() => controls().disconnect());
+    expect(controls().model).toBeUndefined();
+  });
+
   it("starts closed", () => {
     renderSession();
     screen.getByText("closed");

@@ -5,7 +5,7 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { readContentFiles } from "../../tooling/content/build-pack.ts";
 import { brandDirectory } from "./src/build/brand.ts";
-import { chunkGroup, chunkSizeLimit } from "./src/build/chunks.ts";
+import { aiChunkGroup, chunkGroup, chunkSizeLimit } from "./src/build/chunks.ts";
 import { contentPack } from "./src/build/content-pack.ts";
 import { contentSecurityPolicy } from "./src/build/csp.ts";
 import { thirdPartyLicences } from "./src/build/licences.ts";
@@ -37,15 +37,32 @@ export default defineConfig({
     }),
   ],
   resolve: {
-    // The Pharoam theme and artwork, or the neutral ones when brand/ is absent (LICENSING.md).
-    alias: { "@brand": brandDirectory(repoRoot, existsSync) },
+    alias: [
+      // The Pharoam theme and artwork, or the neutral ones when brand/ is absent (LICENSING.md).
+      { find: "@brand", replacement: brandDirectory(repoRoot, existsSync) },
+      // LangChain's tracing package, replaced so no tracing code ships (hard rule 7, src/ai/langsmith-stand-in.ts).
+      {
+        find: /^langsmith(?:\/.*)?$/,
+        replacement: path.join(import.meta.dirname, "src/ai/langsmith-stand-in.ts"),
+      },
+    ],
   },
   build: {
     outDir: path.join(repoRoot, "dist/web"),
     emptyOutDir: true,
     // Fonts and images stay files, so the content security policy needs no data: fonts.
     assetsInlineLimit: 0,
-    // Libraries in named chunks that a returning browser keeps cached (src/build/chunks.ts).
-    rolldownOptions: { output: { codeSplitting: { groups: [{ name: chunkGroup }] } } },
+    // Libraries in named chunks that a returning browser keeps cached; the AI libraries take only their own code, so
+    // nothing the app loads at start ends up in them (src/build/chunks.ts).
+    rolldownOptions: {
+      output: {
+        // Modules start in the order the source imports them, whatever chunk they land in; Rolldown asks for this
+        // when a group doesn't take its dependencies, as the AI group doesn't.
+        strictExecutionOrder: true,
+        codeSplitting: {
+          groups: [{ name: aiChunkGroup, includeDependenciesRecursively: false }, { name: chunkGroup }],
+        },
+      },
+    },
   },
 });

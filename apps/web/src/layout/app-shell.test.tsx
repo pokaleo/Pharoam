@@ -18,7 +18,7 @@ describe("AppShell", () => {
       within(nav)
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toEqual(["Profile", "Skills", "Evidence", "Pathways", "Needs attention", "About you"]);
+    ).toEqual(["Profile", "Skills", "Evidence", "Pathways", "Needs attention", "About you", "Settings"]);
     screen.getByText("my-profile");
     expect(screen.getByRole("main").textContent).toBe("Page");
     await expectNoAxeViolations(container);
@@ -32,12 +32,23 @@ describe("AppShell", () => {
     );
 
     const nav = await screen.findByRole("navigation", { name: "Main" });
-    for (const name of ["Review", "Assess", "Learning plan", "Prepare", "Activity log", "Settings", "Help"]) {
+    for (const name of ["Review", "Assess", "Learning plan", "Prepare", "Activity log", "Help"]) {
       const slot = within(nav).getByText(name).closest("[aria-disabled]");
       expect(slot?.getAttribute("aria-disabled"), name).toBe("true");
       expect(slot?.textContent, name).toContain("Later");
     }
     within(nav).getByText("Where next");
+  });
+
+  it("links to the settings, where a model is set up (MVP S13)", async () => {
+    renderUi(
+      <AppShell kind="folder" folder="my-profile" attention={0} onDisconnect={vi.fn()}>
+        {null}
+      </AppShell>,
+    );
+
+    const nav = await screen.findByRole("navigation", { name: "Main" });
+    expect(within(nav).getByRole("link", { name: "Settings" }).getAttribute("href")).toBe("/settings");
   });
 
   it("folds the sidebar behind a menu button, which says whether it is open", async () => {

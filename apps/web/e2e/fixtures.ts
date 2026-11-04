@@ -168,15 +168,21 @@ export class App {
 const WEBKIT_SELECT_STYLE =
   "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive";
 
-/** The test's options: whether the browser offers a folder picker, as Chromium does, or keeps profiles itself. */
+/** The test's options: the folder picker, and the one outside address a journey expects the app to call. */
 interface Options {
   /** True to offer a folder in the private file system through the picker; false to test browser storage. */
   readonly picker: boolean;
+  /**
+   * The model provider's origin a journey sets up, such as `https://api.anthropic.com`, whose calls are expected
+   * (MVP S13); none by default, so any call outside the app fails the journey (S1.5).
+   */
+  readonly provider: string | undefined;
 }
 
 /** Playwright's test, with the app and its checks. */
 export const test = base.extend<Options & { app: App }>({
   picker: [true, { option: true }],
+  provider: [undefined, { option: true }],
 
   // WebKit keeps no files in a throwaway session, as Safari keeps none in a private window, so its tests get a
   // persistent profile, as a normal Safari window has. Its storage is shared, so they also run one at a time.
@@ -201,7 +207,7 @@ export const test = base.extend<Options & { app: App }>({
     await rm(profile, { recursive: true, force: true });
   },
 
-  app: async ({ page, baseURL, picker, browserName }, use) => {
+  app: async ({ page, baseURL, picker, provider, browserName }, use) => {
     const problems: string[] = [];
     const outside: string[] = [];
     const origin = new URL(baseURL ?? "http://localhost").origin;
@@ -213,7 +219,9 @@ export const test = base.extend<Options & { app: App }>({
     page.on("pageerror", (error) => problems.push(error.message));
     page.on("request", (request) => {
       const url = new URL(request.url());
-      if (url.protocol.startsWith("http") && url.origin !== origin) outside.push(request.url());
+      if (url.protocol.startsWith("http") && url.origin !== origin && url.origin !== provider) {
+        outside.push(request.url());
+      }
     });
     if (picker) {
       await page.addInitScript((folder) => {
@@ -227,7 +235,7 @@ export const test = base.extend<Options & { app: App }>({
     await use(new App(page, picker ? FOLDER : BROWSER_PROFILE));
 
     expect(problems, "console errors and warnings").toEqual([]);
-    expect(outside, "requests outside the app (MVP S1.5)").toEqual([]);
+    expect(outside, "requests outside the app and its model provider (MVP S1.5, S13)").toEqual([]);
   },
 });
 

@@ -9,6 +9,7 @@ import { RouterProvider, type RouterHistory } from "@tanstack/react-router";
 import type { i18n } from "i18next";
 import { useLayoutEffect, useState, type ReactElement } from "react";
 import { I18nextProvider } from "react-i18next";
+import type { LoadProvider } from "./ai/providers.ts";
 import { createI18n } from "./i18n.ts";
 import type { Places } from "./profile/places.ts";
 import { SessionProvider } from "./profile/session.tsx";
@@ -24,6 +25,8 @@ export interface AppProps {
   readonly places: Places;
   /** Loads the content pack. */
   readonly content: () => Promise<ContentPack>;
+  /** Loads the model provider the person chooses; real providers in the browser, fakes in tests. */
+  readonly providers: LoadProvider;
 }
 
 /**
@@ -32,11 +35,11 @@ export interface AppProps {
  * @param props - The address history, what the browser supports, and the app's outside services.
  * @returns The running app.
  */
-export function App({ history, supported, places, content }: AppProps): ReactElement {
+export function App({ history, supported, places, content, providers }: AppProps): ReactElement {
   const [translation] = useState(createI18n);
   const [router] = useState(() => createAppRouter({ history, supported }));
   const [queries] = useState(() => new QueryClient());
-  const [services] = useState(() => ({ places, content }));
+  const [services] = useState(() => ({ places, content, providers }));
   useDocumentLanguage(translation);
   return (
     <I18nextProvider i18n={translation}>

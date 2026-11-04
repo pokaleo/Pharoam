@@ -114,6 +114,58 @@
     "footer": "Pharoam · open source · your files stay in your folder",
     "footerBrowser": "Pharoam · open source · your files stay in this browser"
   },
+  "settings": {
+    "title": "Settings",
+    "lead": "How Pharoam works for you. These settings last until you close the profile or reload the page.",
+    "model": {
+      "title": "A model for AI help",
+      "none": "No model is set up. Everything in Pharoam works without one; AI help, when it arrives, asks you to set one up first.",
+      "provider": "Provider",
+      "providers": {
+        "anthropic": "Anthropic",
+        "openai": "OpenAI",
+        "openrouter": "OpenRouter",
+        "local": "A local server, such as Ollama or LM Studio"
+      },
+      "names": {
+        "anthropic": "Anthropic",
+        "openai": "OpenAI",
+        "openrouter": "OpenRouter",
+        "local": "the local server"
+      },
+      "key": "API key",
+      "keyHint": "Kept only in this page's memory. It is never saved, and reloading the page or closing the profile forgets it.",
+      "address": "Address",
+      "addressHint": "The server's OpenAI-compatible address on this computer, such as http://localhost:11434/v1 for Ollama or http://localhost:1234/v1 for LM Studio.",
+      "terms": "What you send goes to {{provider}}, under its own terms, not Pharoam's. Pharoam never sees it.",
+      "policy": "Read {{provider}}'s data policy",
+      "localTerms": "What you send stays on this machine.",
+      "localSteps": "A local server needs two things first. Allow this app's address, {{origin}}, in the server: set OLLAMA_ORIGINS for Ollama, or turn on Enable CORS in LM Studio. Then allow local network access when your browser asks. Safari doesn't let web pages reach a local server, so local models don't work there.",
+      "showModels": "Show models",
+      "asking": "Asking {{provider}}…",
+      "pick": "Model",
+      "pickNone": "Choose a model",
+      "typeId": "Or type a model ID",
+      "typeIdHint": "As the provider names it, such as one from its documentation.",
+      "use": "Use this model",
+      "noModel": "Choose a model from the list, or type its ID.",
+      "current": "Using {{model}} from {{provider}}.",
+      "named": "{{name}} ({{id}})",
+      "test": "Test the model",
+      "testing": "Testing…",
+      "works": "It works: the model answered in the shape Pharoam needs.",
+      "remove": "Remove the model",
+      "notLocal": "Pharoam can only reach a local server on this machine, at an address starting http://localhost or http://127.0.0.1."
+    },
+    "errors": {
+      "unauthorised": "{{provider}} refused the key. Check it and try again.",
+      "rateLimited": "{{provider}} asked for a pause. Try again in a minute.",
+      "unreachable": "Pharoam couldn't reach {{provider}}. Check your connection; for a local server, check the two steps above.",
+      "refused": "{{provider}} refused the request: {{reason}}",
+      "failed": "Something went wrong at {{provider}}: {{message}}",
+      "invalidAnswer": "The model answered, but not in the shape Pharoam needs. Try a model that can call tools."
+    }
+  },
   "unsupported": {
     "title": "This browser isn't supported yet",
     "lead": "Pharoam keeps your profile in a folder on your computer or in the browser's own storage, and this browser can do neither.",
