@@ -20,5 +20,5 @@ Pharoam must not depend on one model provider (PRD N3), must support local model
 Users with session-only keys re-enter them each session.
 
 ## Update, 3 November 2026 (v0.2)
-- **The hosted app reaches a fixed list of provider addresses**: Anthropic, OpenAI, OpenRouter, and `localhost` for Ollama or LM Studio. The content security policy is written into the built page, so it can't allow an address the person types in (security §4). Any other OpenAI-compatible address needs a self-hosted build with its own list. Spike S1 confirms the list.
+- **The hosted app reaches a fixed list of provider addresses**: Anthropic, OpenAI, OpenRouter, and `localhost` for Ollama or LM Studio. The content security policy is written into the built page, so it can't allow an address the person types in (security §4). Any other OpenAI-compatible address needs a self-hosted build with its own list. Spike S1 confirmed the list; local servers work only in Chromium and Firefox, after the person allows the app in the server and grants the browser's local network permission ([findings](../research/spike-s1-model-providers.md)).
 - **v0.2 keys are session-only, with no "remember on this device" yet.** Remembering a key needs the encrypted cache and spike S3, which come later (MVP §7).

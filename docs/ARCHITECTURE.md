@@ -42,9 +42,9 @@ The core runs entirely in the browser. Some outside services don't allow direct 
 
 | Service | Direct from browser? | Notes |
 |---|---|---|
-| Anthropic | Yes | Needs the browser-access opt-in header |
-| OpenAI, OpenRouter | Yes | |
-| Ollama, LM Studio (local) | Yes | The user allows the app's address in the local server settings |
+| Anthropic | Yes | Needs the browser-access opt-in header; without it the preflight fails (spike S1) |
+| OpenAI, OpenRouter | Yes | Confirmed by spike S1; OpenAI's chat endpoint still to be confirmed with a real key |
+| Ollama, LM Studio (local) | Chromium and Firefox only | The user allows the app's address in the server (`OLLAMA_ORIGINS`, LM Studio's "Enable CORS") and grants the browser's local network permission. Safari blocks it outright (spike S1) |
 | Local folder / Obsidian | Yes | Chromium browsers |
 | Browser storage (origin private file system) | Yes | Safari and Firefox, where a folder can't be opened (ADR-0020) |
 | GitHub | Yes with a personal token | Signing in with OAuth needs the relay |
@@ -52,7 +52,7 @@ The core runs entirely in the browser. Some outside services don't allow direct 
 | Notion | **No** | No browser access, and its OAuth needs a server-held secret, so it needs the relay |
 | Fetching web pages (job ads, course pages) | **No** | Needs the relay |
 
-*This table is to be confirmed with a quick test of each service before implementation.*
+*Spike S1 confirmed the model providers' rows on 3 November 2026 ([findings](research/spike-s1-model-providers.md)). The other rows are confirmed with a quick test before the connector that needs them.*
 
 ## Decisions
 

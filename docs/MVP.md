@@ -232,7 +232,7 @@ Everything here is part of the product (PRD) but left out of v0.1 on purpose. Ea
 v0.2 is done when:
 1. the founder has turned their own CV into evidence records and decided a scan of them, with a real model;
 2. **the hand-run check passes**: a small fixed set of example inputs (two CVs, a module list, a few evidence records and one gap), each with what a good answer must and mustn't contain, run by hand against a real model, with the results recorded in the release PR. It never runs in CI, so CI needs no key;
-3. spike S1 has confirmed which providers a browser can call directly, and the content security policy allows only those;
+3. spike S1 has confirmed which providers a browser can call directly ([findings](research/spike-s1-model-providers.md)), the first call with a real key has confirmed the two replies it couldn't, and the content security policy allows only those providers;
 4. with no model set up, the app loads no AI code and makes no request beyond loading itself;
 5. **every story's acceptance criteria pass** as automated tests, and **axe accessibility checks pass** on every new screen. Core tests use a fake provider; the end-to-end journeys answer the provider's real address with canned replies, so they cover the adapter, the security policy and the key handling;
 6. `pnpm check` and CI are green.
@@ -255,7 +255,7 @@ Everything in the v0.1 quality bar (§5), and:
 - **S13.3** Given a model, then a test call says whether it works, or why not in plain words.
 - **S13.4** Given I entered a key, then it is kept only in memory: nothing is written to my storage or the browser's, and reloading the page, closing the profile or closing the tab forgets it.
 - **S13.5** Given an address that isn't on the list, then it is refused with an explanation, and the content security policy blocks any call to it.
-- **S13.6** Given a browser that blocks the app from calling a local server, then the settings say that local models don't work in this browser; there is no workaround.
+- **S13.6** Given a local server, then the settings explain the two steps it needs: allowing the app's address in the server (`OLLAMA_ORIGINS`, or LM Studio's "Enable CORS") and granting the browser's local network permission. In a browser that blocks local servers outright (Safari), they say that local models don't work there; there is no workaround (spike S1).
 - **S13.7** Given the model settings, then they say in plain words that what I send goes to the chosen provider under its own terms, not Pharoam's, with a link to its data policy.
 - **S13.8** Given I remove the model, then no further AI calls are made and AI actions offer to set one up again.
 
