@@ -28,17 +28,22 @@ export function memoryDirectory(name: string, failWith?: Error): MemoryDirectory
     name: fileName,
     getFile: () => {
       const bytes = files.get(fileName) ?? new Uint8Array();
-      return Promise.resolve({ arrayBuffer: () => Promise.resolve(bytes.slice().buffer) });
+      return Promise.resolve({
+        size: bytes.length,
+        lastModified: 0,
+        arrayBuffer: () => Promise.resolve(bytes.slice().buffer),
+      });
     },
     createWritable: () => {
-      let written = "";
+      let written = new Uint8Array();
       return Promise.resolve({
-        write: (data: string) => {
-          written += data;
+        write: (data: string | Uint8Array) => {
+          const bytes = typeof data === "string" ? encoder.encode(data) : data;
+          written = new Uint8Array([...written, ...bytes]);
           return Promise.resolve();
         },
         close: () => {
-          files.set(fileName, encoder.encode(written));
+          files.set(fileName, written);
           return Promise.resolve();
         },
       });

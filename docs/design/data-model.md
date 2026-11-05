@@ -169,7 +169,7 @@ What each level means for a specific skill comes from that skill's **level descr
 ## 7. Evidence
 
 Each evidence item is **one `.md` file**. Evidence records what the person did; it **carries no level** (Charter R4).
-- **Common fields:** `kind`, `title`, `organisation`, `start`/`end` or `date` (to the year, month or day: `2024`, `2024-09` or `2024-09-30`), `links` (`http` or `https` only), `skills`, `attachments` (files of any type, up to 10 MB each, kept in `_attachments/<id>/` and never shown inside the page), and `source` (`manual`, `paste` or `import`; where the original input is kept goes in `original_input`).
+- **Common fields:** `kind`, `title`, `organisation`, `start`/`end` or `date` (to the year, month or day: `2024`, `2024-09` or `2024-09-30`), `links` (`http` or `https` only), `skills`, `attachments` (the names of files of any type, up to 10 MB each, kept in `evidence/_attachments/<id>/` under the record's full ID and never shown inside the page; a name is made safe for any folder on any system, and numbered, as in `cv (2).pdf`, when the record or the folder already has it), and `source` (`manual`, `paste` or `import`; where the original input is kept goes in `original_input`).
 - **`skills`** lists the skills the item involved. They are entered by hand or proposed by AI and confirmed by the person (PRD B6). Confirmed AI-proposed links are also listed under `ai-skill-links` with the task, model, time and `confirmed_by_user`, so the record shows which links came from AI without labelling the whole record AI-made. AI tasks use these links to find a skill's evidence locally, without sending the whole profile (PRD D4).
 - **Extra fields per kind:** for example a module's course code, credits and grade; a certificate's issuer, credential ID and expiry; a repository's URL and the person's role.
 - **`assessment` evidence** is the full record of one diagnostic, in the top block for exact proof:
@@ -193,7 +193,7 @@ Pharoam/                              ← the folder the user chooses
 ├── evidence/
 │   ├── backend-engineer-example-co--6a7b8c9d.md
 │   ├── diagnostic-python-2026-10--4e1b9a07.md
-│   └── _attachments/0192f3a1/original-input.txt
+│   └── _attachments/0192f3a1-7c2e-…/certificate.pdf   ← files kept with a record, by its full ID
 ├── aspirations/
 ├── plans/
 ├── gaps/                             ← stored gap analyses, one per pathway explored
@@ -203,6 +203,7 @@ Pharoam/                              ← the folder the user chooses
 
 - Skill files are named by skill slug, and gaps by pathway. Other files are named by a readable title plus a short ID: the last 8 hex digits of the record's UUIDv7, its random part (the first digits are a timestamp that records made within a minute share). Pharoam relies only on the IDs inside the files.
 - Records are found anywhere in the folder. Hidden folders (such as `.obsidian` or `.git`) and `_attachments` are skipped.
+- A record's files stay in `evidence/_attachments/<id>/` wherever the record itself is moved; the folder uses the full ID, not the short one, so two records' files can never mix. Deleting the record's last file removes its empty folder.
 - The layout is open to new folders for future features, for example generated CVs and a saved jobs bank (PRD H).
 
 ## 9. Skill references

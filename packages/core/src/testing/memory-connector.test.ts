@@ -38,5 +38,19 @@ describe("the in-memory reference connector", () => {
     expect(await memory.connector.create(record)).toEqual(unavailable);
     expect(await memory.connector.write("notes/a.md", record, "v1")).toEqual(unavailable);
     expect(await memory.connector.delete("notes/a.md", "v1")).toEqual(unavailable);
+    const id = "0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d";
+    expect(await memory.connector.attachments(id)).toEqual(unavailable);
+    expect(await memory.connector.readAttachment(id, "a.pdf")).toEqual(unavailable);
+    expect(await memory.connector.addAttachment(id, "a.pdf", new Uint8Array([1]))).toEqual(unavailable);
+    expect(await memory.connector.deleteAttachment(id, "a.pdf", "v1")).toEqual(unavailable);
+  });
+
+  it("counts the attachments it adds and deletes as writes", async () => {
+    const memory = createMemoryConnector();
+    const id = "0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d";
+    const added = await memory.connector.addAttachment(id, "a.pdf", new Uint8Array([1]));
+    if (!added.ok) throw new Error(added.error.kind);
+    await memory.connector.deleteAttachment(id, "a.pdf", added.value.version);
+    expect(memory.writes()).toBe(2);
   });
 });

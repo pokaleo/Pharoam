@@ -11,6 +11,10 @@ export interface MemoryFolder {
   readonly folders: Set<string>;
   /** Sets what the permission check returns, and whether a request is granted. */
   readonly setPermission: (state: PermissionState, onRequest?: PermissionState) => void;
+  /** Makes every later write fail as a full disk does, or succeed again. */
+  readonly setFull: (full: boolean) => void;
+  /** How many times a file's content has been read. */
+  readonly contentReads: () => number;
 }
 
 const encoder = new TextEncoder();
@@ -21,6 +25,17 @@ export function memoryFolder(initial: Readonly<Record<string, string | Uint8Arra
   );
   let permission: PermissionState = "granted";
   let onRequest: PermissionState = "granted";
+  let failWrites = false;
+  // Every write stores new bytes, so each set of bytes gets its own change time, as a file's modified time would.
+  let clock = 0;
+  let contentReads = 0;
+  const stamps = new WeakMap<Uint8Array, number>();
+  const changedAt = (bytes: Uint8Array): number => {
+    const known = stamps.get(bytes);
+    if (known !== undefined) return known;
+    stamps.set(bytes, ++clock);
+    return clock;
+  };
   const folders = new Set<string>();
 
   const fail = (name: string, message: string): never => {
@@ -37,19 +52,33 @@ export function memoryFolder(initial: Readonly<Record<string, string | Uint8Arra
       getFile: () => {
         guard();
         const bytes = files.get(path) ?? fail("NotFoundError", `${path} was not found.`);
-        return Promise.resolve({ arrayBuffer: () => Promise.resolve(bytes.slice().buffer) });
+        return Promise.resolve({
+          size: bytes.length,
+          lastModified: changedAt(bytes),
+          arrayBuffer: () => {
+            contentReads++;
+            return Promise.resolve(bytes.slice().buffer);
+          },
+        });
       },
       createWritable: () => {
         guard();
-        let pending = "";
+        const pending: Uint8Array[] = [];
         return Promise.resolve({
-          write: (data: string) => {
-            pending += data;
+          write: (data: string | Uint8Array) => {
+            if (failWrites) fail("QuotaExceededError", "The storage is full.");
+            pending.push(typeof data === "string" ? encoder.encode(data) : data.slice());
             return Promise.resolve();
           },
           // Like the browser, the new content replaces the file in one step when the stream closes.
           close: () => {
-            files.set(path, encoder.encode(pending));
+            const bytes = new Uint8Array(pending.reduce((total, part) => total + part.length, 0));
+            let at = 0;
+            for (const part of pending) {
+              bytes.set(part, at);
+              at += part.length;
+            }
+            files.set(path, bytes);
             return Promise.resolve();
           },
         });
@@ -98,9 +127,15 @@ export function memoryFolder(initial: Readonly<Record<string, string | Uint8Arra
         }
         return Promise.resolve(fileHandle(pathOf(child), child));
       },
+      // Like the browser, removes a file or an empty folder.
       removeEntry: (child) => {
         guard();
-        if (!files.delete(pathOf(child))) fail("NotFoundError", `${child} was not found.`);
+        const path = pathOf(child);
+        if (files.delete(path)) return Promise.resolve();
+        if (!hasFolder(path)) fail("NotFoundError", `${child} was not found.`);
+        if ([...files.keys()].some((p) => p.startsWith(`${path}/`)))
+          fail("InvalidModificationError", `${child} is not empty.`);
+        for (const folder of [...folders]) if (folder === path || folder.startsWith(`${path}/`)) folders.delete(folder);
         return Promise.resolve();
       },
     };
@@ -114,5 +149,9 @@ export function memoryFolder(initial: Readonly<Record<string, string | Uint8Arra
       permission = state;
       onRequest = request;
     },
+    setFull: (full) => {
+      failWrites = full;
+    },
+    contentReads: () => contentReads,
   };
 }

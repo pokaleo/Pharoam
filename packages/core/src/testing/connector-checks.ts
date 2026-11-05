@@ -26,10 +26,12 @@ export interface ConnectorCheck {
   readonly run: (setup: () => ConnectorHarness | Promise<ConnectorHarness>) => Promise<void>;
 }
 
+const RECORD_ID = "0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d";
+
 const RECORD = createRecordFile(
   {
     schema: "evidence/1",
-    id: "0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d",
+    id: RECORD_ID,
     created: "2026-10-24T14:02:11Z",
     ai: null,
     kind: "project",
@@ -54,6 +56,11 @@ Résumé: built the payments API.
 
 const HAND_MADE_LOCATION = "evidence/hand-made.md";
 const BROKEN_LOCATION = "evidence/broken.md";
+
+const OTHER_ID = "0192f3a1-0000-7000-8000-0000000000aa";
+// Bytes no text decoder would keep: a zero, an invalid UTF-8 sequence and a lone high byte.
+const BINARY = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x00, 0xc3, 0x28, 0xff, 0x0a]);
+const OUTSIDE_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x00, 0x01]);
 
 type Setup = () => ConnectorHarness | Promise<ConnectorHarness>;
 
@@ -262,5 +269,128 @@ export const CONNECTOR_CHECKS: readonly ConnectorCheck[] = [
     const current = versionAt(value(await connector.list(), "Listing"), created.location) ?? "";
     value(await connector.delete(created.location, current), "Deleting at the current version");
     same(await readOutside(created.location), undefined, "The stored text after deleting");
+  }),
+  check(
+    "adds an attachment, then lists it and reads it back byte for byte at the same version",
+    async (setup) => {
+      const { connector, readAttachmentOutside } = await setup();
+      const added = value(await connector.addAttachment(RECORD_ID, "certificate.pdf", BINARY), "Adding");
+      same(added.name, "certificate.pdf", "The added name");
+      same(added.size, BINARY.length, "The added size");
+      same(value(await connector.attachments(RECORD_ID), "Listing attachments"), [added], "The listing");
+      const read = value(await connector.readAttachment(RECORD_ID, "certificate.pdf"), "Reading");
+      same([...read.bytes], [...BINARY], "The read bytes");
+      same(read.version, added.version, "The read version");
+      same(
+        [...((await readAttachmentOutside(RECORD_ID, "certificate.pdf")) ?? [])],
+        [...BINARY],
+        "The stored bytes",
+      );
+    },
+  ),
+  check("keeps attachments apart from records, and from other records' attachments", async (setup) => {
+    const { connector } = await setup();
+    const created = value(await connector.create(RECORD), "Creating");
+    // An attachment that looks like a record must still never be listed as one.
+    // The record's text is ASCII, so each character is one byte.
+    const text = Uint8Array.from(printRecordFile(withTopField(RECORD, "id", OTHER_ID)), (c) =>
+      c.charCodeAt(0),
+    );
+    value(await connector.addAttachment(RECORD_ID, "notes.md", text), "Adding");
+    same(
+      value(await connector.list(), "Listing").map((ref) => ref.location),
+      [created.location],
+      "The listed locations",
+    );
+    same(
+      value(await connector.attachments(OTHER_ID), "Listing another record's attachments"),
+      [],
+      "The listing",
+    );
+  }),
+  check("never adds an attachment over a file already there, even one put outside", async (setup) => {
+    const { connector, putAttachmentOutside, readAttachmentOutside } = await setup();
+    await putAttachmentOutside(RECORD_ID, "cv.pdf", OUTSIDE_BYTES);
+    const added = await connector.addAttachment(RECORD_ID, "cv.pdf", BINARY);
+    same(errorKind(added, "Adding over an existing file"), "exists", "The error");
+    same(
+      [...((await readAttachmentOutside(RECORD_ID, "cv.pdf")) ?? [])],
+      [...OUTSIDE_BYTES],
+      "The stored bytes",
+    );
+  }),
+  check("lists and reads an attachment put outside Pharoam", async (setup) => {
+    const { connector, putAttachmentOutside } = await setup();
+    await putAttachmentOutside(RECORD_ID, "scan.png", OUTSIDE_BYTES);
+    const listed = value(await connector.attachments(RECORD_ID), "Listing attachments");
+    same(
+      listed.map(({ name, size }) => ({ name, size })),
+      [{ name: "scan.png", size: OUTSIDE_BYTES.length }],
+      "The listing",
+    );
+    const read = value(await connector.readAttachment(RECORD_ID, "scan.png"), "Reading");
+    same([...read.bytes], [...OUTSIDE_BYTES], "The read bytes");
+    same(read.version, listed[0]?.version, "The read version");
+  }),
+  check("reports an attachment with nothing there as not found", async (setup) => {
+    const { connector } = await setup();
+    same(value(await connector.attachments(RECORD_ID), "Listing attachments"), [], "The listing");
+    same(
+      errorKind(await connector.readAttachment(RECORD_ID, "missing.pdf"), "Reading a missing attachment"),
+      "not-found",
+      "The error",
+    );
+    same(
+      errorKind(
+        await connector.deleteAttachment(RECORD_ID, "missing.pdf", "v1"),
+        "Deleting a missing attachment",
+      ),
+      "not-found",
+      "The error",
+    );
+  }),
+  check(
+    "deletes an attachment only at the version listed, never after it changed outside (AD10)",
+    async (setup) => {
+      const { connector, putAttachmentOutside, readAttachmentOutside } = await setup();
+      const added = value(await connector.addAttachment(RECORD_ID, "cv.pdf", BINARY), "Adding");
+      await putAttachmentOutside(RECORD_ID, "cv.pdf", OUTSIDE_BYTES);
+      same(
+        errorKind(await connector.deleteAttachment(RECORD_ID, "cv.pdf", added.version), "Deleting"),
+        "conflict",
+        "The error",
+      );
+      same(
+        [...((await readAttachmentOutside(RECORD_ID, "cv.pdf")) ?? [])],
+        [...OUTSIDE_BYTES],
+        "The stored bytes",
+      );
+      const current = value(await connector.attachments(RECORD_ID), "Listing attachments")[0];
+      if (current === undefined || current.version === added.version)
+        fail("The version didn't change after an outside edit.");
+      value(
+        await connector.deleteAttachment(RECORD_ID, "cv.pdf", current.version),
+        "Deleting at the current version",
+      );
+      same(await readAttachmentOutside(RECORD_ID, "cv.pdf"), undefined, "The stored bytes after deleting");
+      same(
+        value(await connector.attachments(RECORD_ID), "Listing attachments"),
+        [],
+        "The listing after deleting",
+      );
+    },
+  ),
+  check("refuses an attachment whose record or name could reach outside its folder", async (setup) => {
+    const { connector } = await setup();
+    for (const [record, name] of [
+      [RECORD_ID, "../pharoam.md"],
+      [RECORD_ID, ".hidden"],
+      ["../evidence", "cv.pdf"],
+    ] as const) {
+      const added = await connector.addAttachment(record, name, BINARY);
+      if (added.ok) fail(`Adding ${record} ${name} should have failed, but succeeded.`);
+    }
+    same(value(await connector.list(), "Listing"), [], "The listing");
+    same(value(await connector.attachments(RECORD_ID), "Listing attachments"), [], "The attachments");
   }),
 ];

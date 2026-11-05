@@ -10,15 +10,18 @@
  */
 import {
   err,
+  isAttachmentName,
   ok,
+  parseProfileRecordId,
   parseRecordFile,
   printRecordFile,
   type Result,
   type StorageConnector,
   type StorageError,
+  type StoredAttachment,
   type StoredRef,
 } from "@pharoam/core";
-import { PROFILE_FOLDERS, recordPath } from "./layout.ts";
+import { ATTACHMENTS_FOLDER, PROFILE_FOLDERS, recordPath } from "./layout.ts";
 
 /** The part of the File System Access API's file handle the connector uses. */
 export interface FileHandle {
@@ -26,10 +29,17 @@ export interface FileHandle {
   readonly kind: "file";
   /** The file's name, such as `python.md`. */
   readonly name: string;
-  /** Reads the file's current content. */
-  getFile(): Promise<{ arrayBuffer(): Promise<ArrayBuffer> }>;
+  /** Reads the file's current content, size and last change. */
+  getFile(): Promise<{
+    readonly size: number;
+    readonly lastModified: number;
+    arrayBuffer(): Promise<ArrayBuffer>;
+  }>;
   /** Opens a stream whose content replaces the file in one step when it is closed. */
-  createWritable(): Promise<{ write(data: string): Promise<void>; close(): Promise<void> }>;
+  createWritable(): Promise<{
+    write(data: string | Uint8Array<ArrayBuffer>): Promise<void>;
+    close(): Promise<void>;
+  }>;
 }
 
 /**
@@ -49,7 +59,7 @@ export interface FolderHandle {
   getDirectoryHandle(name: string, options?: { create?: boolean }): Promise<FolderHandle>;
   /** Opens a file inside this folder, creating it if asked. */
   getFileHandle(name: string, options?: { create?: boolean }): Promise<FileHandle>;
-  /** Deletes a file inside this folder. */
+  /** Deletes a file, or an empty folder, inside this folder. */
   removeEntry(name: string): Promise<void>;
   /** Says whether the app may read and write the folder. */
   queryPermission?(descriptor: { mode: "readwrite" }): Promise<PermissionState>;
@@ -86,7 +96,9 @@ export async function requestAccess(
  *
  * @remarks Every call first checks the folder's permission and, without it, does nothing and returns
  * `unavailable` (MVP S1.4). Records are found anywhere in the folder; hidden folders (such as `.obsidian` or `.git`)
- * and `_attachments` are skipped.
+ * and `_attachments` are skipped. Files kept with a record are in `evidence/_attachments/<record id>/`, byte for
+ * byte (MVP S14). Their version is their size and last change, not a hash, so listing them reads no file: a large
+ * file put there by hand costs nothing until it is downloaded.
  * @param root - The chosen folder's handle, from `showDirectoryPicker()` or kept from an earlier visit.
  * @returns A connector that reads and writes records in that folder.
  * @example
@@ -112,6 +124,39 @@ export function createFolderConnector(root: FolderHandle): StorageConnector {
     let folder = root;
     for (const part of parts) folder = await folder.getDirectoryHandle(part, { create });
     return { folder, name };
+  }
+
+  // The folder for a record's files, and the folder holding it; `undefined` when it doesn't exist and isn't to be
+  // created, or the ID isn't a record ID.
+  async function attachmentFolder(
+    record: string,
+    create: boolean,
+  ): Promise<{ parent: FolderHandle; folder: FolderHandle } | undefined> {
+    if (!parseProfileRecordId(record).ok) return undefined;
+    try {
+      let parent = root;
+      for (const part of ATTACHMENTS_FOLDER) parent = await parent.getDirectoryHandle(part, { create });
+      return { parent, folder: await parent.getDirectoryHandle(record, { create }) };
+    } catch (error) {
+      if (isNotFound(error)) return undefined;
+      throw error;
+    }
+  }
+
+  // An attachment's file and its folders; `undefined` when there is none, or the name could reach outside its folder.
+  async function attachmentFile(
+    record: string,
+    name: string,
+  ): Promise<{ parent: FolderHandle; folder: FolderHandle; handle: FileHandle } | undefined> {
+    if (!isPlainName(name)) return undefined;
+    const place = await attachmentFolder(record, false);
+    if (place === undefined) return undefined;
+    try {
+      return { ...place, handle: await place.folder.getFileHandle(name) };
+    } catch (error) {
+      if (isNotFound(error)) return undefined;
+      throw error;
+    }
   }
 
   return {
@@ -199,6 +244,78 @@ export function createFolderConnector(root: FolderHandle): StorageConnector {
         return err(isNotFound(error) ? NOT_FOUND : unavailable(error));
       }
     },
+
+    attachments: async (record) => {
+      if (!(await granted())) return err(NOT_GRANTED);
+      try {
+        const place = await attachmentFolder(record, false);
+        const found: StoredAttachment[] = [];
+        if (place === undefined) return ok(found);
+        for await (const entry of place.folder.values()) {
+          // Hidden files, such as `.DS_Store`, aren't the person's attachments.
+          if (entry.kind !== "file" || entry.name.startsWith(".")) continue;
+          const file = await entry.getFile();
+          found.push({ name: entry.name, version: stamp(file), size: file.size });
+        }
+        return ok(found.toSorted((a, b) => (a.name < b.name ? -1 : 1)));
+      } catch (error) {
+        return err(unavailable(error));
+      }
+    },
+
+    readAttachment: async (record, name) => {
+      if (!(await granted())) return err(NOT_GRANTED);
+      try {
+        const file = await attachmentFile(record, name);
+        if (file === undefined) return err(NOT_FOUND);
+        const stored = await file.handle.getFile();
+        return ok({ bytes: new Uint8Array(await stored.arrayBuffer()), version: stamp(stored) });
+      } catch (error) {
+        return err(isNotFound(error) ? NOT_FOUND : unavailable(error));
+      }
+    },
+
+    addAttachment: async (record, name, bytes) => {
+      if (!(await granted())) return err(NOT_GRANTED);
+      if (!parseProfileRecordId(record).ok || !isAttachmentName(name))
+        return err(unavailable(new Error(`Can't keep a file named ${name} with record ${record}.`)));
+      try {
+        const place = await attachmentFolder(record, true);
+        if (place === undefined)
+          return err(unavailable(new Error(`Can't make a folder for record ${record}.`)));
+        const { folder } = place;
+        if (await exists(folder, name))
+          return err({ kind: "exists", location: [...ATTACHMENTS_FOLDER, record, name].join("/") });
+        const handle = await folder.getFileHandle(name, { create: true });
+        try {
+          await writeBytes(handle, bytes);
+        } catch (error) {
+          // The browser made an empty file before the write failed, as on a full disk; nothing is left behind. Only
+          // while it is still empty, in case something else wrote it in the meantime.
+          if ((await handle.getFile()).size === 0) await folder.removeEntry(name).catch(() => undefined);
+          throw error;
+        }
+        const stored = await handle.getFile();
+        return ok({ name, version: stamp(stored), size: stored.size });
+      } catch (error) {
+        return err(unavailable(error));
+      }
+    },
+
+    deleteAttachment: async (record, name, expectedVersion) => {
+      if (!(await granted())) return err(NOT_GRANTED);
+      try {
+        const file = await attachmentFile(record, name);
+        if (file === undefined) return err(NOT_FOUND);
+        if (stamp(await file.handle.getFile()) !== expectedVersion) return err({ kind: "conflict" });
+        await file.folder.removeEntry(name);
+        // The record's folder goes too once it is empty, so deleted evidence leaves nothing behind.
+        if (await isEmpty(file.folder)) await file.parent.removeEntry(record).catch(() => undefined);
+        return ok(undefined);
+      } catch (error) {
+        return err(isNotFound(error) ? NOT_FOUND : unavailable(error));
+      }
+    },
   };
 }
 
@@ -212,6 +329,16 @@ async function collect(folder: FolderHandle, prefix: string, found: StoredRef[])
       found.push({ location: `${prefix}${entry.name}`, version: await fingerprint(await bytesOf(entry)) });
     }
   }
+}
+
+// A name inside one folder: not empty, not the folder itself or its parent, with no path separators.
+function isPlainName(name: string): boolean {
+  return name !== "" && name !== "." && name !== ".." && !/[/\\]/.test(name);
+}
+
+async function isEmpty(folder: FolderHandle): Promise<boolean> {
+  for await (const _ of folder.values()) return false;
+  return true;
 }
 
 async function exists(folder: FolderHandle, name: string): Promise<boolean> {
@@ -234,6 +361,12 @@ async function writeText(handle: FileHandle, text: string): Promise<void> {
   await stream.close();
 }
 
+async function writeBytes(handle: FileHandle, bytes: Uint8Array<ArrayBuffer>): Promise<void> {
+  const stream = await handle.createWritable();
+  await stream.write(bytes);
+  await stream.close();
+}
+
 // The file's text, keeping a byte-order mark; `undefined` if the bytes aren't UTF-8.
 function decode(bytes: Uint8Array): string | undefined {
   try {
@@ -241,6 +374,11 @@ function decode(bytes: Uint8Array): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+// An attachment's version: its size and the time of its last change, both of which any change alters.
+function stamp(file: { readonly size: number; readonly lastModified: number }): string {
+  return `${String(file.size)}-${String(file.lastModified)}`;
 }
 
 async function fingerprint(bytes: Uint8Array<ArrayBuffer>): Promise<string> {

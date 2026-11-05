@@ -18,7 +18,11 @@ interface StorageConnector {                         // packages/core/src/core-s
   create(file): Result<StoredRef>                     // where the layout puts it; never over an existing record
   write(location, file, expectedVersion): Result<VersionToken>  // conflict if changed since read (AD10)
   delete(location, expectedVersion): Result<void>     // conflict if changed since read
-  // Later: capabilities, readAttachment / writeAttachment
+  attachments(recordId): Result<StoredAttachment[]>   // files kept with a record: name, version token, size
+  readAttachment(recordId, name): Result<{ bytes, version }>
+  addAttachment(recordId, name, bytes): Result<StoredAttachment>          // never over a file already there
+  deleteAttachment(recordId, name, expectedVersion): Result<void>         // conflict if changed since listed
+  // Later: capabilities
 }
 ```
 
@@ -27,6 +31,7 @@ interface StorageConnector {                         // packages/core/src/core-s
 
 - The **version token** detects conflicts: a file's modified time or content hash, or Notion's last-edited time.
 - **A local folder has no atomic compare-and-swap.** The connector checks the token again just before writing, and the browser commits the new content in one step, but an edit landing between that check and the write can still be lost. The window is kept as short as possible, and the connector suite tests it.
+- **Attachments are addressed by their record's ID and their name** (MVP S14), not by location, so a record can move without losing its files. They are bytes, kept exactly, and never listed as records. Their version token is their size and modified time, so listing them reads no file; a file changed outside Pharoam is never deleted (AD10). As with records, adding a file has a short window between checking that the name is free and creating the file, in which a file saved there from outside could be replaced. The core makes every name safe before storage sees it, and connectors refuse any other name, or an ID that isn't a record ID, so no name can reach outside the record's own folder.
 - A connector may have a **relay part** where its service blocks browsers (AD12). The interface is the same either way.
 
 ## 2. AI task definitions

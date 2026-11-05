@@ -7,6 +7,7 @@
  * is never silently overwritten (AD10, MVP S12).
  * @packageDocumentation
  */
+import { MAX_ATTACHMENT_BYTES, attachmentName, numberedName } from "./attachments.ts";
 import {
   editedEvidence,
   evidenceDraft,
@@ -75,6 +76,19 @@ export type WriteError = StorageError | { readonly kind: "not-found" } | { reado
 /** Why a connector couldn't store a new record; `exists` means something is already at its location. */
 export type CreateError = StorageError | { readonly kind: "exists"; readonly location: string };
 
+/** A file kept with a record, as storage lists it (MVP S14). */
+export interface StoredAttachment {
+  /** The file's name, which the record lists under `attachments`. */
+  readonly name: string;
+  /** A token that changes whenever the file changes, as for records. */
+  readonly version: string;
+  /** The file's size in bytes. */
+  readonly size: number;
+}
+
+/** Why a connector couldn't read an attachment. */
+export type AttachmentReadError = StorageError | { readonly kind: "not-found" };
+
 /**
  * The storage a profile lives in: a local folder, Obsidian, Git or another service (interfaces §1).
  *
@@ -109,6 +123,34 @@ export interface StorageConnector {
   ) => Promise<Result<string, WriteError>>;
   /** Deletes a record, only if it is still at `expectedVersion`. */
   readonly delete: (location: string, expectedVersion: string) => Promise<Result<undefined, WriteError>>;
+  /**
+   * Lists the files kept with a record, by the record's ID (MVP S14).
+   *
+   * @remarks Attachments are never listed as records, even a Markdown file (data model §8).
+   */
+  readonly attachments: (record: string) => Promise<Result<readonly StoredAttachment[], StorageError>>;
+  /** Reads one of a record's files, byte for byte. */
+  readonly readAttachment: (
+    record: string,
+    name: string,
+  ) => Promise<Result<{ bytes: Uint8Array<ArrayBuffer>; version: string }, AttachmentReadError>>;
+  /**
+   * Keeps a new file with a record, never over a file already there.
+   *
+   * @remarks Refuses, as unavailable, a record ID or name that could reach outside the record's own folder; the
+   * core only gives names made safe (`attachmentName`).
+   */
+  readonly addAttachment: (
+    record: string,
+    name: string,
+    bytes: Uint8Array<ArrayBuffer>,
+  ) => Promise<Result<StoredAttachment, CreateError>>;
+  /** Deletes one of a record's files, only if it is still at `expectedVersion` (AD10). */
+  readonly deleteAttachment: (
+    record: string,
+    name: string,
+    expectedVersion: string,
+  ) => Promise<Result<undefined, WriteError>>;
 }
 
 /** A valid record the service has read. */
@@ -206,6 +248,45 @@ export type EditEvidenceError = SaveError | { readonly kind: "not-editable"; rea
 
 /** Why the service didn't delete a piece of evidence. */
 export type DeleteEvidenceError = SaveError | { readonly kind: "not-evidence"; readonly location: string };
+
+/** A file a piece of evidence lists under `attachments`, and what storage holds under its name (MVP S14). */
+export interface AttachmentView {
+  /** The name the evidence lists. */
+  readonly name: string;
+  /** The stored file, or `undefined` when it is missing, such as one moved or deleted outside Pharoam. */
+  readonly stored: StoredAttachment | undefined;
+}
+
+/** A file to attach, as the person picked it. */
+export interface NewAttachment {
+  /** The file's own name; the service makes it safe to store (`attachmentName`). */
+  readonly name: string;
+  /** The file's bytes. */
+  readonly bytes: Uint8Array<ArrayBuffer>;
+}
+
+/** Why the service didn't attach a file: the reasons evidence can't be changed, or the file is over the limit. */
+export type AttachError = EditEvidenceError | { readonly kind: "too-large"; readonly limit: number };
+
+/** Why the service didn't list a piece of evidence's files. */
+export type AttachmentsError = StorageError | { readonly kind: "not-found"; readonly location: string };
+
+/** Why the service didn't read an attached file; `not-attached` means the evidence doesn't list that name. */
+export type ReadAttachmentError =
+  AttachmentReadError | { readonly kind: "not-attached"; readonly name: string };
+
+/**
+ * Why the service didn't remove an attached file.
+ *
+ * @remarks `attachment-changed`: the file changed outside Pharoam since it was shown, so nothing was removed (AD10).
+ * `not-unlisted`: the file was deleted, but the evidence couldn't then be saved without it, so it still lists the
+ * file, now shown as missing.
+ */
+export type RemoveAttachmentError =
+  | EditEvidenceError
+  | { readonly kind: "not-attached"; readonly name: string }
+  | { readonly kind: "attachment-changed"; readonly name: string }
+  | { readonly kind: "not-unlisted"; readonly name: string };
 
 /** An observation that cites a piece of evidence (MVP S5.3). */
 export interface EvidenceReference {
@@ -357,9 +438,50 @@ export interface CoreService {
    * Deletes a piece of evidence the person confirmed, only if storage still has the version read (MVP S5.2, AD10).
    *
    * @remarks Only evidence is deleted, never a record under Needs attention (hard rule 3). The overview is brought
-   * up to date afterwards.
+   * up to date afterwards. The evidence's files are deleted only when the person agreed, and only those it lists
+   * (MVP S14.4): pass them as {@link CoreService.attachments} showed them. A file changed since then, or one storage
+   * couldn't delete, is kept and named in `kept`.
    */
-  readonly deleteEvidence: (location: string) => Promise<Result<undefined, DeleteEvidenceError>>;
+  readonly deleteEvidence: (
+    location: string,
+    attachments?: readonly AttachmentView[],
+  ) => Promise<Result<{ readonly kept: readonly string[] }, DeleteEvidenceError>>;
+  /**
+   * The files a piece of evidence lists, in its order, each with what storage holds (MVP S14).
+   *
+   * @remarks A file in storage the evidence doesn't list isn't shown; a listed file storage doesn't have is shown as
+   * missing.
+   */
+  readonly attachments: (location: string) => Promise<Result<readonly AttachmentView[], AttachmentsError>>;
+  /**
+   * Keeps a file with a piece of evidence and lists it under `attachments` (MVP S14.1).
+   *
+   * @remarks The name is made safe, and numbered when the evidence or storage already has it, so no file is ever
+   * replaced. A file over {@link MAX_ATTACHMENT_BYTES} is refused (S14.3). If the evidence changed outside Pharoam,
+   * the file is kept for the conflict's "mine"; if it can't be saved for another reason, the file is removed
+   * again, so the evidence is unchanged either way. A diagnostic's record is never changed (data model §4).
+   */
+  readonly attachFile: (location: string, file: NewAttachment) => Promise<Result<LoadedRecord, AttachError>>;
+  /**
+   * Reads a file the evidence lists, byte for byte, for the person to open or download (MVP S14.2).
+   *
+   * @remarks Only names the evidence lists can be read. The app never shows a file inside the page (hard rule 10).
+   */
+  readonly readAttachment: (
+    location: string,
+    name: string,
+  ) => Promise<Result<Uint8Array<ArrayBuffer>, ReadAttachmentError>>;
+  /**
+   * Deletes one of the evidence's files from storage and from its `attachments` list.
+   *
+   * @remarks The file is deleted first, only if it is still as {@link CoreService.attachments} showed it (AD10); a
+   * file already missing is just taken off the list. If the evidence then can't be saved, it still lists the file,
+   * now shown as missing, so nothing is left hidden.
+   */
+  readonly removeAttachment: (
+    location: string,
+    attachment: AttachmentView,
+  ) => Promise<Result<LoadedRecord, RemoveAttachmentError>>;
   /**
    * Appends the person's own rating of a skill to its skill record, starting the record if needed (MVP S6).
    *
@@ -670,6 +792,45 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
     return err({ kind: "no-observation", id });
   }
 
+  // A piece of evidence Pharoam may change: not under Needs attention, and not a diagnostic's record (data model §4).
+  function editableEvidence(location: string): Result<LoadedRecord, EditEvidenceError> {
+    if (attention.some((item) => item.location === location))
+      return err({ kind: "needs-attention", location });
+    const current = loaded.find((r) => r.location === location);
+    if (current === undefined) return err({ kind: "not-found", location });
+    if (current.record.schema !== "evidence/1" || current.record.kind === "assessment")
+      return err({ kind: "not-editable", location });
+    return ok(current);
+  }
+
+  const listedFiles = (record: LoadedRecord): readonly string[] =>
+    record.record.schema === "evidence/1" ? record.record.attachments : [];
+
+  // Saves the evidence with a new list of files and the time of the change.
+  function saveFiles(
+    current: LoadedRecord,
+    files: readonly string[],
+  ): Promise<Result<LoadedRecord, SaveError>> {
+    const changed = withTopFields(current.file, { attachments: [...files], updated: timestamp(ids.now()) });
+    return updateRecord(current.location, changed);
+  }
+
+  // Stores the file under its safe name, or the first numbered name neither the evidence nor storage has.
+  async function storeFile(
+    record: LoadedRecord,
+    file: NewAttachment,
+  ): Promise<Result<StoredAttachment, CreateError>> {
+    const name = attachmentName(file.name);
+    const taken = new Set(listedFiles(record).map(sameName));
+    let added: Result<StoredAttachment, CreateError> = err({ kind: "exists", location: name });
+    for (let number = 1; number <= MAX_NUMBERED && !added.ok && added.error.kind === "exists"; number++) {
+      const candidate = number === 1 ? name : numberedName(name, number);
+      if (!taken.has(sameName(candidate)))
+        added = await storage.addAttachment(record.record.id, candidate, file.bytes);
+    }
+    return added;
+  }
+
   return {
     open: async () => {
       const listed = await storage.list();
@@ -737,12 +898,9 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
     draftEvidence: (form) => evidenceDraft(form, nextId(), timestamp(ids.now())),
 
     editEvidence: async (location, form) => {
-      if (attention.some((item) => item.location === location))
-        return err({ kind: "needs-attention", location });
-      const current = loaded.find((r) => r.location === location);
-      if (current === undefined) return err({ kind: "not-found", location });
-      if (current.record.schema !== "evidence/1" || current.record.kind === "assessment")
-        return err({ kind: "not-editable", location });
+      const editable = editableEvidence(location);
+      if (!editable.ok) return editable;
+      const current = editable.value;
       const edited = editedEvidence(current.file, form, timestamp(ids.now()));
       if (!edited.ok) return edited;
       return updateRecord(location, edited.value);
@@ -847,7 +1005,7 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
           : [],
       ),
 
-    deleteEvidence: async (location) => {
+    deleteEvidence: async (location, attachments = []) => {
       if (attention.some((item) => item.location === location))
         return err({ kind: "needs-attention", location });
       const current = loaded.find((r) => r.location === location);
@@ -860,7 +1018,79 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
       }
       loaded = loaded.filter((r) => r !== current);
       await afterChange(current);
-      return ok(undefined);
+      // Only files the evidence listed, as they were shown; anything else stays (MVP S14.4).
+      const listed = new Set(current.record.attachments);
+      const kept: string[] = [];
+      for (const { name, stored } of attachments) {
+        if (!listed.has(name) || stored === undefined) continue;
+        const deleted = await storage.deleteAttachment(current.record.id, stored.name, stored.version);
+        if (!deleted.ok && deleted.error.kind !== "not-found") kept.push(name);
+      }
+      return ok({ kept });
+    },
+
+    attachments: async (location) => {
+      const current = loaded.find((r) => r.location === location);
+      if (current?.record.schema !== "evidence/1") return err({ kind: "not-found", location });
+      const stored = await storage.attachments(current.record.id);
+      if (!stored.ok) return stored;
+      // A name listed twice by hand is shown once.
+      return ok(
+        [...new Set(current.record.attachments)].map((name) => ({
+          name,
+          stored: storedAs(stored.value, name),
+        })),
+      );
+    },
+
+    attachFile: async (location, file) => {
+      const editable = editableEvidence(location);
+      if (!editable.ok) return editable;
+      if (file.bytes.length > MAX_ATTACHMENT_BYTES)
+        return err({ kind: "too-large", limit: MAX_ATTACHMENT_BYTES });
+      const current = editable.value;
+      const added = await storeFile(current, file);
+      if (!added.ok) return err(added.error);
+      const saved = await saveFiles(current, [...listedFiles(current), added.value.name]);
+      // On a conflict the file stays for the person's "mine"; otherwise the evidence is left as it was.
+      if (!saved.ok && saved.error.kind !== "conflict")
+        await storage.deleteAttachment(current.record.id, added.value.name, added.value.version);
+      return saved;
+    },
+
+    readAttachment: async (location, name) => {
+      const current = loaded.find((r) => r.location === location);
+      if (current === undefined || !listedFiles(current).includes(name))
+        return err({ kind: "not-attached", name });
+      // Read by the name storage holds, which may be spelled another way (NFC or NFD) than the evidence lists it.
+      const stored = await storage.attachments(current.record.id);
+      if (!stored.ok) return stored;
+      const file = storedAs(stored.value, name);
+      if (file === undefined) return err({ kind: "not-found" });
+      const read = await storage.readAttachment(current.record.id, file.name);
+      return read.ok ? ok(read.value.bytes) : read;
+    },
+
+    removeAttachment: async (location, { name, stored }) => {
+      const editable = editableEvidence(location);
+      if (!editable.ok) return editable;
+      const current = editable.value;
+      const files = listedFiles(current);
+      if (!files.includes(name)) return err({ kind: "not-attached", name });
+      if (stored !== undefined) {
+        const deleted = await storage.deleteAttachment(current.record.id, stored.name, stored.version);
+        // A file already gone is just taken off the list.
+        if (!deleted.ok && deleted.error.kind === "conflict")
+          return err({ kind: "attachment-changed", name });
+        if (!deleted.ok && deleted.error.kind === "unavailable") return err(deleted.error);
+      }
+      const saved = await saveFiles(
+        current,
+        files.filter((file) => file !== name),
+      );
+      // The file is gone, so the person mustn't be told nothing changed.
+      if (!saved.ok && stored !== undefined) return err({ kind: "not-unlisted", name });
+      return saved;
     },
 
     createProfile: async (fields) => {
@@ -945,6 +1175,15 @@ function invalidLevel(): SaveError {
   const issue = { path: ["entries", 0, "level"], code: "invalid_type", message: "Not a level." };
   return { kind: "invalid", error: { kind: "invalid-fields", issues: [issue] } };
 }
+
+// The stored file for a name the evidence lists, matching however either spells accented letters (NFC or NFD).
+function storedAs(stored: readonly StoredAttachment[], name: string): StoredAttachment | undefined {
+  const wanted = name.normalize("NFC");
+  return stored.find((file) => file.name.normalize("NFC") === wanted);
+}
+
+// How many numbered names to try for a file before giving up, as storage keeps saying each one exists.
+const MAX_NUMBERED = 100;
 
 // A skill's name compared as the person would: ignoring case and surrounding spaces.
 function sameName(name: string): string {
