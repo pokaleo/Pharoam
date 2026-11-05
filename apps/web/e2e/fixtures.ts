@@ -87,18 +87,40 @@ export class App {
   }
 
   /**
+   * Reads a file in the folder byte for byte, such as one kept with evidence.
+   *
+   * @param path - Where, relative to the folder.
+   * @returns Its bytes, or `undefined` when there is no such file.
+   */
+  async readBytes(path: string): Promise<number[] | undefined> {
+    return this.page.evaluate(
+      async ({ folder, path }) => {
+        try {
+          let dir = await (await navigator.storage.getDirectory()).getDirectoryHandle(folder);
+          const parts = path.split("/");
+          const name = parts.pop() ?? path;
+          for (const part of parts) dir = await dir.getDirectoryHandle(part);
+          return [...new Uint8Array(await (await (await dir.getFileHandle(name)).getFile()).arrayBuffer())];
+        } catch {
+          return undefined;
+        }
+      },
+      { folder: this.folder, path },
+    );
+  }
+
+  /**
    * Lists the files in one of the folder's folders.
    *
-   * @param path - The folder inside the profile's folder, such as `evidence`.
+   * @param path - The folder inside the profile's folder, such as `evidence` or `evidence/_attachments`.
    * @returns The files' names, sorted; empty when there is no such folder.
    */
   async list(path: string): Promise<string[]> {
     return this.page.evaluate(
       async ({ folder, path }) => {
         try {
-          const dir = await (
-            await (await navigator.storage.getDirectory()).getDirectoryHandle(folder)
-          ).getDirectoryHandle(path);
+          let dir = await (await navigator.storage.getDirectory()).getDirectoryHandle(folder);
+          for (const part of path.split("/")) dir = await dir.getDirectoryHandle(part);
           const names: string[] = [];
           for await (const entry of dir.values()) names.push(entry.name);
           return names.sort();

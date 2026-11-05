@@ -20,7 +20,7 @@ import { Tag } from "../ui/tag.tsx";
 /**
  * Lists every piece of evidence, each opening its own page, with the way to add more.
  *
- * @remarks After a deletion, says what was deleted (MVP S5.2).
+ * @remarks After a deletion, says what was deleted, and any of its files kept (MVP S5.2, S14.4).
  * @param props - The open profile's service.
  * @returns The title, the add button and the list, or what to start with when there is none.
  */
@@ -29,6 +29,8 @@ export function EvidenceListPage({ service }: { readonly service: CoreService })
   const { services } = useSession();
   const content = useQuery({ queryKey: ["content"], queryFn: services.content, staleTime: Infinity });
   const deleted = useRouterState({ select: (state) => state.location.state.deleted });
+  const keptFiles = useRouterState({ select: (state) => state.location.state.keptFiles }) ?? [];
+  const list = new Intl.ListFormat(t("app.locale"), { type: "conjunction" });
   const evidence = service
     .records()
     .flatMap((loaded) => (loaded.record.schema === "evidence/1" ? [loaded.record] : []));
@@ -48,7 +50,14 @@ export function EvidenceListPage({ service }: { readonly service: CoreService })
       />
       <div className="grid gap-(--gap)">
         <p role="status" className="text-ink-2 empty:hidden">
-          {deleted === undefined ? "" : t("evidence.deleted", { title: deleted })}
+          {deleted === undefined
+            ? ""
+            : [
+                t("evidence.deleted", { title: deleted }),
+                keptFiles.length === 0 ? "" : t("evidence.keptFiles", { files: list.format(keptFiles) }),
+              ]
+                .filter((part) => part !== "")
+                .join(" ")}
         </p>
         {evidence.length === 0 ? (
           <Empty text={t("evidence.empty")} />

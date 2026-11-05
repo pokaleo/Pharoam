@@ -19,6 +19,12 @@ export const PHAROAM = lines(
   "I like small teams.",
 );
 
+/** The ID of {@link PAYMENTS_API}, which names the folder its files are kept in. */
+export const PAYMENTS_API_ID = "0192f3a1-0000-7000-8000-000000000002";
+
+/** A file that isn't text: the start of a PDF, then bytes no text decoder keeps. */
+export const PDF_BYTES = [0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x37, 0x0a, 0x00, 0xc3, 0x28, 0xff, 0xfe];
+
 /** A piece of evidence: a project. */
 export const PAYMENTS_API = lines(
   "---",

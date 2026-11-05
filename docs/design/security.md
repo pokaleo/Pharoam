@@ -24,6 +24,8 @@ The user's profile files are readable by design (data model §0). Their protecti
 - Markdown from the user's files, AI output and content packs is rendered with **raw HTML disabled and the output sanitised**: no scripts, no embedded frames, safe link handling.
 - **Remote images are blocked by default** (they can reveal the user's IP address when displayed). The user can allow them per record.
 
+- **Files kept with evidence are never shown inside the page** (MVP S14.2): not as an image, a frame or a preview. They are only downloaded, with a generic type (`application/octet-stream`), so the browser saves them rather than opening them in Pharoam's own origin, where an HTML or SVG file could run scripts. Their names come from the person's files, so the core makes them safe for any folder before storage sees them, and the connectors refuse any other name, or one that could reach outside the record's own folder.
+
 ## 3. Prompt injection
 - All content (evidence, pasted text, fetched pages, answers) goes to the model as **clearly marked data**, kept separate from the instructions.
 - The output must match the task's schema, which limits what injected text can achieve.
