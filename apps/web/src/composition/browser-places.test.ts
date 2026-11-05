@@ -94,6 +94,20 @@ describe("createBrowserPlaces (ADR-0020)", () => {
     expect(brought).toEqual({ ok: false, error: { kind: "not-empty" } });
   });
 
+  it("brings in and copies out a file kept with evidence byte for byte, even one that isn't text (MVP S14)", async () => {
+    const { places } = browser();
+    const pdf = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x00, 0xc3, 0x28, 0xff]);
+    const path = "evidence/_attachments/0192f3a1-0000-7000-8000-000000000002/certificate.pdf";
+    await places.bringIn?.([
+      { path: "pharoam.md", bytes: encoder.encode(PHAROAM) },
+      { path, bytes: pdf },
+    ]);
+
+    const copy = await places.copy?.();
+
+    expect(copy?.ok && [...(copy.value.find((file) => file.path === path)?.bytes ?? [])]).toEqual([...pdf]);
+  });
+
   it("copies every file, with its path, for a download", async () => {
     const { places } = browser();
     await places.bringIn?.([

@@ -98,8 +98,8 @@ async function writeFile(root: FolderHandle, file: StoredFile): Promise<void> {
   let directory = root;
   for (const part of parts) directory = await directory.getDirectoryHandle(part, { create: true });
   const stream = await (await directory.getFileHandle(name, { create: true })).createWritable();
-  // The connector's writer takes text; a profile's files are UTF-8 text, so they round-trip unchanged.
-  await stream.write(new TextDecoder().decode(file.bytes));
+  // Bytes, not text: files kept with evidence can be anything, such as a PDF (MVP S14).
+  await stream.write(Uint8Array.from(file.bytes));
   await stream.close();
 }
 

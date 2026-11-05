@@ -14,6 +14,14 @@ const MAX_NAME_LENGTH = 60;
 export const PROFILE_FOLDERS = ["skills", "evidence", "gaps"] as const;
 
 /**
+ * Where files kept with records go: one folder per record, named by its ID (MVP S14.1).
+ *
+ * @remarks The full ID, not the short one in file names, so two records' files can never mix. The leading `_`
+ * keeps the folder out of record listings (data model §8).
+ */
+export const ATTACHMENTS_FOLDER = ["evidence", "_attachments"] as const;
+
+/**
  * Chooses the path for a new record.
  *
  * @remarks `pharoam.md` at the top; `skills/<skill>.md`; `gaps/<pathway>.md`; and for evidence and other records,

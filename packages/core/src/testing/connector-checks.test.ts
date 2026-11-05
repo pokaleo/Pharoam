@@ -110,6 +110,70 @@ describe("the connector checks catch broken connectors", () => {
     );
   });
 
+  it("catches a connector that stores attachments as text, losing bytes", async () => {
+    const asText = broken((c) => ({
+      addAttachment: (record, name, bytes) =>
+        // Decoding as Latin-1 and keeping only 7 bits is the kind of damage a text round trip does.
+        c.addAttachment(
+          record,
+          name,
+          bytes.map((byte) => byte & 0x7f),
+        ),
+    }));
+    await expect(check("adds an attachment, then lists it").run(asText)).rejects.toThrow(/read bytes/);
+  });
+
+  it("catches a connector that adds an attachment over a file already there", async () => {
+    const overwriting = broken((c) => ({
+      addAttachment: async (record, name, bytes) => {
+        const listed = await c.attachments(record);
+        const there = listed.ok ? listed.value.find((a) => a.name === name) : undefined;
+        if (there !== undefined) await c.deleteAttachment(record, name, there.version);
+        return c.addAttachment(record, name, bytes);
+      },
+    }));
+    await expect(check("never adds an attachment over a file").run(overwriting)).rejects.toThrow(
+      /should have failed/,
+    );
+  });
+
+  it("catches a connector that deletes an attachment whatever its version", async () => {
+    const careless = broken((c) => ({
+      deleteAttachment: async (record, name) => {
+        const listed = await c.attachments(record);
+        const version = listed.ok ? (listed.value.find((a) => a.name === name)?.version ?? "") : "";
+        return c.deleteAttachment(record, name, version);
+      },
+    }));
+    await expect(check("deletes an attachment only at the version listed").run(careless)).rejects.toThrow(
+      /should have failed/,
+    );
+  });
+
+  it("catches a connector that lists an attachment as a record", async () => {
+    const leaky = broken((c) => ({
+      list: async () => {
+        const listed = await c.list();
+        return listed.ok
+          ? ok([...listed.value, { location: "evidence/_attachments/x/notes.md", version: "v" }])
+          : listed;
+      },
+    }));
+    await expect(check("keeps attachments apart from records").run(leaky)).rejects.toThrow(
+      /listed locations/,
+    );
+  });
+
+  it("catches a connector that stores an attachment under any name it is given", async () => {
+    const trusting = broken(() => ({
+      addAttachment: (_record, name, bytes) =>
+        Promise.resolve(ok({ name, version: "v1", size: bytes.length })),
+    }));
+    await expect(check("refuses an attachment whose record or name").run(trusting)).rejects.toThrow(
+      /should have failed/,
+    );
+  });
+
   it("catches a connector that can't read what it lists", async () => {
     const forgetful = broken(() => ({
       read: () => Promise.resolve({ ok: false, error: { kind: "not-found" } }),

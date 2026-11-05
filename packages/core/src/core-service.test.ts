@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { examplePack } from "./__fixtures__/content-records.ts";
 import { EVIDENCE_FILE, PHAROAM_FILE } from "./__fixtures__/profile-records.ts";
-import { createCoreService, type CoreService, type ProfileFields } from "./core-service.ts";
+import { MAX_ATTACHMENT_BYTES } from "./attachments.ts";
+import {
+  createCoreService,
+  type AttachmentView,
+  type CoreService,
+  type ProfileFields,
+} from "./core-service.ts";
 import type { GapWriter } from "./gaps.ts";
 import type { OverviewWriter } from "./overview.ts";
 import type { IdSource } from "./ids.ts";
@@ -799,7 +805,7 @@ describe("editing and deleting evidence (MVP S5)", () => {
       "evidence/a.md": EVIDENCE_FILE,
       "skills/python.md": CITING,
     });
-    expect(await service.deleteEvidence("evidence/a.md")).toEqual({ ok: true, value: undefined });
+    expect(await service.deleteEvidence("evidence/a.md")).toEqual({ ok: true, value: { kept: [] } });
     expect(storage.text("evidence/a.md")).toBeUndefined();
     expect(service.find(EVIDENCE_ID)).toBeUndefined();
     expect(service.records().map((r) => r.location)).toEqual(["pharoam.md", "skills/python.md"]);
@@ -1370,5 +1376,277 @@ describe("seeing my gap to a pathway (MVP S11)", () => {
     const again = await service.exploreGap("ml-engineer");
     expect(again.ok && again.value.updated).toBe("2026-10-29T09:30:00Z");
     expect(storage.writes()).toBe(0);
+  });
+});
+
+describe("attaching files to evidence (MVP S14)", () => {
+  const EVIDENCE_ID = "0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d";
+  const PDF = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x00, 0xff]);
+  const OTHER = new Uint8Array([1, 2, 3]);
+  const LISTING = EVIDENCE_FILE.replace("source: manual", "attachments: [cv.pdf, gone.pdf]\nsource: manual");
+
+  async function withFiles(text = LISTING): Promise<{ service: CoreService; storage: MemoryConnector }> {
+    const storage = createMemoryConnector({ "evidence/a.md": text });
+    await storage.putAttachmentOutside(EVIDENCE_ID, "cv.pdf", PDF);
+    const service = createCoreService({ ...OPTIONS, storage: storage.connector });
+    await service.open();
+    return { service, storage };
+  }
+
+  async function listed(
+    service: CoreService,
+    location = "evidence/a.md",
+  ): Promise<readonly AttachmentView[]> {
+    const result = await service.attachments(location);
+    if (!result.ok) throw new Error(result.error.kind);
+    return result.value;
+  }
+
+  it("keeps the file with the evidence and lists it under attachments, with a new updated time (S14.1)", async () => {
+    const { service, storage } = await opened({ "evidence/a.md": EVIDENCE_FILE });
+    const result = await service.attachFile("evidence/a.md", { name: "Certificate.pdf", bytes: PDF });
+    expect(result.ok && result.value.record).toMatchObject({ attachments: ["Certificate.pdf"] });
+    expect([...((await storage.readAttachmentOutside(EVIDENCE_ID, "Certificate.pdf")) ?? [])]).toEqual([
+      ...PDF,
+    ]);
+    expect(storage.text("evidence/a.md")).toBe(
+      EVIDENCE_FILE.replace("updated: 2026-10-24T14:02:11Z", "updated: 2026-10-29T09:30:00Z").replace(
+        "source: manual\n",
+        "source: manual\nattachments:\n  - Certificate.pdf\n",
+      ),
+    );
+  });
+
+  it("makes the name safe, and numbers a name already taken without touching the file there", async () => {
+    const { service, storage } = await withFiles();
+    await storage.putAttachmentOutside(EVIDENCE_ID, "cv (2).pdf", OTHER);
+    const result = await service.attachFile("evidence/a.md", { name: "../cv.pdf", bytes: PDF });
+    expect(result.ok && result.value.record).toMatchObject({
+      attachments: ["cv.pdf", "gone.pdf", "cv (3).pdf"],
+    });
+    expect([...((await storage.readAttachmentOutside(EVIDENCE_ID, "cv (2).pdf")) ?? [])]).toEqual([...OTHER]);
+  });
+
+  it("refuses a file over 10 MB, and writes nothing (S14.3)", async () => {
+    const { service, storage } = await opened({ "evidence/a.md": EVIDENCE_FILE });
+    const big = new Uint8Array(MAX_ATTACHMENT_BYTES + 1);
+    expect(await service.attachFile("evidence/a.md", { name: "big.zip", bytes: big })).toEqual({
+      ok: false,
+      error: { kind: "too-large", limit: MAX_ATTACHMENT_BYTES },
+    });
+    expect(storage.writes()).toBe(0);
+  });
+
+  it("leaves the evidence unchanged when storage can't hold the file (S14.3)", async () => {
+    const { service, storage } = await opened({ "evidence/a.md": EVIDENCE_FILE });
+    storage.loseAccess();
+    const result = await service.attachFile("evidence/a.md", { name: "cv.pdf", bytes: PDF });
+    expect(result.ok ? null : result.error.kind).toBe("unavailable");
+    expect(storage.text("evidence/a.md")).toBe(EVIDENCE_FILE);
+  });
+
+  it("never attaches to a diagnostic's record, a record under Needs attention, or one that isn't evidence", async () => {
+    const assessment = EVIDENCE_FILE.replace("kind: job", "kind: assessment");
+    const broken = EVIDENCE_FILE.replace("title: Backend Engineer\n", "");
+    const { service, storage } = await opened({
+      "evidence/x.md": assessment,
+      "evidence/broken.md": broken,
+      "pharoam.md": PHAROAM_FILE,
+    });
+    const attach = (location: string): ReturnType<CoreService["attachFile"]> =>
+      service.attachFile(location, { name: "cv.pdf", bytes: PDF });
+    expect(await attach("evidence/x.md")).toEqual({
+      ok: false,
+      error: { kind: "not-editable", location: "evidence/x.md" },
+    });
+    expect(await attach("pharoam.md")).toEqual({
+      ok: false,
+      error: { kind: "not-editable", location: "pharoam.md" },
+    });
+    expect(await attach("evidence/broken.md")).toEqual({
+      ok: false,
+      error: { kind: "needs-attention", location: "evidence/broken.md" },
+    });
+    expect(storage.writes()).toBe(0);
+  });
+
+  it("keeps the file but changes nothing else when the evidence changed outside (AD10)", async () => {
+    const { service, storage } = await opened({ "evidence/a.md": EVIDENCE_FILE });
+    const outside = EVIDENCE_FILE.replace("Built", "I built");
+    await storage.putOutside("evidence/a.md", outside);
+    expect(await service.attachFile("evidence/a.md", { name: "cv.pdf", bytes: PDF })).toEqual({
+      ok: false,
+      error: { kind: "conflict", location: "evidence/a.md" },
+    });
+    expect(storage.text("evidence/a.md")).toBe(outside);
+    // Kept for when the person keeps Pharoam's version, which lists it.
+    expect(await storage.readAttachmentOutside(EVIDENCE_ID, "cv.pdf")).toBeDefined();
+    expect((await service.resolveConflict("evidence/a.md", "mine")).ok).toBe(true);
+    expect(service.find(EVIDENCE_ID)?.record).toMatchObject({ attachments: ["cv.pdf"] });
+  });
+
+  it("removes the file it added when the evidence couldn't be saved for another reason", async () => {
+    const { service, storage } = await opened({ "evidence/a.md": EVIDENCE_FILE });
+    await storage.removeOutside("evidence/a.md");
+    const result = await service.attachFile("evidence/a.md", { name: "cv.pdf", bytes: PDF });
+    expect(result.ok ? null : result.error.kind).toBe("not-found");
+    expect(await storage.readAttachmentOutside(EVIDENCE_ID, "cv.pdf")).toBeUndefined();
+  });
+
+  it("lists each attachment with what storage holds, and a file missing from storage as missing", async () => {
+    const { service, storage } = await withFiles();
+    await storage.putAttachmentOutside(EVIDENCE_ID, "not-listed.txt", OTHER);
+    expect(await listed(service)).toEqual([
+      {
+        name: "cv.pdf",
+        stored: { name: "cv.pdf", version: expect.any(String) as unknown, size: PDF.length },
+      },
+      { name: "gone.pdf", stored: undefined },
+    ]);
+    expect(await service.attachments("evidence/missing.md")).toEqual({
+      ok: false,
+      error: { kind: "not-found", location: "evidence/missing.md" },
+    });
+  });
+
+  it("reads an attachment the evidence lists, byte for byte, and no other file (S14.2)", async () => {
+    const { service, storage } = await withFiles();
+    await storage.putAttachmentOutside(EVIDENCE_ID, "not-listed.txt", OTHER);
+    const read = await service.readAttachment("evidence/a.md", "cv.pdf");
+    expect(read.ok && [...read.value]).toEqual([...PDF]);
+    expect(await service.readAttachment("evidence/a.md", "not-listed.txt")).toEqual({
+      ok: false,
+      error: { kind: "not-attached", name: "not-listed.txt" },
+    });
+    expect(await service.readAttachment("evidence/a.md", "gone.pdf")).toEqual({
+      ok: false,
+      error: { kind: "not-found" },
+    });
+  });
+
+  it("removes a file from the evidence and from storage", async () => {
+    const { service, storage } = await withFiles();
+    const [cv] = await listed(service);
+    if (cv === undefined) throw new Error("No attachment listed.");
+    const result = await service.removeAttachment("evidence/a.md", cv);
+    expect(result.ok && result.value.record).toMatchObject({ attachments: ["gone.pdf"] });
+    expect(await storage.readAttachmentOutside(EVIDENCE_ID, "cv.pdf")).toBeUndefined();
+    expect(storage.text("evidence/a.md")).toContain("updated: 2026-10-29T09:30:00Z");
+  });
+
+  it("removes a missing file from the list", async () => {
+    const { service } = await withFiles();
+    const result = await service.removeAttachment("evidence/a.md", { name: "gone.pdf", stored: undefined });
+    expect(result.ok && result.value.record).toMatchObject({ attachments: ["cv.pdf"] });
+  });
+
+  it("removes nothing when the file changed outside since it was shown (AD10)", async () => {
+    const { service, storage } = await withFiles();
+    const [cv] = await listed(service);
+    if (cv === undefined) throw new Error("No attachment listed.");
+    await storage.putAttachmentOutside(EVIDENCE_ID, "cv.pdf", OTHER);
+    expect(await service.removeAttachment("evidence/a.md", cv)).toEqual({
+      ok: false,
+      error: { kind: "attachment-changed", name: "cv.pdf" },
+    });
+    expect(storage.text("evidence/a.md")).toBe(LISTING);
+    expect([...((await storage.readAttachmentOutside(EVIDENCE_ID, "cv.pdf")) ?? [])]).toEqual([...OTHER]);
+  });
+
+  it("removes only files the evidence lists, and never from a diagnostic's record", async () => {
+    const { service, storage } = await withFiles();
+    expect(await service.removeAttachment("evidence/a.md", { name: "other.pdf", stored: undefined })).toEqual(
+      {
+        ok: false,
+        error: { kind: "not-attached", name: "other.pdf" },
+      },
+    );
+    const assessment = await withFiles(LISTING.replace("kind: job", "kind: assessment"));
+    expect(
+      await assessment.service.removeAttachment("evidence/a.md", { name: "gone.pdf", stored: undefined }),
+    ).toEqual({
+      ok: false,
+      error: { kind: "not-editable", location: "evidence/a.md" },
+    });
+    expect(storage.writes()).toBe(0);
+  });
+
+  it("deletes the evidence's files when the person agrees, and nothing else (S14.4)", async () => {
+    const { service, storage } = await withFiles();
+    await storage.putAttachmentOutside(EVIDENCE_ID, "not-listed.txt", OTHER);
+    const shown = await listed(service);
+    expect(await service.deleteEvidence("evidence/a.md", shown)).toEqual({ ok: true, value: { kept: [] } });
+    expect(storage.text("evidence/a.md")).toBeUndefined();
+    expect(await storage.readAttachmentOutside(EVIDENCE_ID, "cv.pdf")).toBeUndefined();
+    expect(await storage.readAttachmentOutside(EVIDENCE_ID, "not-listed.txt")).toBeDefined();
+  });
+
+  it("keeps the evidence's files when the person says no (S14.4)", async () => {
+    const { service, storage } = await withFiles();
+    expect(await service.deleteEvidence("evidence/a.md", [])).toEqual({ ok: true, value: { kept: [] } });
+    expect(await storage.readAttachmentOutside(EVIDENCE_ID, "cv.pdf")).toBeDefined();
+  });
+
+  it("keeps a file changed outside since it was shown, and says so (AD10)", async () => {
+    const { service, storage } = await withFiles();
+    const shown = await listed(service);
+    await storage.putAttachmentOutside(EVIDENCE_ID, "cv.pdf", OTHER);
+    expect(await service.deleteEvidence("evidence/a.md", shown)).toEqual({
+      ok: true,
+      value: { kept: ["cv.pdf"] },
+    });
+    expect(storage.text("evidence/a.md")).toBeUndefined();
+    expect([...((await storage.readAttachmentOutside(EVIDENCE_ID, "cv.pdf")) ?? [])]).toEqual([...OTHER]);
+  });
+
+  it("deletes no files when the evidence itself can't be deleted", async () => {
+    const { service, storage } = await withFiles();
+    const shown = await listed(service);
+    await storage.putOutside("evidence/a.md", LISTING.replace("Built", "I built"));
+    expect((await service.deleteEvidence("evidence/a.md", shown)).ok).toBe(false);
+    expect(await storage.readAttachmentOutside(EVIDENCE_ID, "cv.pdf")).toBeDefined();
+  });
+
+  it("deletes only files the evidence lists, whatever it is given", async () => {
+    const { service, storage } = await withFiles();
+    await storage.putAttachmentOutside(EVIDENCE_ID, "not-listed.txt", OTHER);
+    const listedFiles = await storage.connector.attachments(EVIDENCE_ID);
+    const everything = (listedFiles.ok ? listedFiles.value : []).map((stored) => ({
+      name: stored.name,
+      stored,
+    }));
+    await service.deleteEvidence("evidence/a.md", everything);
+    expect(await storage.readAttachmentOutside(EVIDENCE_ID, "not-listed.txt")).toBeDefined();
+  });
+
+  it("reads and deletes a file by the name storage holds, when the evidence spells it another way", async () => {
+    const decomposed = "Cafe\u0301.pdf";
+    const { service, storage } = await withFiles(
+      EVIDENCE_FILE.replace("source: manual", `attachments: ["${decomposed}"]\nsource: manual`),
+    );
+    await storage.putAttachmentOutside(EVIDENCE_ID, "Café.pdf", PDF);
+    const read = await service.readAttachment("evidence/a.md", decomposed);
+    expect(read.ok && [...read.value]).toEqual([...PDF]);
+    const [file] = await listed(service);
+    if (file === undefined) throw new Error("No attachment listed.");
+    expect(await service.deleteEvidence("evidence/a.md", [file])).toEqual({ ok: true, value: { kept: [] } });
+    expect(await storage.readAttachmentOutside(EVIDENCE_ID, "Café.pdf")).toBeUndefined();
+  });
+
+  it("says a file was deleted when the evidence couldn't then be saved without it", async () => {
+    const { service, storage } = await withFiles();
+    const [cv] = await listed(service);
+    if (cv === undefined) throw new Error("No attachment listed.");
+    await storage.removeOutside("evidence/a.md");
+    expect(await service.removeAttachment("evidence/a.md", cv)).toEqual({
+      ok: false,
+      error: { kind: "not-unlisted", name: "cv.pdf" },
+    });
+    expect(await storage.readAttachmentOutside(EVIDENCE_ID, "cv.pdf")).toBeUndefined();
+  });
+
+  it("lists a name the evidence repeats once", async () => {
+    const { service } = await withFiles(LISTING.replace("[cv.pdf, gone.pdf]", "[cv.pdf, cv.pdf]"));
+    expect((await listed(service)).map((file) => file.name)).toEqual(["cv.pdf"]);
   });
 });

@@ -23,6 +23,12 @@ function harness(folder: MemoryFolder = memoryFolder()): ConnectorHarness {
       folder.files.delete(location);
       return Promise.resolve();
     },
+    putAttachmentOutside: (record, name, bytes) => {
+      folder.files.set(`evidence/_attachments/${record}/${name}`, Uint8Array.from(bytes));
+      return Promise.resolve();
+    },
+    readAttachmentOutside: (record, name) =>
+      Promise.resolve(folder.files.get(`evidence/_attachments/${record}/${name}`)),
   };
 }
 
@@ -138,6 +144,70 @@ describe("the folder connector", () => {
     }
   });
 
+  it("keeps a record's files in evidence/_attachments/<record ID>/ under their own names (MVP S14.1)", async () => {
+    const folder = memoryFolder();
+    const id = "0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d";
+    await createFolderConnector(folder.handle).addAttachment(id, "CV 2026.pdf", new Uint8Array([1, 2]));
+    expect([...folder.files.keys()]).toEqual([`evidence/_attachments/${id}/CV 2026.pdf`]);
+  });
+
+  it("leaves nothing behind when the storage can't hold a file (MVP S14.3)", async () => {
+    const folder = memoryFolder();
+    folder.setFull(true);
+    const id = "0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d";
+    expect(
+      await createFolderConnector(folder.handle).addAttachment(id, "big.pdf", new Uint8Array(8)),
+    ).toEqual({
+      ok: false,
+      error: { kind: "unavailable", reason: "QuotaExceededError: The storage is full." },
+    });
+    expect([...folder.files.keys()]).toEqual([]);
+  });
+
+  it("removes a record's folder of files once its last file is deleted, and only then", async () => {
+    const id = "0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d";
+    const folder = memoryFolder({ "evidence/a.md": "x" });
+    const connector = createFolderConnector(folder.handle);
+    const first = await connector.addAttachment(id, "a.pdf", new Uint8Array([1]));
+    const second = await connector.addAttachment(id, "b.pdf", new Uint8Array([2]));
+    if (!first.ok || !second.ok) throw new Error("Adding failed.");
+    await connector.deleteAttachment(id, "a.pdf", first.value.version);
+    expect(folder.folders.has(`evidence/_attachments/${id}`)).toBe(true);
+    await connector.deleteAttachment(id, "b.pdf", second.value.version);
+    expect(folder.folders.has(`evidence/_attachments/${id}`)).toBe(false);
+    expect([...folder.files.keys()]).toEqual(["evidence/a.md"]);
+  });
+
+  it("lists a record's files without reading them, however large they are", async () => {
+    const id = "0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d";
+    const folder = memoryFolder({ [`evidence/_attachments/${id}/video.mp4`]: new Uint8Array(64) });
+    const listed = await createFolderConnector(folder.handle).attachments(id);
+    expect(listed.ok && listed.value.map(({ name, size }) => ({ name, size }))).toEqual([
+      { name: "video.mp4", size: 64 },
+    ]);
+    expect(folder.contentReads()).toBe(0);
+  });
+
+  it("doesn't list hidden files kept with a record, such as .DS_Store", async () => {
+    const id = "0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d";
+    const folder = memoryFolder({
+      [`evidence/_attachments/${id}/.DS_Store`]: "x",
+      [`evidence/_attachments/${id}/cv.pdf`]: "x",
+    });
+    const listed = await createFolderConnector(folder.handle).attachments(id);
+    expect(listed.ok && listed.value.map((a) => a.name)).toEqual(["cv.pdf"]);
+  });
+
+  it("finds no files for something that isn't a record ID, and reads no file outside the record's folder", async () => {
+    const id = "0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d";
+    const connector = createFolderConnector(
+      memoryFolder({ "pharoam.md": "x", [`evidence/_attachments/${id}/cv.pdf`]: "x" }).handle,
+    );
+    expect(await connector.attachments("..")).toEqual({ ok: true, value: [] });
+    for (const name of ["../../../pharoam.md", "..", "a/b", ""])
+      expect(await connector.readAttachment(id, name)).toEqual({ ok: false, error: { kind: "not-found" } });
+  });
+
   it.each(["denied", "prompt"] as const)(
     "writes nothing, and returns a typed error, when permission is %s (MVP S1.4)",
     async (state) => {
@@ -153,6 +223,11 @@ describe("the folder connector", () => {
       expect(await connector.create(createRecordFile({ schema: "pharoam/1" }, ""))).toEqual(unavailable);
       expect(await connector.write("evidence/a.md", RECORD, "any")).toEqual(unavailable);
       expect(await connector.delete("evidence/a.md", "any")).toEqual(unavailable);
+      const id = "0192f3a1-7c2e-7b44-9a1d-3e5f6a7b8c9d";
+      expect(await connector.attachments(id)).toEqual(unavailable);
+      expect(await connector.readAttachment(id, "a.pdf")).toEqual(unavailable);
+      expect(await connector.addAttachment(id, "a.pdf", new Uint8Array([1]))).toEqual(unavailable);
+      expect(await connector.deleteAttachment(id, "a.pdf", "any")).toEqual(unavailable);
       expect([...folder.files.keys()]).toEqual(["evidence/a.md"]);
       expect(decoder.decode(folder.files.get("evidence/a.md"))).toBe(printRecordFile(RECORD));
     },
