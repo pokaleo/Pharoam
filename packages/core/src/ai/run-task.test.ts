@@ -14,7 +14,7 @@ const tag = defineTask({
   data: ({ text }) => [{ kind: "pasted-text", text }],
 });
 
-const now = (): Date => new Date("2026-11-04T10:00:00.000Z");
+const now = (): Date => new Date("2026-11-04T10:00:00.250Z");
 
 describe("runTask (ADR-0004, PRD D6, MVP S17.1)", () => {
   it("returns the checked answer with its ai block, and a call record of exactly what was sent", async () => {
@@ -26,11 +26,11 @@ describe("runTask (ADR-0004, PRD D6, MVP S17.1)", () => {
       ok: true,
       value: {
         output: { tags: ["python", "apis"] },
-        ai: { task: "tag-text@2", model: "fake/m-1", at: "2026-11-04T10:00:00.000Z" },
+        ai: { task: "tag-text@2", model: "fake/m-1", at: "2026-11-04T10:00:00Z" },
         call: {
           task: "tag-text@2",
           model: "fake/m-1",
-          at: "2026-11-04T10:00:00.000Z",
+          at: "2026-11-04T10:00:00Z",
           sent: prepareCall(tag, { text: "I built an API in Python." }).request,
           outcome: "answered",
         },

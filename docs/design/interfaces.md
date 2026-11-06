@@ -41,8 +41,8 @@ Every AI feature is one task definition in `packages/core`, shared by the app an
 ```ts
 defineTask({
   name: "normalise-evidence", version: 1,
-  input:  z.object({ text: z.string(), kindHint: … }),   // Zod (AD7), checked before anything is sent
-  output: EvidenceShape,                                  // checked before the user sees the answer
+  input:  z.object({ text: z.string().max(20_000) }),   // Zod (AD7), checked before anything is sent
+  output: z.object({ records: z.array(NormalisedEvidence) }),  // checked before the user sees the answer
   instructions: (input) => "…",                           // Pharoam's own text only, never the person's
   data: ({ text }) => [{ kind: "pasted-text", text }],    // all the task reads (PRD D4)
 })

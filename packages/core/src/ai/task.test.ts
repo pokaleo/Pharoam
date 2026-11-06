@@ -85,4 +85,13 @@ describe("prepareCall (security §3, PRD D4)", () => {
     // @ts-expect-error: the input is missing `words` on purpose.
     expect(() => prepareCall(summarise, { text: "x" })).toThrow();
   });
+
+  it("asks for answers in English, unless the task answers in its material's language", () => {
+    const english = defineTask({ ...summarise, name: "english-task" });
+    expect(prepareCall(english, { text: "x", words: 5 }).request.system).toMatch(/write in English/);
+    const own = defineTask({ ...summarise, name: "own-language", answerIn: "material" });
+    const { system } = prepareCall(own, { text: "x", words: 5 }).request;
+    expect(system).toMatch(/in the language of the material/);
+    expect(system).not.toMatch(/English/);
+  });
 });
