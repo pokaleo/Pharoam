@@ -27,6 +27,7 @@ import { EditEvidencePage } from "./pages/edit-evidence-page.tsx";
 import { EvidenceListPage } from "./pages/evidence-list-page.tsx";
 import { EvidencePage } from "./pages/evidence-page.tsx";
 import { NewEvidencePage } from "./pages/new-evidence-page.tsx";
+import { PastePage } from "./pages/paste-evidence-page.tsx";
 import { HomePage } from "./pages/home-page.tsx";
 import { SettingsPage } from "./pages/settings-page.tsx";
 import { UnsupportedPage } from "./pages/unsupported-page.tsx";
@@ -65,6 +66,12 @@ const newEvidenceRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/evidence/new",
   component: () => <ProfileRoute page={(service) => <NewEvidencePage service={service} />} />,
+});
+
+const pasteRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/evidence/paste",
+  component: () => <ProfileRoute page={(service) => <PastePage service={service} />} />,
 });
 
 const evidenceRoute = createRoute({
@@ -167,6 +174,7 @@ const routeTree = rootRoute.addChildren([
   startRoute,
   aboutRoute,
   evidenceListRoute,
+  pasteRoute,
   newEvidenceRoute,
   evidenceRoute,
   editEvidenceRoute,
@@ -197,5 +205,7 @@ declare module "@tanstack/react-router" {
     deleted?: string;
     /** Files of the deleted evidence that were kept, as they changed outside since they were shown (MVP S14.4). */
     keptFiles?: readonly string[];
+    /** How many records were just saved from pasted text, so the list can say so (MVP S15.5). */
+    pasted?: number;
   }
 }

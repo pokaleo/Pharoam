@@ -1,6 +1,6 @@
 import { createRecordFile } from "@pharoam/core";
 import { describe, expect, it } from "vitest";
-import { answersOf, evidenceFormFrom, fieldErrorsOf, NO_ANSWERS } from "./answers.ts";
+import { answersFromForm, answersOf, evidenceFormFrom, fieldErrorsOf, NO_ANSWERS } from "./answers.ts";
 
 describe("evidenceFormFrom", () => {
   it("turns the answers into the core's evidence form, links one per line", () => {
@@ -106,5 +106,28 @@ describe("fieldErrorsOf (MVP S4.4)", () => {
 
   it("ignores problems with fields the form doesn't have", () => {
     expect(fieldErrorsOf(invalid([{ path: ["schema"], code: "invalid_value" }]))).toEqual({});
+  });
+});
+
+describe("answersFromForm (MVP S15.3)", () => {
+  it("shows a draft's answers in the form, ready to edit and read back", () => {
+    const form = {
+      kind: "module",
+      title: "Databases",
+      course_code: "COMP2041",
+      credits: 15,
+      links: ["https://example.com/a", "https://example.com/b"],
+      description: "Relational design.",
+    } as const;
+    const answers = answersFromForm(form);
+    expect(answers).toEqual({
+      kind: "module",
+      text: { title: "Databases", course_code: "COMP2041", credits: "15" },
+      links: "https://example.com/a\nhttps://example.com/b",
+      skills: [],
+      description: "Relational design.",
+    });
+    const read = evidenceFormFrom(answers);
+    expect("form" in read && read.form).toMatchObject(form);
   });
 });

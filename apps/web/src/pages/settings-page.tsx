@@ -3,8 +3,7 @@
  *
  * @packageDocumentation
  */
-import { checkModel, runTask, type ModelInfo, type ProviderError, type TaskError } from "@pharoam/core";
-import type { TFunction } from "i18next";
+import { checkModel, runTask, type ModelInfo } from "@pharoam/core";
 import { useId, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -15,6 +14,7 @@ import {
   type ProviderChoice,
   type ProviderKind,
 } from "../ai/providers.ts";
+import { providerProblem, taskProblem } from "../ai/problems.ts";
 import { useSession } from "../profile/session.tsx";
 import { Button } from "../ui/button.tsx";
 import { SelectField, TextField } from "../ui/field.tsx";
@@ -264,27 +264,4 @@ function CurrentModel({
       )}
     </div>
   );
-}
-
-// Why a provider couldn't answer, in plain words.
-function providerProblem(t: TFunction, error: ProviderError, provider: string): string {
-  switch (error.kind) {
-    case "unauthorised":
-      return t("settings.errors.unauthorised", { provider });
-    case "rate-limited":
-      return t("settings.errors.rateLimited", { provider });
-    case "unreachable":
-      return t("settings.errors.unreachable", { provider });
-    case "refused":
-      return t("settings.errors.refused", { provider, reason: error.reason });
-    case "failed":
-      return t("settings.errors.failed", { provider, message: error.message });
-  }
-}
-
-// Why a task gave no usable answer, in plain words.
-function taskProblem(t: TFunction, error: TaskError, provider: string): string {
-  return error.kind === "provider"
-    ? providerProblem(t, error.error, provider)
-    : t("settings.errors.invalidAnswer");
 }

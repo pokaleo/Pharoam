@@ -245,8 +245,11 @@
     "list": "Your evidence",
     "empty": "No evidence yet. Start with something you did recently: a project, a job, or a course you finished.",
     "add": "Add evidence",
+    "paste": "Paste text",
     "deleted": "{{title}} was deleted from your folder.",
     "keptFiles": "These files were kept, as they changed in your folder since they were shown or couldn't be deleted: {{files}}.",
+    "pasted_one": "{{count}} record was saved from your pasted text.",
+    "pasted_other": "{{count}} records were saved from your pasted text.",
     "kindQuestion": "What kind of evidence is it?",
     "kinds": {
       "project": "Project",
@@ -361,6 +364,57 @@
       "notUnlisted": "{{name}} was deleted from your folder, but this evidence still lists it.",
       "listFailed": "Pharoam couldn't list this evidence's files."
     }
+  },
+  "paste": {
+    "title": "Paste text",
+    "lead": "Paste your CV or a list of modules, and the model you set up turns it into evidence records for you to check. Nothing is saved until you confirm.",
+    "noModel": "Reading pasted text needs a model of your choice.",
+    "setUp": "Set up a model in Settings",
+    "text": "Your text",
+    "textHint": "Up to {{max}} characters. Only this text is sent, to the model you set up.",
+    "count": "{{count}} of {{max}} characters",
+    "empty": "Paste some text first.",
+    "tooLong": "That's more than {{max}} characters. Paste a part at a time.",
+    "continue": "Continue",
+    "loadFailed": "Pharoam couldn't load what it needs to reach {{provider}}. Check your connection and try again.",
+    "failed": "Nothing was saved. Your text is still here.",
+    "send": {
+      "title": "What will be sent",
+      "lead": "Check what goes to {{provider}} before it is sent. It goes under {{provider}}'s own terms, not Pharoam's.",
+      "parts": {
+        "pasted-text": "Your pasted text"
+      },
+      "size": "{{size}} characters in all, with Pharoam's instructions to the model.",
+      "model": "Model: {{model}} from {{provider}}.",
+      "send": "Send",
+      "back": "Back to the text",
+      "reading": "Reading your text with {{model}}…"
+    },
+    "review": {
+      "title": "Check what was found",
+      "lead_one": "{{count}} record was found in your text. Edit it, or leave it out, then save.",
+      "lead_other": "{{count}} records were found in your text. Edit any of them, leave out what you don't want, then save.",
+      "none": "The model found no evidence in your text. Nothing was saved.",
+      "label": "AI-normalised",
+      "by": "by {{model}}",
+      "mistakes": "AI can make mistakes. Check each record before you save it.",
+      "include": "Include this record",
+      "similar": "This looks like {{title}}, which you already have. It's left out unless you include it.",
+      "twin": "This looks like {{title}}, found above. It's left out unless you include it.",
+      "needsFix": "This record needs a fix before it can be saved.",
+      "edit": "Edit",
+      "useAnswers": "Use these answers",
+      "cancel": "Cancel",
+      "editFirst": "Finish or cancel your edit first.",
+      "keep": "Keep a copy of the pasted text with each record",
+      "keepHint": "Saved as original-input.txt next to each record, so you can always see where it came from.",
+      "save_one": "Save {{count}} record",
+      "save_other": "Save {{count}} records",
+      "again": "Start again",
+      "saveFailed_one": "Pharoam couldn't save {{title}}. {{count}} record was saved before it; the rest are still here.",
+      "saveFailed_other": "Pharoam couldn't save {{title}}. {{count}} records were saved before it; the rest are still here."
+    },
+    "disclaimer": "AI-generated from your pasted text and confirmed by you. AI can make mistakes."
   },
   "skills": {
     "title": "Skills",
