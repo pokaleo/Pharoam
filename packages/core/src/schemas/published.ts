@@ -20,6 +20,7 @@ const PUBLISHED: readonly (readonly [type: string, label: string, schema: z.ZodT
   ["evidence", "evidence record", PROFILE_RECORD_SCHEMAS.evidence],
   ["skill-record", "skill record", PROFILE_RECORD_SCHEMAS["skill-record"]],
   ["gap", "gap record", PROFILE_RECORD_SCHEMAS.gap],
+  ["session", "review session record", PROFILE_RECORD_SCHEMAS.session],
   ["skill", "skill inventory entry", SkillEntry],
   ["pathway", "pathway", PathwayRecord],
   ["pack", "content pack manifest", PackManifest],

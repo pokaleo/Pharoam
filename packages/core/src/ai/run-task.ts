@@ -51,7 +51,7 @@ export interface TaskFailure {
 /**
  * Runs a task through a provider and checks the answer against the task's output schema.
  *
- * @remarks The answer is shown to the person only once it matches the schema, so an answer steered by text in the
+ * @remarks The answer is shown to the person only once it matches the schema and the task's own check, so an answer steered by text in the
  * person's material can't take a shape the task doesn't allow (ADR-0004, security §3). Every call, answered or
  * not, comes back with its call record (MVP S17.1). Nothing is written here: records are written only once the
  * person confirms (hard rule 6).
@@ -99,5 +99,8 @@ export async function runTask<I, O>(
     );
     return err({ reason: { kind: "invalid-answer", issues }, call: record("rejected") });
   }
+  const problems = task.check?.(task.input.parse(input), checked.data) ?? [];
+  if (problems.length > 0)
+    return err({ reason: { kind: "invalid-answer", issues: problems }, call: record("rejected") });
   return ok({ output: checked.data, ai: { task: task.id, model, at }, call: record("answered") });
 }

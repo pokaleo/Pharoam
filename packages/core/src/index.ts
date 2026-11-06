@@ -31,6 +31,8 @@ export { MAX_ATTACHMENT_BYTES, attachmentName, isAttachmentName, numberedName } 
 export {
   createCoreService,
   type AddCustomSkillError,
+  type AdjustError,
+  type DecisionReport,
   type AttachError,
   type AttachmentReadError,
   type AttachmentView,
@@ -59,6 +61,8 @@ export {
   type ReadError,
   type RemoveAttachmentError,
   type SavePastedError,
+  type ScanError,
+  type ScanOptions,
   type ResolveConflictError,
   type SaveError,
   type StorageConnector,
@@ -78,6 +82,16 @@ export {
   type ProviderError,
 } from "./ai/provider.ts";
 export { checkModel } from "./ai/tasks/check-model.ts";
+export { judgeSkillLevel } from "./ai/tasks/judge-skill-level.ts";
+export { suggestSkillLinks } from "./ai/tasks/suggest-skill-links.ts";
+export { evidenceText, sentFingerprint } from "./evidence-text.ts";
+export {
+  SCAN_WORKFLOW,
+  type LevelScanCall,
+  type LinkScanCall,
+  type ReviewItem,
+  type ScanCall,
+} from "./scan.ts";
 export {
   MAX_PASTED_CHARACTERS,
   NormalisedEvidence,
@@ -156,6 +170,13 @@ export { skillView, type SkillFilter, type SkillViewItem } from "./skill-view.ts
 export { AiSkillLink, EvidenceRecord } from "./schemas/evidence.ts";
 export { AiProvenance, ConfirmedAiProvenance, Provenance } from "./schemas/fields.ts";
 export { GapRecord, GapRequirement } from "./schemas/gap.ts";
+export {
+  LevelSuggestion,
+  LinkSuggestion,
+  SessionRecord,
+  Suggestion,
+  type SuggestionInput,
+} from "./schemas/session.ts";
 export { LevelScale } from "./schemas/levels.ts";
 export { PackManifest } from "./schemas/pack.ts";
 export { PathwayRecord, PathwayRequirement, SourceRef } from "./schemas/pathway.ts";

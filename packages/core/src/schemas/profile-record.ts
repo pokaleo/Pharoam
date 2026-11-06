@@ -10,6 +10,7 @@ import { err, ok, type Result } from "../result.ts";
 import { EvidenceRecord } from "./evidence.ts";
 import { GapRecord } from "./gap.ts";
 import { PharoamRecord } from "./pharoam.ts";
+import { SessionRecord } from "./session.ts";
 import { SkillRecord } from "./skill-record.ts";
 
 /** The schema for each profile record type, at the format version this Pharoam writes. */
@@ -18,13 +19,14 @@ export const PROFILE_RECORD_SCHEMAS = {
   evidence: EvidenceRecord,
   "skill-record": SkillRecord,
   gap: GapRecord,
+  session: SessionRecord,
 } as const;
 
 /** A profile record type, such as `evidence`. */
 export type ProfileRecordType = keyof typeof PROFILE_RECORD_SCHEMAS;
 
 /** Any v0.1 profile record, told apart by its `schema` field. */
-export type ProfileRecord = PharoamRecord | EvidenceRecord | SkillRecord | GapRecord;
+export type ProfileRecord = PharoamRecord | EvidenceRecord | SkillRecord | GapRecord | SessionRecord;
 
 /** One field that failed validation. */
 export interface FieldIssue {

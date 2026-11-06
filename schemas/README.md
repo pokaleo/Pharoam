@@ -10,6 +10,7 @@ Each record file names its format in its top block, for example `schema: evidenc
 | `evidence/1` | [evidence-1.schema.json](evidence-1.schema.json) | Something the person studied or did |
 | `skill-record/1` | [skill-record-1.schema.json](skill-record-1.schema.json) | One skill's history and shown level |
 | `gap/1` | [gap-1.schema.json](gap-1.schema.json) | A stored gap analysis for one pathway |
+| `session/1` | [session-1.schema.json](session-1.schema.json) | A review session: one evidence scan's suggestions, awaiting the person's decisions |
 | `skill/1` | [skill-1.schema.json](skill-1.schema.json) | An entry in the skill inventory |
 | `pathway/1` | [pathway-1.schema.json](pathway-1.schema.json) | A career pathway |
 | `pack/1` | [pack-1.schema.json](pack-1.schema.json) | A content pack's manifest |

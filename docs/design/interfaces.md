@@ -50,7 +50,7 @@ defineTask({
 
 - **`data` is exactly what the task reads**: for example pasted text, or one skill's evidence, found through the evidence records' skill links. `prepareCall` builds the request without sending it, so the app can show the parts and their size first (PRD D4). The person's material goes only into the prompt, each part inside `<data>` tags, with instructions to treat it as data (security §3).
 - **The label and disclaimer are interface text**, so they live in the web app's translation files under the task's name, not in the core (hard rule 12).
-- **`runTask` sends the prepared request and checks the answer** against `output`. Every call, answered or not, comes back with a call record (§3).
+- **`runTask` sends the prepared request and checks the answer** against `output`, then against the task's own `check`, if it has one: what a fixed schema can't, such as a level judgement citing evidence it wasn't sent (MVP S16.3). A task may answer in its material's language (`answerIn`) where the answer is the person's own words. Every call, answered or not, comes back with a call record (§3).
 
 Validation, transparency and the relay's allow-list all come from this one definition.
 

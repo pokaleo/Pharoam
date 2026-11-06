@@ -38,6 +38,13 @@ export interface TaskDefinition<I, O> {
    * @defaultValue `"english"`
    */
   readonly answerIn?: "english" | "material";
+  /**
+   * Checks an answer against this input, after the output schema: what a fixed schema can't, such as an answer
+   * citing evidence it wasn't sent (MVP S16.3).
+   *
+   * @returns What is wrong, one sentence each; none when the answer is fine.
+   */
+  readonly check?: (input: I, output: O) => readonly string[];
 }
 
 /** A registered task, named as `ai` blocks and call records name it. */

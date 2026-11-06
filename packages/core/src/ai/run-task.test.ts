@@ -66,4 +66,30 @@ describe("runTask (ADR-0004, PRD D6, MVP S17.1)", () => {
       },
     });
   });
+
+  it("rejects an answer that fails the task's own check against what was sent, such as citing what wasn't (S16.3)", async () => {
+    const pick = defineTask({
+      ...tag,
+      name: "pick-tag",
+      input: z.object({ text: z.string(), allowed: z.array(z.string()) }),
+      check: ({ allowed }, { tags }) =>
+        tags.filter((t) => !allowed.includes(t)).map((t) => `tags: ${t} wasn't offered`),
+    });
+    const provider = fakeProvider(() => ok({ tags: ["python", "cobol"] }));
+
+    const answer = await runTask(provider, pick, { text: "x", allowed: ["python"] }, { model: "m-1", now });
+
+    expect(answer.ok ? null : answer.error.reason).toEqual({
+      kind: "invalid-answer",
+      issues: ["tags: cobol wasn't offered"],
+    });
+    expect(answer.ok ? null : answer.error.call.outcome).toBe("rejected");
+    const allowed = await runTask(
+      provider,
+      pick,
+      { text: "x", allowed: ["python", "cobol"] },
+      { model: "m-1", now },
+    );
+    expect(allowed.ok).toBe(true);
+  });
 });
