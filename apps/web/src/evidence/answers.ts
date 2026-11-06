@@ -95,7 +95,16 @@ export function evidenceFormFrom(answers: EvidenceAnswers): { form: EvidenceForm
  */
 export function answersOf(file: RecordFile): EvidenceAnswers | undefined {
   const form = evidenceFormOf(file);
-  if (form === undefined) return undefined;
+  return form === undefined ? undefined : answersFromForm(form);
+}
+
+/**
+ * The answers a filled form gives, for editing it, such as a draft from pasted text (MVP S15.3).
+ *
+ * @param form - What the form holds, such as the model's answer for one record.
+ * @returns The answers as the form shows them.
+ */
+export function answersFromForm(form: EvidenceForm): EvidenceAnswers {
   const text: Partial<Record<TextAnswer, string>> = {};
   for (const field of evidenceFormFields(form.kind)) {
     if (field === "links" || field === "skills" || field === "description") continue;

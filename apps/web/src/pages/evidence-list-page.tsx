@@ -11,6 +11,7 @@ import type { ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { useSession } from "../profile/session.tsx";
 import { skillChoices, skillName } from "../profile/skills.ts";
+import { AiMark } from "../ui/ai-mark.tsx";
 import { buttonClassName } from "../ui/button.tsx";
 import { Empty } from "../ui/empty.tsx";
 import { Icon } from "../ui/icon.tsx";
@@ -30,6 +31,7 @@ export function EvidenceListPage({ service }: { readonly service: CoreService })
   const content = useQuery({ queryKey: ["content"], queryFn: services.content, staleTime: Infinity });
   const deleted = useRouterState({ select: (state) => state.location.state.deleted });
   const keptFiles = useRouterState({ select: (state) => state.location.state.keptFiles }) ?? [];
+  const pasted = useRouterState({ select: (state) => state.location.state.pasted });
   const list = new Intl.ListFormat(t("app.locale"), { type: "conjunction" });
   const evidence = service
     .records()
@@ -42,22 +44,30 @@ export function EvidenceListPage({ service }: { readonly service: CoreService })
         title={t("evidence.title")}
         lead={t("evidence.lead", { count: evidence.length })}
         actions={
-          <Link to="/evidence/new" className={buttonClassName("primary")}>
-            <Icon of={Paperclip} />
-            {t("evidence.add")}
-          </Link>
+          <>
+            <Link to="/evidence/paste" className={buttonClassName("secondary")}>
+              <AiMark />
+              {t("evidence.paste")}
+            </Link>
+            <Link to="/evidence/new" className={buttonClassName("primary")}>
+              <Icon of={Paperclip} />
+              {t("evidence.add")}
+            </Link>
+          </>
         }
       />
       <div className="grid gap-(--gap)">
         <p role="status" className="text-ink-2 empty:hidden">
-          {deleted === undefined
-            ? ""
-            : [
-                t("evidence.deleted", { title: deleted }),
-                keptFiles.length === 0 ? "" : t("evidence.keptFiles", { files: list.format(keptFiles) }),
-              ]
-                .filter((part) => part !== "")
-                .join(" ")}
+          {pasted !== undefined
+            ? t("evidence.pasted", { count: pasted })
+            : deleted === undefined
+              ? ""
+              : [
+                  t("evidence.deleted", { title: deleted }),
+                  keptFiles.length === 0 ? "" : t("evidence.keptFiles", { files: list.format(keptFiles) }),
+                ]
+                  .filter((part) => part !== "")
+                  .join(" ")}
         </p>
         {evidence.length === 0 ? (
           <Empty text={t("evidence.empty")} />

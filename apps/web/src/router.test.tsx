@@ -15,6 +15,7 @@ describe("createAppRouter (ADR-0008)", () => {
         "/evidence/$id",
         "/evidence/$id/edit",
         "/evidence/new",
+        "/evidence/paste",
         "/pathways",
         "/pathways/$slug",
         "/pathways/$slug/gap",
@@ -31,6 +32,7 @@ describe("createAppRouter (ADR-0008)", () => {
     const match = (path: string): string | undefined => router.matchRoutes(path).at(-1)?.routeId;
     expect(match("/skills/custom")).toBe("/skills/custom");
     expect(match("/skills/record")).toBe("/skills/record");
+    expect(match("/evidence/paste")).toBe("/evidence/paste");
     expect(match("/skills/python")).toBe("/skills/$skill");
     expect(match("/evidence/new")).toBe("/evidence/new");
   });
