@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { expect, test } from "./fixtures.ts";
-import { PAYMENTS_API, PHAROAM } from "./files.ts";
+import { PAYMENTS_API, PAYMENTS_API_ID, PDF_BYTES, PHAROAM } from "./files.ts";
 
 test.use({ picker: false });
 // WebKit shares its private file system between test profiles, so these run one after another.
@@ -65,5 +65,42 @@ test("starts from a folder the person picks, copying its files in", async ({ app
   await app.nav("Evidence").click();
   await expect(page.getByRole("link", { name: "Payments API" })).toBeVisible();
   await app.expectAccessible("evidence, browser storage");
+  await rm(folder, { recursive: true, force: true });
+});
+
+test("S14: keeps files with evidence in the browser byte for byte, brought in from a folder or attached", async ({
+  app,
+  page,
+}) => {
+  const folder = await mkdtemp(path.join(tmpdir(), "pharoam-copy-"));
+  const files = path.join(folder, "evidence", "_attachments", PAYMENTS_API_ID);
+  await mkdir(files, { recursive: true });
+  await writeFile(path.join(folder, "pharoam.md"), PHAROAM);
+  await writeFile(
+    path.join(folder, "evidence", "payments-api--0192f3a1.md"),
+    PAYMENTS_API.replace("title: Payments API\n", "title: Payments API\nattachments: [certificate.pdf]\n"),
+  );
+  await writeFile(path.join(files, "certificate.pdf"), Buffer.from(PDF_BYTES));
+
+  await app.start();
+  await page.getByLabel("Start from a folder").setInputFiles(folder);
+  await expect(page.getByRole("heading", { level: 1, name: "Backend developer" })).toBeVisible();
+  await app.nav("Evidence").click();
+  await page.getByRole("link", { name: "Payments API" }).click();
+
+  const downloading = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download certificate.pdf" }).click();
+  const download = await downloading;
+  expect(download.suggestedFilename()).toBe("certificate.pdf");
+  expect([...(await readFile(await download.path()))]).toEqual(PDF_BYTES);
+
+  await page.getByLabel("Attach a file").setInputFiles({
+    name: "transcript.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from(PDF_BYTES),
+  });
+  await expect(page.getByText("transcript.pdf was attached.")).toBeVisible();
+  expect(await app.readBytes(`evidence/_attachments/${PAYMENTS_API_ID}/transcript.pdf`)).toEqual(PDF_BYTES);
+  await app.expectAccessible("evidence with files, browser storage");
   await rm(folder, { recursive: true, force: true });
 });

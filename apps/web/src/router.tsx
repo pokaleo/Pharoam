@@ -195,5 +195,7 @@ declare module "@tanstack/react-router" {
   interface HistoryState {
     /** The title of the evidence just deleted, so the list can say so (MVP S5.2). */
     deleted?: string;
+    /** Files of the deleted evidence that were kept, as they changed outside since they were shown (MVP S14.4). */
+    keptFiles?: readonly string[];
   }
 }

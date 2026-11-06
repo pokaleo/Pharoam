@@ -1,15 +1,16 @@
 /**
- * One piece of evidence, with editing and deleting (MVP S4.5, S5).
+ * One piece of evidence, with its files, editing and deleting (MVP S4.5, S5, S14).
  *
  * @packageDocumentation
  */
-import type { CoreService } from "@pharoam/core";
+import type { AttachmentView, CoreService } from "@pharoam/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Pencil, Trash2 } from "lucide-react";
 import { useEffect, useId, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { answersOf } from "../evidence/answers.ts";
+import { EvidenceFiles, useAttachments } from "../evidence/evidence-files.tsx";
 import { useSession } from "../profile/session.tsx";
 import { skillChoices, skillName } from "../profile/skills.ts";
 import { Button, buttonClassName } from "../ui/button.tsx";
@@ -25,7 +26,8 @@ import { kindName } from "./evidence-list-page.tsx";
  * safely (MVP S4.5).
  *
  * @remarks Deleting asks first and names the levels that cite the evidence (MVP S5.3); those levels are never
- * changed, and show the evidence as removed afterwards (MVP S5.2, hard rule 4).
+ * changed, and show the evidence as removed afterwards (MVP S5.2, hard rule 4). It also shows the evidence's files,
+ * which are kept unless the person asks for them to be deleted too (MVP S14.4).
  * @param props - The open profile's service and the evidence's ID.
  * @returns The evidence's page, or a note when there is no evidence with that ID.
  */
@@ -41,6 +43,7 @@ export function EvidencePage({
   const content = useQuery({ queryKey: ["content"], queryFn: services.content, staleTime: Infinity });
   const [deleting, setDeleting] = useState(false);
   const loaded = service.find(id);
+  const files = useAttachments(service, loaded);
 
   if (loaded?.record.schema !== "evidence/1") {
     return (
@@ -95,6 +98,11 @@ export function EvidencePage({
             location={loaded.location}
             title={record.title}
             skills={service.evidenceReferences(id).map((reference) => skillName(skills, reference.skill))}
+            files={
+              files === false || files === undefined
+                ? files
+                : files.filter((file) => file.stored !== undefined)
+            }
             onKeep={() => {
               setDeleting(false);
             }}
@@ -140,6 +148,12 @@ export function EvidencePage({
               <Markdown text={loaded.file.body} />
             </section>
           )}
+          <EvidenceFiles
+            service={service}
+            loaded={loaded}
+            files={files}
+            editable={record.kind !== "assessment"}
+          />
         </div>
       </div>
     </>
@@ -168,12 +182,15 @@ function DeleteConfirmation({
   location,
   title,
   skills,
+  files,
   onKeep,
 }: {
   readonly service: CoreService;
   readonly location: string;
   readonly title: string;
   readonly skills: readonly string[];
+  /** The evidence's stored files; `undefined` while they are read, `false` when they couldn't be. */
+  readonly files: readonly AttachmentView[] | false | undefined;
   readonly onKeep: () => void;
 }): ReactElement {
   const { t } = useTranslation();
@@ -182,13 +199,16 @@ function DeleteConfirmation({
   const navigate = useNavigate();
   const { changed } = useSession();
   const box = useRef<HTMLDivElement>(null);
+  const [withFiles, setWithFiles] = useState(false);
   const cited = [...new Set(skills)];
   const list = new Intl.ListFormat(t("app.locale"), { type: "conjunction" });
   const remove = useMutation({
     mutationFn: async () => {
-      const deleted = await service.deleteEvidence(location);
+      const chosen = withFiles && files !== false && files !== undefined ? files : [];
+      const deleted = await service.deleteEvidence(location, chosen);
       changed();
-      if (deleted.ok) await navigate({ to: "/evidence", state: { deleted: title } });
+      if (deleted.ok)
+        await navigate({ to: "/evidence", state: { deleted: title, keptFiles: [...deleted.value.kept] } });
       return deleted.ok;
     },
   });
@@ -204,7 +224,7 @@ function DeleteConfirmation({
       aria-labelledby={titleId}
       aria-describedby={textId}
       tabIndex={-1}
-      className="grid gap-(--space-3) rounded-lg border border-problem-edge bg-problem-wash p-(--pad)"
+      className="grid gap-(--space-3) rounded-lg border border-problem-edge bg-problem-wash p-(--pad) lg:col-span-2"
     >
       <h2 id={titleId} className="text-section font-bold">
         {t("evidence.delete.title", { title })}
@@ -214,14 +234,40 @@ function DeleteConfirmation({
         {cited.length === 0 ? null : (
           <p>{t("evidence.delete.cited", { count: cited.length, skills: list.format(cited) })}</p>
         )}
+        {files === false ? <p>{t("evidence.delete.filesUnknown")}</p> : null}
+        {files === false || files === undefined || files.length === 0 ? null : (
+          <>
+            <p>{t("evidence.delete.files")}</p>
+            <ul className="list-disc ps-(--space-4)">
+              {files.map((file) => (
+                <li key={file.name} className="break-all">
+                  {file.name}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
       </div>
+      {files === false || files === undefined || files.length === 0 ? null : (
+        <label className="flex items-center gap-(--space-2)">
+          <input
+            type="checkbox"
+            checked={withFiles}
+            onChange={(event) => {
+              setWithFiles(event.currentTarget.checked);
+            }}
+          />
+          {t("evidence.delete.alsoFiles")}
+        </label>
+      )}
       {remove.data === false || remove.isError ? (
         <Notice tone="problem" title={t("evidence.delete.failed")} />
       ) : null}
       <div className="flex flex-wrap gap-(--space-2)">
         <Button
           variant="primary"
-          disabled={remove.isPending}
+          // Not before the files are known, so the person is always asked about them (MVP S14.4).
+          disabled={remove.isPending || files === undefined}
           onClick={() => {
             remove.mutate();
           }}
