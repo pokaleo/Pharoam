@@ -429,7 +429,7 @@
     "domain": "Domain",
     "allDomains": "All domains",
     "table": "Your skills",
-    "whichLevel": "One level each: latest diagnostic, then an accepted AI judgement, then your own",
+    "whichLevel": "One level each: your latest diagnostic, otherwise your newest claim, your own or an AI judgement you accepted",
     "find": "Find skills",
     "count_one": "{{count}} skill",
     "count_other": "{{count}} skills",

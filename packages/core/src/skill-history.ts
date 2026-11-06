@@ -4,8 +4,8 @@
  * @remarks Entries are only ever appended (hard rule 4). A correction is a new observation that `supersedes` an
  * earlier one, and a retraction is a review entry; superseded and retracted observations stay in the history but
  * never count (PRD C3, data model §6). The shown level is chosen by a fixed order, never blended from several
- * entries (Charter R4): the latest tested level, otherwise the latest accepted AI judgement, otherwise the latest
- * self-reported level. "Latest" compares `observed_at` as instants.
+ * entries (Charter R4): the latest tested level, otherwise the latest claim, an accepted AI judgement or the
+ * person's own rating, whichever is newer (PRD C4). "Latest" compares `observed_at` as instants.
  * @packageDocumentation
  */
 import type { IntegrityStatus } from "./integrity.ts";
@@ -35,8 +35,10 @@ export type HistoryItem =
 
 type Entry = Observation | Review;
 
-// The order a shown level is chosen in: tested levels first, then accepted AI judgements, then claims.
-const RANK = { demonstrated: 0, "ai-correlated": 0, "ai-judged": 1, "self-reported": 2 } as const;
+// The order a shown level is chosen in: tested levels first, then claims, the newer of which wins. An accepted AI
+// judgement and the person's own rating are both claims, so a newer rating is never hidden behind an older
+// judgement (PRD C4).
+const RANK = { demonstrated: 0, "ai-correlated": 0, "ai-judged": 1, "self-reported": 1 } as const;
 
 /**
  * Says whether each observation counts, or why not.

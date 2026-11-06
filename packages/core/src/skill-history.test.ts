@@ -57,23 +57,48 @@ describe("the shown level (data model §6)", () => {
     expect(shownObservation(entries)?.id).toBe(id(2));
   });
 
-  it("is an accepted AI judgement before a self-reported level", () => {
-    const judged = {
+  it("is the newer of an accepted AI judgement and a self-reported level (PRD C4)", () => {
+    const judged = (at: string) => ({
       id: id(2),
       level: 3,
       provenance: "ai-judged",
-      observed_at: "2026-10-01T10:00:00Z",
+      observed_at: at,
       explanation: "Built and tested packages.",
       limits: "From evidence only.",
       ai: {
-        task: "judge-level@1",
+        task: "judge-skill-level@1",
         model: "anthropic/claude-sonnet-5-5",
-        at: "2026-10-01T10:00:00Z",
-        confirmed_by_user: "2026-10-01T10:05:00Z",
+        at,
+        confirmed_by_user: at,
       },
-    };
-    const entries = record([claim(1, 4, "2026-10-02T10:00:00Z"), judged]).entries;
-    expect(shownObservation(entries)?.id).toBe(id(2));
+    });
+    // The person's own newer rating is never hidden behind an AI judgement they accepted earlier.
+    const rated = record([judged("2026-10-01T10:00:00Z"), claim(1, 4, "2026-10-02T10:00:00Z")]).entries;
+    expect(shownObservation(rated)?.id).toBe(id(1));
+    // A judgement accepted after the person's rating is the newer claim.
+    const accepted = record([claim(1, 4, "2026-10-01T10:00:00Z"), judged("2026-10-02T10:00:00Z")]).entries;
+    expect(shownObservation(accepted)?.id).toBe(id(2));
+  });
+
+  it("is a tested level before an accepted AI judgement, however new", () => {
+    const entries = record([
+      tested(1, 2, "2026-10-01T10:00:00Z"),
+      {
+        id: id(2),
+        level: 4,
+        provenance: "ai-judged",
+        observed_at: "2026-10-05T10:00:00Z",
+        explanation: "Led the rewrite.",
+        limits: "From evidence only.",
+        ai: {
+          task: "judge-skill-level@1",
+          model: "anthropic/claude-sonnet-5-5",
+          at: "2026-10-05T10:00:00Z",
+          confirmed_by_user: "2026-10-05T10:00:00Z",
+        },
+      },
+    ]).entries;
+    expect(shownObservation(entries)?.id).toBe(id(1));
   });
 
   it("falls back to the previous level when the latest is retracted", () => {
