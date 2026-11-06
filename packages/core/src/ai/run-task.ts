@@ -76,7 +76,11 @@ export async function runTask<I, O>(
   options: { readonly model: string; readonly now: () => Date },
 ): Promise<Result<TaskAnswer<O>, TaskFailure>> {
   const { request } = prepareCall(task, input);
-  const at = options.now().toISOString();
+  // To the second, as Pharoam writes every time, such as `2026-10-24T14:02:11Z` (data model §4–5).
+  const at = options
+    .now()
+    .toISOString()
+    .replace(/\.\d{3}Z$/, "Z");
   const model = modelName(provider, options.model);
   const record = (outcome: CallRecord["outcome"]): CallRecord => ({
     task: task.id,

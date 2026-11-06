@@ -8,6 +8,7 @@ import {
   type CoreService,
   type ProfileFields,
 } from "./core-service.ts";
+import type { EvidenceForm } from "./evidence-form.ts";
 import type { GapWriter } from "./gaps.ts";
 import type { OverviewWriter } from "./overview.ts";
 import type { IdSource } from "./ids.ts";
@@ -1648,5 +1649,161 @@ describe("attaching files to evidence (MVP S14)", () => {
   it("lists a name the evidence repeats once", async () => {
     const { service } = await withFiles(LISTING.replace("[cv.pdf, gone.pdf]", "[cv.pdf, cv.pdf]"));
     expect((await listed(service)).map((file) => file.name)).toEqual(["cv.pdf"]);
+  });
+});
+
+describe("turning pasted text into evidence (MVP S15)", () => {
+  const AI = {
+    task: "normalise-evidence@1",
+    model: "anthropic/claude-sonnet-5-5",
+    at: "2026-10-29T09:29:00Z",
+  };
+  const PASTE = { ai: AI, disclaimer: "AI-generated. AI can make mistakes.", keepOriginal: true };
+  const PASTED = new Uint8Array([0x43, 0x56, 0x0a]);
+  const FORM = {
+    kind: "project",
+    title: "Shell history search",
+    description: "Built a small tool.",
+  } as const;
+  const LATER = { ...OPTIONS.ids, now: () => Date.UTC(2026, 9, 29, 9, 31, 0) };
+
+  function draft(service: CoreService, form: EvidenceForm = FORM, paste = PASTE): RecordFile {
+    const drafted = service.draftPastedEvidence(form, paste);
+    if (!drafted.ok) throw new Error(drafted.error.kind);
+    return drafted.value;
+  }
+
+  it("drafts a record from pasted text, labelled as AI-made, without writing anything (S15.2)", async () => {
+    const { service, storage } = await opened({});
+    const file = draft(service);
+    expect(file.top).toMatchObject({
+      source: "paste",
+      ai: { ...AI, confirmed_by_user: "2026-10-29T09:30:00Z" },
+    });
+    expect(file.body).toBe("> ⚠️ AI-generated. AI can make mistakes.\n\nBuilt a small tool.\n");
+    expect(storage.writes()).toBe(0);
+  });
+
+  it("finds evidence a draft looks like, by kind, title and organisation (S15.4)", async () => {
+    const { service } = await opened({ "evidence/a.md": EVIDENCE_FILE });
+    expect(
+      service.similarEvidence({ kind: "job", title: "backend engineer", organisation: "Example Co" })
+        ?.location,
+    ).toBe("evidence/a.md");
+    expect(service.similarEvidence({ kind: "job", title: "Backend Engineer" })).toBeUndefined();
+  });
+
+  it("saves each record with its own copy of the pasted text, confirmed when saved (S15.5)", async () => {
+    const storage = createMemoryConnector();
+    const drafting = createCoreService({ ...OPTIONS, storage: storage.connector });
+    await drafting.open();
+    const first = draft(drafting);
+    const second = draft(drafting, { kind: "module", title: "Databases" });
+    const service = createCoreService({ ...OPTIONS, ids: LATER, storage: storage.connector });
+    await service.open();
+
+    for (const file of [first, second]) {
+      const saved = await service.savePastedEvidence(file, PASTED);
+      expect(saved.ok && saved.value.record).toMatchObject({
+        source: "paste",
+        original_input: "original-input.txt",
+        attachments: ["original-input.txt"],
+        ai: { ...AI, confirmed_by_user: "2026-10-29T09:31:00Z" },
+      });
+      const id = String(file.top.id);
+      expect([...((await storage.readAttachmentOutside(id, "original-input.txt")) ?? [])]).toEqual([
+        ...PASTED,
+      ]);
+    }
+  });
+
+  it("keeps no copy when the person chose to discard it", async () => {
+    const { service, storage } = await opened({});
+    const file = draft(service, FORM, { ...PASTE, keepOriginal: false });
+    const saved = await service.savePastedEvidence(file, undefined);
+    expect(saved.ok && saved.value.record).toMatchObject({ source: "paste", attachments: [] });
+    expect(await storage.connector.attachments(String(file.top.id))).toEqual({ ok: true, value: [] });
+  });
+
+  it("writes nothing when storage fails, and leaves no copy behind (S15.6)", async () => {
+    const { service, storage } = await opened({});
+    const file = draft(service);
+    storage.loseAccess();
+    const saved = await service.savePastedEvidence(file, PASTED);
+    expect(saved.ok ? null : saved.error.kind).toBe("unavailable");
+    expect(storage.writes()).toBe(0);
+  });
+
+  it("removes the copy again when the record itself can't be stored", async () => {
+    const { service, storage } = await opened({});
+    const file = draft(service);
+    const id = String(file.top.id);
+    // Something already at the record's place, so storage refuses to create it there.
+    await storage.putOutside(`evidence/${id}.md`, "taken");
+    const saved = await service.savePastedEvidence(file, PASTED);
+    expect(saved.ok ? null : saved.error.kind).toBe("exists");
+    expect(await storage.readAttachmentOutside(id, "original-input.txt")).toBeUndefined();
+  });
+
+  it("never saves the same draft twice, nor touches the first one's copy", async () => {
+    const { service, storage } = await opened({});
+    const file = draft(service);
+    await service.savePastedEvidence(file, PASTED);
+    const again = await service.savePastedEvidence(file, new Uint8Array([9]));
+    expect(again.ok ? null : again.error.kind).toBe("duplicate-id");
+    const id = String(file.top.id);
+    expect([...((await storage.readAttachmentOutside(id, "original-input.txt")) ?? [])]).toEqual([...PASTED]);
+  });
+
+  it("refuses a record that names a copy it wasn't given, or isn't from pasted text", async () => {
+    const { service, storage } = await opened({});
+    expect(await service.savePastedEvidence(draft(service), undefined)).toEqual({
+      ok: false,
+      error: { kind: "missing-original" },
+    });
+    const manual = service.draftEvidence(FORM);
+    if (!manual.ok) throw new Error(manual.error.kind);
+    expect(await service.savePastedEvidence(manual.value, PASTED)).toEqual({
+      ok: false,
+      error: { kind: "not-pasted" },
+    });
+    expect(storage.writes()).toBe(0);
+  });
+
+  it("refuses pasted text too large to keep, writing nothing", async () => {
+    const { service, storage } = await opened({});
+    const saved = await service.savePastedEvidence(draft(service), new Uint8Array(MAX_ATTACHMENT_BYTES + 1));
+    expect(saved).toEqual({ ok: false, error: { kind: "too-large", limit: MAX_ATTACHMENT_BYTES } });
+    expect(storage.writes()).toBe(0);
+  });
+
+  it("reuses a copy left by an earlier try when it holds the same text, so the draft can still be saved", async () => {
+    const { service, storage } = await opened({});
+    const file = draft(service);
+    await storage.putAttachmentOutside(String(file.top.id), "original-input.txt", PASTED);
+    const saved = await service.savePastedEvidence(file, PASTED);
+    expect(saved.ok && saved.value.record).toMatchObject({ original_input: "original-input.txt" });
+  });
+
+  it("never replaces a different file already where the copy would go", async () => {
+    const { service, storage } = await opened({});
+    const file = draft(service);
+    const other = new Uint8Array([7, 7]);
+    await storage.putAttachmentOutside(String(file.top.id), "original-input.txt", other);
+    const saved = await service.savePastedEvidence(file, PASTED);
+    expect(saved.ok ? null : saved.error.kind).toBe("exists");
+    expect([
+      ...((await storage.readAttachmentOutside(String(file.top.id), "original-input.txt")) ?? []),
+    ]).toEqual([...other]);
+  });
+
+  it("keeps the copy only under its own name, listed with the record", async () => {
+    const { service, storage } = await opened({});
+    const renamed = withTopField(draft(service), "original_input", "elsewhere.txt");
+    expect(await service.savePastedEvidence(renamed, PASTED)).toEqual({
+      ok: false,
+      error: { kind: "not-pasted" },
+    });
+    expect(storage.writes()).toBe(0);
   });
 });

@@ -58,6 +58,7 @@ export {
   type ReadAttachmentError,
   type ReadError,
   type RemoveAttachmentError,
+  type SavePastedError,
   type ResolveConflictError,
   type SaveError,
   type StorageConnector,
@@ -77,6 +78,19 @@ export {
   type ProviderError,
 } from "./ai/provider.ts";
 export { checkModel } from "./ai/tasks/check-model.ts";
+export {
+  MAX_PASTED_CHARACTERS,
+  NormalisedEvidence,
+  formOfNormalised,
+  normaliseEvidence,
+} from "./ai/tasks/normalise-evidence.ts";
+export {
+  ORIGINAL_INPUT,
+  isSameEvidence,
+  pastedEvidence,
+  type EvidenceIdentity,
+  type PasteProvenance,
+} from "./pasted-evidence.ts";
 export {
   runTask,
   type CallRecord,

@@ -15,6 +15,13 @@ import {
   type InvalidEvidenceError,
 } from "./evidence-form.ts";
 import { customSkillSlug } from "./custom-skills.ts";
+import {
+  ORIGINAL_INPUT,
+  isSameEvidence,
+  pastedEvidence,
+  type EvidenceIdentity,
+  type PasteProvenance,
+} from "./pasted-evidence.ts";
 import { gapItems, type GapItem, type GapWriter } from "./gaps.ts";
 import { createProfileRecordIdGenerator, type IdSource } from "./ids.ts";
 import { checkEntry, sealEntry, type IntegrityStatus } from "./integrity.ts";
@@ -268,6 +275,18 @@ export interface NewAttachment {
 /** Why the service didn't attach a file: the reasons evidence can't be changed, or the file is over the limit. */
 export type AttachError = EditEvidenceError | { readonly kind: "too-large"; readonly limit: number };
 
+/**
+ * Why the service didn't save evidence made from pasted text.
+ *
+ * @remarks `not-pasted`: the record isn't one from pasted text with an `ai` block. `missing-original`: it names a
+ * copy of the pasted text, but none was given. `too-large`: the copy is over the attachment limit.
+ */
+export type SavePastedError =
+  | SaveError
+  | { readonly kind: "not-pasted" }
+  | { readonly kind: "missing-original" }
+  | { readonly kind: "too-large"; readonly limit: number };
+
 /** Why the service didn't list a piece of evidence's files. */
 export type AttachmentsError = StorageError | { readonly kind: "not-found"; readonly location: string };
 
@@ -446,6 +465,35 @@ export interface CoreService {
     location: string,
     attachments?: readonly AttachmentView[],
   ) => Promise<Result<{ readonly kept: readonly string[] }, DeleteEvidenceError>>;
+  /**
+   * Turns a draft from pasted text into the record it will be stored as, writing nothing (MVP S15.2, S15.5).
+   *
+   * @remarks The draft has its own new ID and time, `source: paste`, the `ai` block and the disclaimer; show it as
+   * a preview and save it with {@link CoreService.savePastedEvidence} when the person confirms.
+   */
+  readonly draftPastedEvidence: (
+    form: EvidenceForm,
+    paste: PasteProvenance,
+  ) => Result<RecordFile, InvalidEvidenceError>;
+  /**
+   * Evidence the person already has that a draft looks like: the same kind, title and organisation (MVP S15.4).
+   *
+   * @returns The first such record, or `undefined`.
+   */
+  readonly similarEvidence: (draft: EvidenceIdentity) => LoadedRecord | undefined;
+  /**
+   * Saves evidence made from pasted text, with its own copy of the text, once the person confirms (MVP S15.5).
+   *
+   * @remarks `confirmed_by_user` is set to the time of saving. The copy is stored first, under the name in
+   * `original_input`, then the record; if the record can't be stored, the copy is removed again, so nothing is left
+   * behind (S15.6). A record already in the profile is refused before anything is written.
+   * @param file - A record from {@link CoreService.draftPastedEvidence}, perhaps edited.
+   * @param original - The pasted text's bytes, when the record keeps a copy; `undefined` when it was discarded.
+   */
+  readonly savePastedEvidence: (
+    file: RecordFile,
+    original: Uint8Array<ArrayBuffer> | undefined,
+  ) => Promise<Result<LoadedRecord, SavePastedError>>;
   /**
    * The files a piece of evidence lists, in its order, each with what storage holds (MVP S14).
    *
@@ -831,6 +879,24 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
     return added;
   }
 
+  // Stores the copy of pasted text for a record not yet saved, reusing one an earlier try left that holds the same
+  // text, so a draft whose save was cut short can still be saved; any other file there is never replaced.
+  async function storeCopy(
+    record: string,
+    name: string,
+    bytes: Uint8Array<ArrayBuffer>,
+  ): Promise<Result<string, SavePastedError>> {
+    const added = await storage.addAttachment(record, name, bytes);
+    if (added.ok) return ok(added.value.version);
+    if (added.error.kind !== "exists") return err(added.error);
+    const there = await storage.readAttachment(record, name);
+    const same =
+      there.ok &&
+      there.value.bytes.length === bytes.length &&
+      there.value.bytes.every((b, i) => b === bytes[i]);
+    return same ? ok(there.value.version) : err(added.error);
+  }
+
   return {
     open: async () => {
       const listed = await storage.list();
@@ -896,6 +962,43 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
     create: createRecord,
     update: updateRecord,
     draftEvidence: (form) => evidenceDraft(form, nextId(), timestamp(ids.now())),
+    draftPastedEvidence: (form, paste) => pastedEvidence(form, nextId(), timestamp(ids.now()), paste),
+
+    similarEvidence: (draft) =>
+      loaded.find(
+        ({ record }) =>
+          record.schema === "evidence/1" &&
+          isSameEvidence(draft, {
+            kind: record.kind,
+            title: record.title,
+            ...(record.organisation !== undefined && { organisation: record.organisation }),
+          }),
+      ),
+
+    savePastedEvidence: async (given, original) => {
+      const parsed = parseProfileRecord(given.top);
+      if (!parsed.ok) return err({ kind: "invalid", error: parsed.error });
+      const record = parsed.value;
+      if (record.schema !== "evidence/1" || record.source !== "paste" || record.ai === null)
+        return err({ kind: "not-pasted" });
+      const kept = byId(record.id);
+      if (kept !== undefined) return err({ kind: "duplicate-id", id: record.id, keptAt: kept.location });
+      const name = record.original_input;
+      // The copy only ever goes under its own name, listed with the record (data model §7).
+      if (name !== undefined && (name !== ORIGINAL_INPUT || !record.attachments.includes(name)))
+        return err({ kind: "not-pasted" });
+      if (name !== undefined && original === undefined) return err({ kind: "missing-original" });
+      if (original !== undefined && original.length > MAX_ATTACHMENT_BYTES)
+        return err({ kind: "too-large", limit: MAX_ATTACHMENT_BYTES });
+      // Confirmed now, when the person saves it (data model §5).
+      const file = withTopFields(given, { ai: { ...record.ai, confirmed_by_user: timestamp(ids.now()) } });
+      if (name === undefined || original === undefined) return createRecord(file);
+      const copy = await storeCopy(record.id, name, original);
+      if (!copy.ok) return copy;
+      const created = await createRecord(file);
+      if (!created.ok) await storage.deleteAttachment(record.id, name, copy.value);
+      return created;
+    },
 
     editEvidence: async (location, form) => {
       const editable = editableEvidence(location);

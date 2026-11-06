@@ -231,7 +231,7 @@ Everything here is part of the product (PRD) but left out of v0.1 on purpose. Ea
 
 v0.2 is done when:
 1. the founder has turned their own CV into evidence records and decided a scan of them, with a real model;
-2. **the hand-run check passes**: a small fixed set of example inputs (two CVs, a module list, a few evidence records and one gap), each with what a good answer must and mustn't contain, run by hand against a real model, with the results recorded in the release PR. It never runs in CI, so CI needs no key;
+2. **the hand-run check passes**: a small fixed set of example inputs (two CVs, a module list, a few evidence records and one gap), each with what a good answer must and mustn't contain, run by hand against a real model ([the inputs](hand-run-check.md)), with the results recorded in the release PR. It never runs in CI, so CI needs no key;
 3. spike S1 has confirmed which providers a browser can call directly ([findings](research/spike-s1-model-providers.md)), the first call with a real key has confirmed the two replies it couldn't, and the content security policy allows only those providers;
 4. with no model set up, the app loads no AI code and makes no request beyond loading itself;
 5. **every story's acceptance criteria pass** as automated tests, and **axe accessibility checks pass** on every new screen. Core tests use a fake provider; the end-to-end journeys answer the provider's real address with canned replies, so they cover the adapter, the security policy and the key handling;
@@ -244,7 +244,7 @@ Everything in the v0.1 quality bar (§5), and:
 - All AI output is labelled, names its model and carries the disclaimer, and is written only when the person accepts it (hard rule 6, PRD D6).
 - Before every send, the person sees what will be sent and its size in characters, never a price or a token count (PRD D4).
 - The person's text goes to the model as clearly marked data, apart from the instructions (security §3).
-- Tasks answer in English until the interface has other languages (PRD N9).
+- Tasks answer in English until the interface has other languages (PRD N9), except where the answer is the person's own words: normalising pasted text keeps the language they wrote in.
 - No confidence scores anywhere (hard rule 9).
 
 ### S13. Set up a model
