@@ -254,6 +254,28 @@ Profile records reference skills by **Pharoam inventory slug only** (for example
 ### `session`
 - Workflow name and version, `status` (in progress, completed or abandoned), started and updated times.
 - **AI review session:** one per scan. It holds the suggestions that await the person's decision (PRD D2): skill links for each evidence record read, or a level for each skill judged, each with its explanation, limits, the evidence it cites and its `ai` block, and the decision once made. **Accept** writes the observation or link to the skill and evidence records; **skip** leaves it pending, never counting; **discard** drops it, writing nothing else. A suggestion whose evidence changed after the scan read it can't be accepted, only scanned again. Suggestions that would change nothing are listed as already so, not offered. The session completes when nothing is pending, and is then kept as a readable record unless the person deletes it.
+- **An evidence scan's session** (`schema: session/1`, `workflow: evidence-scan@1`) is kept as `sessions/evidence-scan-<day>--<short id>.md`. Its `scan` is `skill-links` or `skill-levels`. Each suggestion has its own ID, the skill, an explanation, its `ai` block and, once decided, `decision` (`accepted`, `discarded` or `adjusted`) and `decided_at`; a skipped suggestion has no decision. Each suggestion also keeps `read`, a SHA-256 fingerprint of exactly what the scan sent about each evidence record, which is how a later change to that evidence is seen (MVP S16.10). An accepted level's `ai-judged` observation takes the suggestion's ID. `already` lists suggestions that would have changed nothing, and `set_aside` the records or skills whose call failed. Nothing in a session ever carries a confidence (hard rule 9).
+
+  ```yaml
+  schema: session/1
+  id: 0192f3a1-…
+  created: 2026-11-06T10:00:00Z
+  updated: 2026-11-06T10:02:00Z
+  workflow: evidence-scan@1
+  scan: skill-links
+  status: in-progress            # completed once nothing is pending
+  suggestions:
+    - id: 0192f3a1-…
+      kind: skill-link
+      evidence: 0192f3a1-…       # the evidence record it would link
+      read: sha256:9f2c…         # what the scan sent about it
+      skill: sql
+      explanation: Ran the payments database.
+      ai: { task: suggest-skill-links@1, model: anthropic/claude-sonnet-5-5, at: 2026-11-06T10:00:30Z }
+  already:
+    - { kind: skill-link, evidence: 0192f3a1-…, skill: python }
+  ```
+  A level suggestion (`kind: skill-level`) also has `level`, `limits`, the `evidence` it rests on, and `read` as a list of each record sent with its fingerprint.
 - **A readable log of what has happened so far**: for a diagnostic, the items asked, the answers given and the marking so far, plus what the next step is.
 - Pharoam rebuilds its working state (for example a LangGraph checkpoint) from this log. Any engine checkpoint is kept only in the local cache.
 - When the session completes, its results are written as evidence and observations. The session is then archived as a readable record, or deleted if the person chooses.

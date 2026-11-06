@@ -54,6 +54,13 @@ describe("folder layout (data model §8)", () => {
     expect(path({ schema: "evidence/1", title: "后端工程师" })).toBe("evidence/evidence--6a7b8c9d.md");
   });
 
+  it("names a review session by its workflow and the day it started (data model §10)", () => {
+    expect(path({ schema: "session/1", workflow: "evidence-scan@1", created: "2026-11-06T10:00:00Z" })).toBe(
+      "sessions/evidence-scan-2026-11-06--6a7b8c9d.md",
+    );
+    expect(path({ schema: "session/1" })).toBe("sessions/session--6a7b8c9d.md");
+  });
+
   it("puts other record types in a folder named after the type", () => {
     expect(path({ schema: "aspiration/1", title: "Lead a team" })).toBe(
       "aspirations/lead-a-team--6a7b8c9d.md",

@@ -7,6 +7,10 @@
  * is never silently overwritten (AD10, MVP S12).
  * @packageDocumentation
  */
+import type { ModelProvider } from "./ai/provider.ts";
+import { runTask, type TaskError } from "./ai/run-task.ts";
+import { judgeSkillLevel } from "./ai/tasks/judge-skill-level.ts";
+import { suggestSkillLinks } from "./ai/tasks/suggest-skill-links.ts";
 import { MAX_ATTACHMENT_BYTES, attachmentName, numberedName } from "./attachments.ts";
 import {
   editedEvidence,
@@ -30,6 +34,20 @@ import type { ContentPack } from "./pack.ts";
 import { pathwayDetail, type PathwayDetail } from "./pathways.ts";
 import { proficiencyOf } from "./proficiency.ts";
 import {
+  SCAN_WORKFLOW,
+  customSkillNames,
+  isStale,
+  levelFindings,
+  levelScanCall,
+  linkFindings,
+  linkScanCall,
+  scanVocabulary,
+  scannable,
+  skillDescription,
+  type ReviewItem,
+  type ScanCall,
+} from "./scan.ts";
+import {
   createRecordFile,
   withAppendedItem,
   withTopFields,
@@ -42,9 +60,13 @@ import {
   skillHistory,
   type HistoryItem,
   type ObservationStatus,
+  countingObservations,
+  shownObservation,
 } from "./skill-history.ts";
 import { skillView, type SkillFilter, type SkillViewItem } from "./skill-view.ts";
 import { parseProfileRecord, type ProfileRecord, type ProfileRecordError } from "./schemas/profile-record.ts";
+import type { EvidenceRecord } from "./schemas/evidence.ts";
+import type { SuggestionInput } from "./schemas/session.ts";
 import type { Observation } from "./schemas/skill-record.ts";
 import type { SkillEntry } from "./schemas/skill.ts";
 
@@ -286,6 +308,41 @@ export type SavePastedError =
   | { readonly kind: "not-pasted" }
   | { readonly kind: "missing-original" }
   | { readonly kind: "too-large"; readonly limit: number };
+
+/** How a scan runs: the model, the clock, and how it reports progress and is stopped (MVP S16.5). */
+export interface ScanOptions {
+  /** The provider's own ID for the model. */
+  readonly model: string;
+  /** The clock to time each call by. */
+  readonly now: () => Date;
+  /** Called after each call, with how many are done and how many there are. */
+  readonly onProgress?: (done: number, total: number) => void;
+  /** Asked before each call; when it says yes, the scan stops, keeping what finished. */
+  readonly stopped?: () => boolean;
+}
+
+/** Why the service didn't run a scan: the reasons a save fails, or nothing was given to scan. */
+export type ScanError = SaveError | { readonly kind: "nothing-to-scan" } | { readonly kind: "mixed-scan" };
+
+/** What deciding several suggestions did: which were decided, and which weren't, and why (MVP S16.7). */
+export interface DecisionReport {
+  /** The suggestions decided, by ID. */
+  readonly decided: readonly string[];
+  /**
+   * The suggestions left as they were: `stale`, its evidence changed since the scan read it (S16.10);
+   * `not-pending`, already decided or gone.
+   */
+  readonly refused: readonly { readonly id: string; readonly reason: "stale" | "not-pending" }[];
+  /**
+   * The write that failed, if one did: deciding stopped there. Everything listed under `decided` was written
+   * and marked; the failed suggestion stays pending, and deciding it again is safe, since an accepted level is
+   * never written twice.
+   */
+  readonly failed?: { readonly id: string; readonly error: SaveError };
+}
+
+/** Why the service didn't record the person's own level instead of a suggested one. */
+export type AdjustError = RecordLevelError | { readonly kind: "not-pending"; readonly id: string };
 
 /** Why the service didn't list a piece of evidence's files. */
 export type AttachmentsError = StorageError | { readonly kind: "not-found"; readonly location: string };
@@ -614,6 +671,70 @@ export interface CoreService {
    * @remarks Validates before writing anything, and refuses if the profile already has a `pharoam` record.
    */
   readonly createProfile: (profile: ProfileFields) => Promise<Result<LoadedRecord, CreateProfileError>>;
+  /**
+   * The calls a scan for skill links would make: one per evidence record, sending that record only (MVP S16.1).
+   *
+   * @remarks Writes nothing, so the app can show what will be sent and its size first (PRD D4). A diagnostic's
+   * record, or an ID that isn't evidence, is left out.
+   */
+  readonly linkScan: (evidence: readonly string[]) => readonly ScanCall[];
+  /**
+   * The calls a scan for levels would make: one per skill, sending only that skill's linked evidence (MVP S16.2).
+   *
+   * @remarks Writes nothing. A skill with no linked evidence, or one on neither Pharoam's list nor the person's
+   * own, is left out.
+   */
+  readonly levelScan: (skills: readonly string[]) => readonly ScanCall[];
+  /** The skills a level scan can judge: on a list, with linked evidence; sorted by slug (MVP S16.2). */
+  readonly judgeableSkills: () => readonly string[];
+  /**
+   * Runs a scan's calls, writing what they suggest to a review session of its own in `sessions/` (MVP S16.4).
+   *
+   * @remarks The session is written after every call, so suggestions from finished calls are kept if the scan is
+   * stopped; a failed call sets aside only its own record or skill (S16.5). No link or level is written: the person
+   * decides each suggestion later (PRD D2). Suggestions that would change nothing are listed as already so, and a
+   * skill on no list is dropped (S16.11). The session is complete once nothing in it is pending.
+   */
+  readonly runScan: (
+    calls: readonly ScanCall[],
+    provider: ModelProvider,
+    options: ScanOptions,
+  ) => Promise<Result<LoadedRecord, ScanError>>;
+  /** Every pending suggestion, from every session but an abandoned one, oldest session first (MVP S16.6). */
+  readonly reviewItems: () => readonly ReviewItem[];
+  /**
+   * Accepts or discards suggestions, several at once (MVP S16.7).
+   *
+   * @remarks Accepting a link adds the skill to the evidence record's `skills` and lists it under `ai-skill-links`
+   * (S16.8); accepting a level appends an `ai-judged` observation citing its evidence, with the suggestion's ID
+   * (S16.9). Discarding writes nothing but the decision. A suggestion whose evidence changed since the scan read it
+   * isn't accepted (S16.10). Skipping is simply not deciding: the suggestion stays pending and never counts.
+   */
+  readonly decideSuggestions: (
+    items: readonly Pick<ReviewItem, "session" | "suggestion">[],
+    decision: "accept" | "discard",
+  ) => Promise<DecisionReport>;
+  /**
+   * Records the person's own level instead of a suggested one, and drops the suggestion (MVP S16.7, PRD D2).
+   *
+   * @returns The skill record with the new `self-reported` observation.
+   */
+  readonly adjustSuggestion: (
+    item: Pick<ReviewItem, "session" | "suggestion">,
+    level: number,
+  ) => Promise<Result<LoadedRecord, AdjustError>>;
+  /**
+   * Deletes a review session the person no longer wants, only if storage still has the version read (MVP S16.14).
+   *
+   * @remarks Nothing it led to is changed: accepted links and levels stay.
+   */
+  readonly deleteSession: (location: string) => Promise<Result<undefined, SaveError>>;
+  /**
+   * Whether a skill's latest accepted AI level was judged from evidence that has since changed, or from fewer
+   * records than are now linked, so the app can offer to ask AI again; Pharoam never judges again on its own (MVP
+   * S16.12).
+   */
+  readonly levelOutOfDate: (skill: string) => boolean;
 }
 
 /** What the core service needs. */
@@ -897,6 +1018,185 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
     return same ? ok(there.value.version) : err(added.error);
   }
 
+  // Appends the person's own level to a skill record, starting the record if needed (MVP S6).
+  async function recordLevelOf({
+    skill,
+    level,
+    evidence = [],
+  }: SelfRating): Promise<Result<LoadedRecord, RecordLevelError>> {
+    const observation = newObservation(level, evidence);
+    if (!observation.ok) return observation;
+    const current = skillRecord(skill);
+    if (current !== undefined) return appendEntry(current, observation.value);
+    const top = {
+      schema: "skill-record/1",
+      id: nextId(),
+      created: observation.value.observed_at,
+      ai: null,
+      skill,
+      entries: [observation.value],
+    };
+    return createRecord(createRecordFile(top, ""));
+  }
+
+  // An evidence record as it is now, for a scan to read or compare with what it read.
+  function evidenceNow(id: string): { record: EvidenceRecord; body: string } | undefined {
+    const found = byId(id);
+    return found?.record.schema === "evidence/1"
+      ? { record: found.record, body: found.file.body }
+      : undefined;
+  }
+
+  // The evidence a level judgement reads for a skill: every record linking it, except a diagnostic's.
+  function linkedEvidence(skill: string): { record: EvidenceRecord; body: string; loaded: LoadedRecord }[] {
+    return loaded.flatMap((one) => {
+      const record = scannable(one);
+      return record?.skills.some((one) => one === skill) === true
+        ? [{ record, body: one.file.body, loaded: one }]
+        : [];
+    });
+  }
+
+  // What a skill is, for a level judgement: from Pharoam's vocabulary, or the person's own skill record.
+  function skillInfo(skill: string): string | undefined {
+    const entry = content.skills.find((one) => one.slug === skill && one.status === "active");
+    if (entry !== undefined) return skillDescription(entry);
+    const own = skillRecord(skill);
+    if (own?.record.schema !== "skill-record/1" || own.record.name === undefined) return undefined;
+    return skillDescription({ name: own.record.name, description: own.record.description });
+  }
+
+  // Whether a suggestion can't be accepted, only scanned again (MVP S16.10).
+  function staleNow(suggestion: SuggestionInput): boolean {
+    if (isStale(suggestion, evidenceNow)) return true;
+    if (suggestion.kind === "skill-link") {
+      const found = byId(suggestion.evidence);
+      return found === undefined || scannable(found) === undefined;
+    }
+    const read = new Set(suggestion.read.map(({ evidence }) => evidence));
+    const linked = linkedEvidence(suggestion.skill).map(({ record }) => record.id);
+    return (
+      linked.length !== read.size ||
+      linked.some((id) => !read.has(id)) ||
+      suggestion.evidence.some((id) => !read.has(id))
+    );
+  }
+
+  function shownLevel(skill: string): number | undefined {
+    const record = skillRecord(skill)?.record;
+    return record?.schema === "skill-record/1" ? shownObservation(record.entries)?.level : undefined;
+  }
+
+  // Writes a link or level the person accepted to the evidence or skill record (MVP S16.8, S16.9).
+  async function applySuggestion(
+    suggestion: SuggestionInput,
+    now: string,
+  ): Promise<Result<undefined, SaveError>> {
+    const confirmed = { ...suggestion.ai, confirmed_by_user: now };
+    if (suggestion.kind === "skill-link") {
+      const evidence = byId(suggestion.evidence);
+      if (evidence?.record.schema !== "evidence/1")
+        return err({ kind: "not-found", location: suggestion.evidence });
+      if (evidence.record.skills.some((one) => one === suggestion.skill)) return ok(undefined);
+      // The links as written, kept exactly, with the new one added after them.
+      const written: unknown = evidence.file.top["ai-skill-links"];
+      const links: readonly unknown[] = Array.isArray(written) ? written : [];
+      const saved = await updateRecord(
+        evidence.location,
+        withTopFields(evidence.file, {
+          updated: now,
+          skills: [...evidence.record.skills, suggestion.skill],
+          "ai-skill-links": [...links, { skill: suggestion.skill, ...confirmed }],
+        }),
+      );
+      return saved.ok ? ok(undefined) : saved;
+    }
+    // The observation keeps the suggestion's ID, so what the judgement read can be found again (S16.12).
+    const sealed = sealEntry({
+      id: suggestion.id,
+      level: suggestion.level,
+      provenance: "ai-judged",
+      observed_at: now,
+      evidence: [...suggestion.evidence],
+      explanation: suggestion.explanation,
+      limits: suggestion.limits,
+      ai: confirmed,
+    });
+    if (!sealed.ok) return err(invalidLevel());
+    const current = skillRecord(suggestion.skill);
+    const entries = current?.record.schema === "skill-record/1" ? current.record.entries : [];
+    if (entries.some((entry) => entry.id === suggestion.id)) return ok(undefined);
+    const saved =
+      current === undefined
+        ? await createRecord(
+            createRecordFile(
+              {
+                schema: "skill-record/1",
+                id: nextId(),
+                created: now,
+                ai: null,
+                skill: suggestion.skill,
+                entries: [sealed.value],
+              },
+              "",
+            ),
+          )
+        : await appendEntry(current, sealed.value);
+    return saved.ok ? ok(undefined) : saved;
+  }
+
+  // Writes a running scan's findings into its session as it is now, so decisions the person made on it meanwhile
+  // are kept; complete once the scan is over and nothing is pending (MVP S16.5, S16.14).
+  async function writeScan(
+    started: LoadedRecord,
+    found: readonly SuggestionInput[],
+    already: readonly Readonly<Record<string, unknown>>[],
+    setAside: readonly Readonly<Record<string, unknown>>[],
+    over: boolean,
+  ): Promise<Result<LoadedRecord, SaveError>> {
+    const current = loaded.find((one) => one.location === started.location) ?? started;
+    const written = (
+      Array.isArray(current.file.top.suggestions) ? current.file.top.suggestions : []
+    ) as readonly Readonly<Record<string, unknown>>[];
+    const known = new Set(written.map((one) => one.id));
+    const suggestions = [...written, ...found.filter((one) => !known.has(one.id))];
+    const pending = suggestions.some((one) => one.decision === undefined);
+    return updateRecord(
+      current.location,
+      withTopFields(current.file, {
+        updated: timestamp(ids.now()),
+        status: over && !pending ? "completed" : "in-progress",
+        suggestions: suggestions.length === 0 ? undefined : suggestions,
+        already: already.length === 0 ? undefined : already,
+        set_aside: setAside.length === 0 ? undefined : setAside,
+      }),
+    );
+  }
+
+  // Writes decisions into a session, completing it when nothing is pending (MVP S16.14).
+  async function markDecided(
+    session: LoadedRecord,
+    decisions: ReadonlyMap<string, "accepted" | "discarded" | "adjusted">,
+    now: string,
+  ): Promise<Result<LoadedRecord, SaveError>> {
+    const raw = (
+      Array.isArray(session.file.top.suggestions) ? session.file.top.suggestions : []
+    ) as readonly Readonly<Record<string, unknown>>[];
+    const suggestions = raw.map((one) => {
+      const decision = typeof one.id === "string" ? decisions.get(one.id) : undefined;
+      return decision === undefined ? one : { ...one, decision, decided_at: now };
+    });
+    const pending = suggestions.some((one) => one.decision === undefined);
+    return updateRecord(
+      session.location,
+      withTopFields(session.file, {
+        updated: now,
+        status: pending ? "in-progress" : "completed",
+        suggestions,
+      }),
+    );
+  }
+
   return {
     open: async () => {
       const listed = await storage.list();
@@ -1009,21 +1309,7 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
       return updateRecord(location, edited.value);
     },
 
-    recordLevel: async ({ skill, level, evidence = [] }) => {
-      const observation = newObservation(level, evidence);
-      if (!observation.ok) return observation;
-      const current = skillRecord(skill);
-      if (current !== undefined) return appendEntry(current, observation.value);
-      const top = {
-        schema: "skill-record/1",
-        id: nextId(),
-        created: observation.value.observed_at,
-        ai: null,
-        skill,
-        entries: [observation.value],
-      };
-      return createRecord(createRecordFile(top, ""));
-    },
+    recordLevel: recordLevelOf,
 
     addCustomSkill: async ({ name, description = "" }) => {
       const wanted = sameName(name);
@@ -1220,7 +1506,218 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
 
     refreshOverview,
     overviewProblem: () => overviewProblem,
+
+    linkScan: (ids) => {
+      const vocabulary = scanVocabulary(content);
+      const custom = customSkillNames(loaded);
+      return ids.flatMap((id) => {
+        const found = byId(id);
+        const record = found === undefined ? undefined : scannable(found);
+        return found === undefined || record === undefined
+          ? []
+          : [linkScanCall(found, record, vocabulary, custom)];
+      });
+    },
+
+    levelScan: (skills) =>
+      skills.flatMap((skill) => {
+        const description = skillInfo(skill);
+        const linked = linkedEvidence(skill);
+        if (description === undefined || linked.length === 0) return [];
+        return [levelScanCall(skill, description, content.levels.levels, linked)];
+      }),
+
+    judgeableSkills: () =>
+      [...new Set(loaded.flatMap((one) => scannable(one)?.skills ?? []))]
+        .filter((skill) => skillInfo(skill) !== undefined)
+        .sort(),
+
+    runScan: async (calls, provider, options) => {
+      const first = calls[0];
+      if (first === undefined) return err({ kind: "nothing-to-scan" });
+      if (calls.some((call) => call.kind !== first.kind)) return err({ kind: "mixed-scan" });
+      const started = timestamp(ids.now());
+      const top = {
+        schema: "session/1",
+        id: nextId(),
+        created: started,
+        updated: started,
+        ai: null,
+        workflow: SCAN_WORKFLOW,
+        scan: first.kind,
+        status: "in-progress",
+      };
+      let saved = await createRecord(createRecordFile(top, ""));
+      if (!saved.ok) return saved;
+      const known = new Set(
+        [...scanVocabulary(content), ...customSkillNames(loaded)].map(({ slug }) => slug),
+      );
+      const suggestions: SuggestionInput[] = [];
+      const already: Readonly<Record<string, unknown>>[] = [];
+      const setAside: Readonly<Record<string, unknown>>[] = [];
+      let done = 0;
+      for (const call of calls) {
+        if (options.stopped?.() === true) break;
+        if (call.kind === "skill-links") {
+          const answer = await runTask(provider, suggestSkillLinks, call.input, options);
+          if (!answer.ok) setAside.push({ evidence: call.evidence, reason: reasonOf(answer.error.reason) });
+          else {
+            const linked = evidenceNow(call.evidence)?.record.skills ?? [];
+            const found = linkFindings(
+              call,
+              answer.value.output.links,
+              answer.value.ai,
+              known,
+              linked,
+              nextId,
+            );
+            suggestions.push(...found.suggestions);
+            already.push(...found.already);
+          }
+        } else {
+          const answer = await runTask(provider, judgeSkillLevel, call.input, options);
+          if (!answer.ok) setAside.push({ skill: call.skill, reason: reasonOf(answer.error.reason) });
+          else {
+            const found = levelFindings(
+              call,
+              answer.value.output,
+              answer.value.ai,
+              shownLevel(call.skill),
+              nextId,
+            );
+            suggestions.push(...found.suggestions);
+            already.push(...found.already);
+          }
+        }
+        done++;
+        saved = await writeScan(saved.value, suggestions, already, setAside, done === calls.length);
+        if (!saved.ok) return saved;
+        options.onProgress?.(done, calls.length);
+      }
+      // Stopped early: a session with nothing pending is complete.
+      if (done < calls.length) saved = await writeScan(saved.value, suggestions, already, setAside, true);
+      return saved;
+    },
+
+    reviewItems: () =>
+      loaded
+        .flatMap((one) =>
+          one.record.schema === "session/1" && one.record.status !== "abandoned"
+            ? [{ location: one.location, record: one.record }]
+            : [],
+        )
+        .sort((a, b) => Date.parse(a.record.created) - Date.parse(b.record.created))
+        .flatMap(({ location, record }) =>
+          record.suggestions
+            .filter((suggestion) => suggestion.decision === undefined)
+            .map((suggestion) => ({ session: location, suggestion, stale: staleNow(suggestion) })),
+        ),
+
+    decideSuggestions: async (items, decision) => {
+      const now = timestamp(ids.now());
+      const decided: string[] = [];
+      const refused: { id: string; reason: "stale" | "not-pending" }[] = [];
+      let failed: { id: string; error: SaveError } | undefined;
+      for (const location of new Set(items.map((item) => item.session))) {
+        const session = loaded.find((one) => one.location === location);
+        const wanted = [
+          ...new Set(items.filter((item) => item.session === location).map((item) => item.suggestion.id)),
+        ];
+        if (session?.record.schema !== "session/1") {
+          refused.push(...wanted.map((id) => ({ id, reason: "not-pending" as const })));
+          continue;
+        }
+        const decisions = new Map<string, "accepted" | "discarded">();
+        for (const id of wanted) {
+          const suggestion = session.record.suggestions.find((one) => one.id === id);
+          if (suggestion === undefined || suggestion.decision !== undefined) {
+            refused.push({ id, reason: "not-pending" });
+            continue;
+          }
+          if (decision === "accept") {
+            if (staleNow(suggestion)) {
+              refused.push({ id, reason: "stale" });
+              continue;
+            }
+            const applied = await applySuggestion(suggestion, now);
+            if (!applied.ok) {
+              failed = { id, error: applied.error };
+              break;
+            }
+          }
+          decisions.set(id, decision === "accept" ? "accepted" : "discarded");
+        }
+        // Whatever was written is marked, even when a later write failed, so nothing is left half-decided.
+        if (decisions.size > 0) {
+          const current = loaded.find((one) => one.location === location) ?? session;
+          const marked = await markDecided(current, decisions, now);
+          if (marked.ok) decided.push(...decisions.keys());
+          else failed ??= { id: [...decisions.keys()][0] ?? "", error: marked.error };
+        }
+        if (failed !== undefined) break;
+      }
+      return { decided, refused, ...(failed !== undefined && { failed }) };
+    },
+
+    adjustSuggestion: async ({ session: location, suggestion: { id } }, level) => {
+      const session = loaded.find((one) => one.location === location);
+      const suggestion =
+        session?.record.schema === "session/1"
+          ? session.record.suggestions.find((one) => one.id === id)
+          : undefined;
+      if (session === undefined || suggestion?.kind !== "skill-level" || suggestion.decision !== undefined)
+        return err({ kind: "not-pending", id });
+      const recorded = await recordLevelOf({ skill: suggestion.skill, level });
+      if (!recorded.ok) return recorded;
+      const current = loaded.find((one) => one.location === location) ?? session;
+      const marked = await markDecided(current, new Map([[id, "adjusted"]]), timestamp(ids.now()));
+      return marked.ok ? recorded : marked;
+    },
+
+    deleteSession: async (location) => {
+      const current = loaded.find((one) => one.location === location);
+      if (current?.record.schema !== "session/1") return err({ kind: "not-found", location });
+      const removed = await storage.delete(location, current.version);
+      if (!removed.ok) {
+        if (removed.error.kind === "conflict") await noteConflict(location, undefined);
+        return err(saveError(removed.error, location));
+      }
+      loaded = loaded.filter((one) => one !== current);
+      return ok(undefined);
+    },
+
+    levelOutOfDate: (skill) => {
+      const record = skillRecord(skill)?.record;
+      if (record?.schema !== "skill-record/1") return false;
+      const judged = countingObservations(record.entries)
+        .filter((one) => one.provenance === "ai-judged")
+        .at(-1);
+      if (judged === undefined) return false;
+      const linked = linkedEvidence(skill);
+      const read = loaded
+        .flatMap((one) => (one.record.schema === "session/1" ? one.record.suggestions : []))
+        .find((one) => one.id === judged.id);
+      if (read?.kind === "skill-level") {
+        if (linked.length !== read.read.length) return true;
+        return linked.some(({ record: evidence }) => {
+          const sent = read.read.find((one) => one.evidence === evidence.id)?.sent;
+          return (
+            sent === undefined || isStale({ ...read, read: [{ evidence: evidence.id, sent }] }, evidenceNow)
+          );
+        });
+      }
+      // Its session was deleted: a record it rests on that is no longer linked, or linked evidence changed since.
+      if (judged.evidence.some((id) => !linked.some(({ record: evidence }) => evidence.id === id)))
+        return true;
+      const after = Date.parse(judged.observed_at);
+      return linked.some(({ record: evidence }) => Date.parse(evidence.updated ?? evidence.created) > after);
+    },
   };
+}
+
+// The kind of failure a scan sets a record or skill aside for, such as `unreachable` (MVP S16.5).
+function reasonOf(error: TaskError): string {
+  return error.kind === "provider" ? error.error.kind : error.kind;
 }
 
 // A skill record with its `proficiency` summary brought up to date from its history, so the file reads correctly
