@@ -9,6 +9,7 @@ import {
   createCoreService,
   err,
   ok,
+  type CallRecord,
   type ContentPack,
   type CoreService,
   type CoreServiceOptions,
@@ -16,7 +17,15 @@ import {
   type StorageError,
 } from "@pharoam/core";
 import type { TFunction } from "i18next";
-import { createContext, useContext, useMemo, useState, type ReactElement, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { useTranslation } from "react-i18next";
 import type { Places, ProfilePlace } from "./places.ts";
 import { gapWriter, overviewWriter } from "./writers.ts";
@@ -50,6 +59,16 @@ export interface AppServices {
   readonly providers: LoadProvider;
 }
 
+/** One AI call made in this session, as the activity log shows it (MVP S17). */
+export interface LoggedCall {
+  /** Tells calls apart in this session, in the order they were made. */
+  readonly id: number;
+  /** The call's record: task, model, time, exactly what was sent, and what came back. */
+  readonly call: CallRecord;
+  /** What the person did with the answer, once a screen knows. */
+  readonly decision?: "accepted" | "discarded";
+}
+
 /** The session and what changes it. */
 export interface SessionControls {
   /** Where the person is with their profile. */
@@ -70,6 +89,17 @@ export interface SessionControls {
   readonly chooseModel: (setup: ModelSetup) => void;
   /** Removes the model and forgets its key (MVP S13.8). */
   readonly removeModel: () => void;
+  /**
+   * The AI calls made with the open profile, oldest first (MVP S17.2).
+   *
+   * @remarks Kept in memory only: opening or closing a profile, or reloading the page, forgets them, and nothing
+   * of them is written to storage (S17.3).
+   */
+  readonly calls: readonly LoggedCall[];
+  /** Adds a call to the log, if the profile it was made with is still open; returns its ID. */
+  readonly logCall: (call: CallRecord) => number;
+  /** Records whether the person accepted or discarded what a call answered (MVP S17.1). */
+  readonly decideCall: (id: number, decision: "accepted" | "discarded") => void;
 }
 
 const SessionContext = createContext<SessionControls | undefined>(undefined);
@@ -91,6 +121,13 @@ export function SessionProvider({
   const [session, setSession] = useState<Session>({ status: "closed" });
   // The model and its key, held only here: a reload or closing the profile forgets them (ADR-0011, MVP S13.4).
   const [model, setModel] = useState<ModelSetup | undefined>(undefined);
+  // The AI calls made with the open profile, kept with the service they belong to, so a call that ends after the
+  // profile closed is never logged against the next one (MVP S17.3).
+  const [log, setLog] = useState<{ readonly owner: unknown; readonly calls: readonly LoggedCall[] }>({
+    owner: undefined,
+    calls: [],
+  });
+  const nextCall = useRef(0);
 
   const controls = useMemo<SessionControls>(() => {
     const closeService = (current: Session): void => {
@@ -111,6 +148,7 @@ export function SessionProvider({
         if (!opened.ok) return err(opened.error);
         closeService(session);
         setModel(undefined);
+        setLog({ owner: service, calls: [] });
         setSession(sessionFor(place.name, service));
         return ok(undefined);
       },
@@ -133,6 +171,7 @@ export function SessionProvider({
         // Forgotten before the start page shows, which would otherwise still find the folder and offer it again.
         await services.places.forget();
         setModel(undefined);
+        setLog({ owner: undefined, calls: [] });
         setSession({ status: "closed" });
       },
       model,
@@ -140,8 +179,23 @@ export function SessionProvider({
       removeModel: () => {
         setModel(undefined);
       },
+      calls: log.calls,
+      logCall: (call) => {
+        const id = ++nextCall.current;
+        const owner = session.status === "open" ? session.service : undefined;
+        setLog((current) =>
+          current.owner === owner ? { owner, calls: [...current.calls, { id, call }] } : current,
+        );
+        return id;
+      },
+      decideCall: (id, decision) => {
+        setLog((current) => ({
+          ...current,
+          calls: current.calls.map((one) => (one.id === id ? { ...one, decision } : one)),
+        }));
+      },
     };
-  }, [session, services, t, model]);
+  }, [session, services, t, model, log]);
 
   return <SessionContext value={controls}>{children}</SessionContext>;
 }

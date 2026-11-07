@@ -141,7 +141,7 @@ describe("ScanPage: suggesting skill links (MVP S16.1, S16.4, S16.5)", () => {
     screen.getByText("1 suggestion waits for your review.");
   });
 
-  it("says the scan stopped when something breaks, instead of waiting forever, keeping what finished", async () => {
+  it("sets aside a record whose provider code breaks, instead of waiting forever, and carries on", async () => {
     const user = userEvent.setup();
     await scanFrom(user, "Evidence", "Suggest skills", {
       links: { "Payments API": ["sql"] },
@@ -150,9 +150,8 @@ describe("ScanPage: suggesting skill links (MVP S16.1, S16.4, S16.5)", () => {
     await user.click(await screen.findByRole("button", { name: "Continue" }));
     await user.click(await screen.findByRole("button", { name: "Send 2 calls" }));
 
-    await screen.findByText(
-      "The scan stopped because something went wrong. What finished is kept in Review.",
-    );
+    await screen.findByText("The scan is done.");
+    screen.getByText("Set aside: Shell history search, because the provider reported a problem.");
   });
 
   it("offers to set up a model when none is set up, and sends nothing", async () => {

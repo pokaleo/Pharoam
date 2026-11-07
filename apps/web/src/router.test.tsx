@@ -10,6 +10,7 @@ describe("createAppRouter (ADR-0008)", () => {
       [
         "/",
         "/about",
+        "/activity",
         "/attention",
         "/evidence",
         "/evidence/$id",

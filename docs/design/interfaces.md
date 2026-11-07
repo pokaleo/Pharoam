@@ -69,7 +69,7 @@ interface ModelProvider {
 A provider only sends what the core prepared and returns the parsed answer. **The core's `runTask` checks it** against the task's schema and makes the call record, so no provider can skip either. There is no cancelling a call in flight in v0.2: a scan stops between calls (MVP S16.5).
 
 - The user configures the provider type, base URL (OpenRouter, Ollama, LM Studio), key and model.
-- Every call produces a **call record** (task, model, time, data sent). It is shown in the transparency view, and its summary goes into the resulting record's AI block.
+- Every call produces a **call record**: the task, the model, the time, exactly what was sent, how it ended (answered, rejected by the schema, or failed) and what came back, the model's answer as it came or the provider's error. The screens add whether the person accepted or discarded the answer. Records are shown in the Activity log, the transparency view (MVP S17), and kept in memory for the session only; the summary goes into the resulting record's `ai` block.
 
 ## 4. Workflows
 

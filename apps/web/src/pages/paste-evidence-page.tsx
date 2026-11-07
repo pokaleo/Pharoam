@@ -63,7 +63,13 @@ type Step =
   | { readonly step: "write"; readonly problem?: string }
   | { readonly step: "confirm"; readonly call: PreparedCall }
   | { readonly step: "sending" }
-  | { readonly step: "review"; readonly ai: AiProvenance; readonly drafts: readonly Draft[] };
+  | {
+      readonly step: "review";
+      readonly ai: AiProvenance;
+      readonly drafts: readonly Draft[];
+      /** The call that found them, in the activity log. */
+      readonly call: number;
+    };
 
 /**
  * The paste page: the text, then what will be sent, then each record found, to edit, leave out or save.
@@ -79,7 +85,7 @@ type Step =
  */
 export function PastePage({ service }: { readonly service: CoreService }): ReactElement {
   const { t } = useTranslation();
-  const { model } = useSession();
+  const { model, decideCall } = useSession();
   const [text, setText] = useState("");
   const [step, setStep] = useState<Step>({ step: "write" });
 
@@ -129,7 +135,9 @@ export function PastePage({ service }: { readonly service: CoreService }): React
           text={text}
           ai={step.ai}
           initial={step.drafts}
+          call={step.call}
           onAgain={() => {
+            decideCall(step.call, "discarded");
             setStep({ step: "write" });
           }}
         />
@@ -222,7 +230,7 @@ function Confirm({
   readonly onDone: (step: Step) => void;
 }): ReactElement {
   const { t } = useTranslation();
-  const { services } = useSession();
+  const { services, logCall } = useSession();
   const titleId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
   const provider = t(`settings.model.names.${setup.choice.kind}`);
@@ -248,6 +256,7 @@ function Confirm({
       { text },
       { model: setup.model, now: () => new Date() },
     );
+    const call = logCall(answer.ok ? answer.value.call : answer.error.call);
     if (!answer.ok) {
       onDone({ step: "write", problem: taskProblem(t, answer.error.reason, provider) });
       return;
@@ -255,7 +264,7 @@ function Confirm({
     const drafts: Draft[] = [];
     for (const [key, record] of answer.value.output.records.entries())
       drafts.push(draftOf(service, key, formOfNormalised(record), answer.value.ai, t, drafts));
-    onDone({ step: "review", ai: answer.value.ai, drafts });
+    onDone({ step: "review", ai: answer.value.ai, drafts, call });
   };
 
   return (
@@ -272,7 +281,7 @@ function Confirm({
           {(call?.parts ?? []).map((part) => (
             <div key={part.kind} className="grid gap-(--space-1)">
               <h3 className="font-semibold">{t("paste.send.parts.pasted-text")}</h3>
-              <pre className="max-h-80 overflow-auto rounded-md bg-panel px-3 py-2 font-mono text-[13px] whitespace-pre-wrap">
+              <pre className="rounded-md bg-panel px-3 py-2 font-mono text-[13px] break-words whitespace-pre-wrap">
                 {part.text}
               </pre>
             </div>
@@ -336,17 +345,20 @@ function Review({
   text,
   ai,
   initial,
+  call,
   onAgain,
 }: {
   readonly service: CoreService;
   readonly text: string;
   readonly ai: AiProvenance;
   readonly initial: readonly Draft[];
+  /** The call that found the drafts, in the activity log. */
+  readonly call: number;
   readonly onAgain: () => void;
 }): ReactElement {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { services, changed } = useSession();
+  const { services, changed, decideCall } = useSession();
   const content = useQuery({ queryKey: ["content"], queryFn: services.content, staleTime: Infinity });
   const heading = useRef<HTMLHeadingElement>(null);
   const [drafts, setDrafts] = useState(initial);
@@ -385,6 +397,7 @@ function Review({
         return;
       }
       saved.push(draft.key);
+      decideCall(call, "accepted");
     }
     changed();
     await navigate({ to: "/evidence", state: { pasted: saved.length } });

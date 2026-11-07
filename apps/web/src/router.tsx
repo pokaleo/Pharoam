@@ -28,6 +28,7 @@ import { EvidenceListPage } from "./pages/evidence-list-page.tsx";
 import { EvidencePage } from "./pages/evidence-page.tsx";
 import { NewEvidencePage } from "./pages/new-evidence-page.tsx";
 import { PastePage } from "./pages/paste-evidence-page.tsx";
+import { ActivityPage } from "./pages/activity-page.tsx";
 import { ReviewPage } from "./pages/review-page.tsx";
 import { ScanPage, type ScanKind } from "./pages/scan-page.tsx";
 import { HomePage } from "./pages/home-page.tsx";
@@ -51,6 +52,12 @@ function Root(): ReactElement {
 }
 
 const startRoute = createRoute({ getParentRoute: () => rootRoute, path: "/", component: HomePage });
+
+const activityRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/activity",
+  component: () => <ProfileRoute page={() => <ActivityPage />} />,
+});
 
 const aboutRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -201,6 +208,7 @@ const routeTree = rootRoute.addChildren([
   skillRoute,
   startRoute,
   aboutRoute,
+  activityRoute,
   evidenceListRoute,
   pasteRoute,
   scanRoute,

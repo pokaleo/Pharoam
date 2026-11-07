@@ -11,6 +11,8 @@ export interface ScanAnswers {
   readonly links?: Readonly<Record<string, readonly string[]>>;
   /** The level it judges any skill at. */
   readonly level?: number;
+  /** What it answers when asked to read pasted text. */
+  readonly pasted?: unknown;
   /** A failure for records whose title has this word. */
   readonly failFor?: { readonly word: string; readonly error: ProviderError };
   /** Throws, as a broken adapter would, for records whose title has this word. */
@@ -30,6 +32,8 @@ export function scanModel(answers: ScanAnswers = {}): { load: LoadProvider; sent
   const answer = (request: ModelRequest) => {
     if (answers.failFor !== undefined && request.prompt.includes(answers.failFor.word))
       return err(answers.failFor.error);
+    if (request.output.name === "check-model") return ok({ ready: true });
+    if (request.output.name === "normalise-evidence") return ok(answers.pasted ?? { records: [] });
     if (request.output.name === "judge-skill-level")
       return ok({
         level: answers.level ?? 3,
