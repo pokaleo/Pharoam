@@ -72,6 +72,11 @@ export const LanguageTagField = z.string().regex(/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8
 /** A licence named by its SPDX identifier, such as `MIT` or `CC-BY-SA-4.0`, or a `LicenseRef-` of its own. */
 export const SpdxIdField = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9.+-]*$/);
 
+/** A pathway pinned to its pack version, as `pack@version:pathway`, such as `pharoam-core@0.1.0:ml-engineer`. */
+export const PinnedPathwayField = z
+  .string()
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*@[0-9A-Za-z][0-9A-Za-z.+-]*:[a-z0-9]+(?:-[a-z0-9]+)*$/);
+
 /** An integrity fingerprint: `sha256-` and the rule name, then 64 lowercase hex digits (data model §4). */
 export const IntegrityField = z.string().regex(/^sha256-[a-z0-9]+:[0-9a-f]{64}$/);
 

@@ -21,6 +21,7 @@ const PUBLISHED: readonly (readonly [type: string, label: string, schema: z.ZodT
   ["skill-record", "skill record", PROFILE_RECORD_SCHEMAS["skill-record"]],
   ["gap", "gap record", PROFILE_RECORD_SCHEMAS.gap],
   ["session", "review session record", PROFILE_RECORD_SCHEMAS.session],
+  ["note", "note record", PROFILE_RECORD_SCHEMAS.note],
   ["skill", "skill inventory entry", SkillEntry],
   ["pathway", "pathway", PathwayRecord],
   ["pack", "content pack manifest", PackManifest],

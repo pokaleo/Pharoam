@@ -50,6 +50,7 @@ export {
   type EvidenceReference,
   type GapError,
   type GapView,
+  type SaveNoteError,
   type RecordLevelError,
   type SelfRating,
   type OverviewError,
@@ -82,9 +83,11 @@ export {
   type ProviderError,
 } from "./ai/provider.ts";
 export { checkModel } from "./ai/tasks/check-model.ts";
+export { explainGap } from "./ai/tasks/explain-gap.ts";
 export { judgeSkillLevel } from "./ai/tasks/judge-skill-level.ts";
 export { suggestSkillLinks } from "./ai/tasks/suggest-skill-links.ts";
 export { evidenceText, sentFingerprint } from "./evidence-text.ts";
+export { type ExplainedGap, type GapExplanationCall, type GapNote } from "./notes.ts";
 export {
   SCAN_WORKFLOW,
   type LevelScanCall,
@@ -170,6 +173,7 @@ export { skillView, type SkillFilter, type SkillViewItem } from "./skill-view.ts
 export { AiSkillLink, EvidenceRecord } from "./schemas/evidence.ts";
 export { AiProvenance, ConfirmedAiProvenance, Provenance } from "./schemas/fields.ts";
 export { GapRecord, GapRequirement } from "./schemas/gap.ts";
+export { NoteRecord } from "./schemas/note.ts";
 export {
   LevelSuggestion,
   LinkSuggestion,

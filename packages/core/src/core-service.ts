@@ -9,6 +9,8 @@
  */
 import type { ModelProvider } from "./ai/provider.ts";
 import { runTask, type CallRecord, type TaskError } from "./ai/run-task.ts";
+import { prepareCall } from "./ai/task.ts";
+import { explainGap } from "./ai/tasks/explain-gap.ts";
 import { judgeSkillLevel } from "./ai/tasks/judge-skill-level.ts";
 import { suggestSkillLinks } from "./ai/tasks/suggest-skill-links.ts";
 import { MAX_ATTACHMENT_BYTES, attachmentName, numberedName } from "./attachments.ts";
@@ -31,6 +33,14 @@ import { createProfileRecordIdGenerator, type IdSource } from "./ids.ts";
 import { checkEntry, sealEntry, type IntegrityStatus } from "./integrity.ts";
 import { overviewFacts, withOverview, type OverviewWriter } from "./overview.ts";
 import type { ContentPack } from "./pack.ts";
+import {
+  gapExplanationInput,
+  gapNoteFile,
+  noteText,
+  type ExplainedGap,
+  type GapExplanationCall,
+  type GapNote,
+} from "./notes.ts";
 import { pathwayDetail, type PathwayDetail } from "./pathways.ts";
 import { proficiencyOf } from "./proficiency.ts";
 import {
@@ -441,6 +451,9 @@ export interface GapView {
 /** Why the gap to a pathway couldn't be shown or stored. */
 export type GapError = SaveError | { readonly kind: "unknown-pathway"; readonly pathway: string };
 
+/** Why the service didn't save a note: storage refused it, or the explanation was edited down to nothing. */
+export type SaveNoteError = SaveError | { readonly kind: "empty-note" };
+
 /** Why the overview in `pharoam.md` wasn't brought up to date. */
 export type OverviewError =
   ProfileChangeError | { readonly kind: "overview-markers"; readonly location: string };
@@ -646,6 +659,37 @@ export interface CoreService {
    * Pharoam is never overwritten (hard rule 3).
    */
   readonly gapProblem: (pathway: string) => GapError | undefined;
+  /**
+   * The call that would explain the gap to a pathway: the gap and the titles of the evidence its levels cite
+   * (MVP S18.1).
+   *
+   * @remarks Sends nothing, so the app can show what will be sent and its size first (PRD D4). The stored gap is
+   * brought up to date first, as {@link CoreService.exploreGap} does, writing only if it changed, so the call
+   * explains the gap the note will name, and its time tells later when the profile has moved on (S18.4, S18.5). A
+   * gap that can't be brought up to date, such as one changed outside Pharoam, is refused (hard rule 3).
+   */
+  readonly explainGapCall: (pathway: string) => Promise<Result<GapExplanationCall, GapError>>;
+  /**
+   * Saves an explanation the person accepted, as they accepted or edited it, as a new `note/1` (MVP S18.3, S18.4).
+   *
+   * @remarks `confirmed_by_user` is the time of saving, and the disclaimer goes at the top of the body. It changes no
+   * level and no gap (S18.2). A note is never rewritten: asking again saves a new one.
+   * @param gap - Which gap it explains and the `ai` block, from the call and its answer.
+   * @param text - The explanation, as Markdown.
+   * @param disclaimer - The disclaimer, in the person's language.
+   */
+  readonly saveGapNote: (
+    gap: ExplainedGap,
+    text: string,
+    disclaimer: string,
+  ) => Promise<Result<LoadedRecord, SaveNoteError>>;
+  /**
+   * The newest note on the gap to a pathway, and whether the gap has changed since (MVP S18.5).
+   *
+   * @remarks A note counts as out of date when the stored gap was regenerated after the gap it explained, couldn't
+   * be after the last change, or isn't stored at all. Only notes on this pack's pathway count.
+   */
+  readonly latestGapNote: (pathway: string) => GapNote | undefined;
   /** A skill's history, newest first, with each entry marked; empty for a skill without a record (MVP S7.3). */
   readonly skillHistory: (skill: string) => readonly HistoryItem[];
   /**
@@ -872,6 +916,10 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
       if (gap.record.schema === "gap/1") await refreshGap(pathwaySlug(gap.record.pathway));
   }
 
+  // A pathway pinned to this pack's version, as gaps and notes name it.
+  const pinnedPathway = (slug: string): string =>
+    `${content.manifest.name}@${content.manifest.version}:${slug}`;
+
   const storedGap = (pathway: string): LoadedRecord | undefined =>
     loaded.find((r) => r.record.schema === "gap/1" && pathwaySlug(r.record.pathway) === pathway);
 
@@ -883,7 +931,7 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
       loaded.map((r) => r.record),
     );
     const fields = {
-      pathway: `${content.manifest.name}@${content.manifest.version}:${slug}`,
+      pathway: pinnedPathway(slug),
       requirements: requirements.map(({ skill, required, shown, group, evidence }) => ({
         skill,
         required,
@@ -1377,6 +1425,53 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
 
     exploreGap: refreshGap,
     gapProblem: (pathway) => gapProblems.get(pathway),
+
+    explainGapCall: async (slug) => {
+      const gap = await refreshGap(slug);
+      if (!gap.ok) return gap;
+      const input = gapExplanationInput(gap.value.pathway, gap.value.requirements, content.levels.levels);
+      return ok({
+        pathway: pinnedPathway(slug),
+        gapUpdated: gap.value.updated,
+        gap: gap.value,
+        input,
+        call: prepareCall(explainGap, input),
+      });
+    },
+
+    saveGapNote: async (gap, text, disclaimer) => {
+      if (text.trim() === "") return err({ kind: "empty-note" });
+      return createRecord(gapNoteFile(gap, text, nextId(), timestamp(ids.now()), disclaimer));
+    },
+
+    latestGapNote: (slug) => {
+      // Any version of this pack's pathway, as a note pins the version its gap had.
+      const pack = `${content.manifest.name}@`;
+      const notes = loaded.flatMap((r) =>
+        r.record.schema === "note/1" &&
+        r.record.pathway.startsWith(pack) &&
+        pathwaySlug(r.record.pathway) === slug
+          ? [{ ...r, note: r.record }]
+          : [],
+      );
+      // The newest by when it was accepted; UUIDv7 IDs, which sort as they were made, break a tie.
+      const latest = notes.toSorted(
+        (a, b) =>
+          Date.parse(b.note.created) - Date.parse(a.note.created) ||
+          (a.note.id < b.note.id ? 1 : a.note.id > b.note.id ? -1 : 0),
+      )[0];
+      if (latest === undefined) return undefined;
+      const gap = storedGap(slug)?.record;
+      const gapUpdated = gap?.schema === "gap/1" ? Date.parse(gap.updated ?? gap.created) : undefined;
+      return {
+        id: latest.note.id,
+        location: latest.location,
+        created: latest.note.created,
+        ai: latest.note.ai,
+        text: noteText(latest.file.body),
+        outOfDate: gapProblems.has(slug) || gapUpdated !== Date.parse(latest.note.gap_updated),
+      };
+    },
 
     skillView: (vocabulary, filter) => skillView(loaded, vocabulary, filter),
 
