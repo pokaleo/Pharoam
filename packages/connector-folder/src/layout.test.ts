@@ -61,6 +61,13 @@ describe("folder layout (data model §8)", () => {
     expect(path({ schema: "session/1" })).toBe("sessions/session--6a7b8c9d.md");
   });
 
+  it("names a note by the pathway whose gap it explains and the day it was written (MVP S18.4)", () => {
+    expect(
+      path({ schema: "note/1", pathway: "pharoam-core@0.1.0:ml-engineer", created: "2026-11-07T10:05:00Z" }),
+    ).toBe("notes/ml-engineer-2026-11-07--6a7b8c9d.md");
+    expect(path({ schema: "note/1" })).toBe("notes/note--6a7b8c9d.md");
+  });
+
   it("puts other record types in a folder named after the type", () => {
     expect(path({ schema: "aspiration/1", title: "Lead a team" })).toBe(
       "aspirations/lead-a-team--6a7b8c9d.md",

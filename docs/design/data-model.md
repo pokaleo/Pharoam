@@ -250,6 +250,16 @@ Profile records reference skills by **Pharoam inventory slug only** (for example
 - An AI explanation of a gap (PRD D3) that the person accepted, as they accepted or edited it, with its `ai` block and the disclaimer at the top of its body (§5).
 - `pathway`, pinned to a version (`pack@version:pathway`), and `gap_updated`: the `updated` time of the gap it explained.
 - **Never rewritten.** Asking again writes a new note. The gap view shows the latest one, and says so when the profile has changed since `gap_updated`.
+- A gap's note (`schema: note/1`) is kept as `notes/<pathway>-<day>--<short id>.md`. Its `ai` block names a version of `explain-gap`, such as `explain-gap@1`, and is confirmed by the person. The body is the explanation in Markdown, under the disclaimer. It carries no level and no score (Charter R1).
+
+  ```yaml
+  schema: note/1
+  id: 0192f3a1-…
+  created: 2026-11-07T10:05:00Z
+  ai: { task: explain-gap@1, model: anthropic/claude-sonnet-5-5, at: 2026-11-07T10:00:00Z, confirmed_by_user: 2026-11-07T10:05:00Z }
+  pathway: pharoam-core@0.1.0:ml-engineer
+  gap_updated: 2026-11-07T09:58:00Z   # the gap it explained
+  ```
 
 ### `session`
 - Workflow name and version, `status` (in progress, completed or abandoned), started and updated times.

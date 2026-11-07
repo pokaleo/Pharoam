@@ -25,7 +25,7 @@ export const ATTACHMENTS_FOLDER = ["evidence", "_attachments"] as const;
  * Chooses the path for a new record.
  *
  * @remarks `pharoam.md` at the top; `skills/<skill>.md`; `gaps/<pathway>.md`;
- * `sessions/<workflow>-<day>--<short id>.md`; and for evidence and other records, `<folder>/<title>--<short id>.md`. The short ID is the last 8 hex digits of the record's UUIDv7, its random
+ * `sessions/<workflow>-<day>--<short id>.md`; `notes/<pathway>-<day>--<short id>.md`; and for evidence and other records, `<folder>/<title>--<short id>.md`. The short ID is the last 8 hex digits of the record's UUIDv7, its random
  * part: the first digits are a timestamp that records made within a minute share.
  * @param file - The new record, already validated by the core.
  * @returns A path relative to the chosen folder, such as `evidence/backend-engineer-example-co--6a7b8c9d.md`.
@@ -45,6 +45,11 @@ export function recordPath(file: RecordFile): string {
       // The workflow without its version, and the day it started, such as `evidence-scan-2026-11-06`.
       const name = [text(top.workflow).split("@")[0] ?? "", text(top.created).slice(0, 10)].join(" ");
       return `sessions/${slugify(name) || type}--${shortId}.md`;
+    }
+    case "note": {
+      // The pathway whose gap it explains, and the day it was written, such as `ml-engineer-2026-11-07`.
+      const name = [text(top.pathway).split(":").at(-1) ?? "", text(top.created).slice(0, 10)].join(" ");
+      return `notes/${slugify(name) || type}--${shortId}.md`;
     }
     default: {
       const folder = type === "evidence" ? "evidence" : `${type}s`;

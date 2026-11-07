@@ -6,7 +6,14 @@
  * @packageDocumentation
  */
 import { z } from "zod";
-import { ENVELOPE_FIELDS, LevelField, ProfileRecordIdField, Provenance, SkillSlugField } from "./fields.ts";
+import {
+  ENVELOPE_FIELDS,
+  LevelField,
+  PinnedPathwayField,
+  ProfileRecordIdField,
+  Provenance,
+  SkillSlugField,
+} from "./fields.ts";
 
 /** One pathway requirement and where the person stands against it. */
 export const GapRequirement = z.object({
@@ -25,7 +32,7 @@ export const GapRecord = z.object({
   schema: z.literal("gap/1"),
   ...ENVELOPE_FIELDS,
   /** The pathway pinned to its pack version, as `pack@version:pathway`, such as `pharoam-core@0.1.0:ml-engineer`. */
-  pathway: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*@[0-9A-Za-z][0-9A-Za-z.+-]*:[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  pathway: PinnedPathwayField,
   requirements: z.array(GapRequirement),
 });
 
