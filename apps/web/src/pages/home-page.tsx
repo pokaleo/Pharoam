@@ -36,6 +36,7 @@ export function HomePage(): ReactElement {
           kind={services.places.kind}
           folder={place}
           attention={session.service.needsAttention().length + session.service.conflicts().length}
+          review={session.service.reviewItems().length}
           onDisconnect={() => void disconnect()}
         >
           <ProfileHomePage folder={place} service={session.service} />

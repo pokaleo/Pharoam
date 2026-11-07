@@ -8,7 +8,7 @@ import { AppShell } from "./app-shell.tsx";
 describe("AppShell", () => {
   it("shows the folder and the main areas beside the page", async () => {
     const { container } = renderUi(
-      <AppShell kind="folder" folder="my-profile" attention={0} onDisconnect={vi.fn()}>
+      <AppShell kind="folder" folder="my-profile" attention={0} review={0} onDisconnect={vi.fn()}>
         <h1>{"Page"}</h1>
       </AppShell>,
     );
@@ -18,7 +18,16 @@ describe("AppShell", () => {
       within(nav)
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toEqual(["Profile", "Skills", "Evidence", "Pathways", "Needs attention", "About you", "Settings"]);
+    ).toEqual([
+      "Profile",
+      "Skills",
+      "Evidence",
+      "Review",
+      "Pathways",
+      "Needs attention",
+      "About you",
+      "Settings",
+    ]);
     screen.getByText("my-profile");
     expect(screen.getByRole("main").textContent).toBe("Page");
     await expectNoAxeViolations(container);
@@ -26,13 +35,13 @@ describe("AppShell", () => {
 
   it("shows the areas still to come in their places, as not available yet rather than as links", async () => {
     renderUi(
-      <AppShell kind="folder" folder="my-profile" attention={0} onDisconnect={vi.fn()}>
+      <AppShell kind="folder" folder="my-profile" attention={0} review={0} onDisconnect={vi.fn()}>
         {null}
       </AppShell>,
     );
 
     const nav = await screen.findByRole("navigation", { name: "Main" });
-    for (const name of ["Review", "Assess", "Learning plan", "Prepare", "Activity log", "Help"]) {
+    for (const name of ["Assess", "Learning plan", "Prepare", "Activity log", "Help"]) {
       const slot = within(nav).getByText(name).closest("[aria-disabled]");
       expect(slot?.getAttribute("aria-disabled"), name).toBe("true");
       expect(slot?.textContent, name).toContain("Later");
@@ -40,9 +49,22 @@ describe("AppShell", () => {
     within(nav).getByText("Where next");
   });
 
+  it("links to Review, saying how many suggestions wait for a decision (MVP S16.6)", async () => {
+    renderUi(
+      <AppShell kind="folder" folder="my-profile" attention={0} review={3} onDisconnect={vi.fn()}>
+        {null}
+      </AppShell>,
+    );
+
+    const nav = await screen.findByRole("navigation", { name: "Main" });
+    const review = within(nav).getByRole("link", { name: /^Review/ });
+    expect(review.getAttribute("href")).toBe("/review");
+    expect(review.textContent).toBe("Review 3");
+  });
+
   it("links to the settings, where a model is set up (MVP S13)", async () => {
     renderUi(
-      <AppShell kind="folder" folder="my-profile" attention={0} onDisconnect={vi.fn()}>
+      <AppShell kind="folder" folder="my-profile" attention={0} review={0} onDisconnect={vi.fn()}>
         {null}
       </AppShell>,
     );
@@ -53,7 +75,7 @@ describe("AppShell", () => {
 
   it("folds the sidebar behind a menu button, which says whether it is open", async () => {
     renderUi(
-      <AppShell kind="folder" folder="my-profile" attention={0} onDisconnect={vi.fn()}>
+      <AppShell kind="folder" folder="my-profile" attention={0} review={0} onDisconnect={vi.fn()}>
         {null}
       </AppShell>,
     );
@@ -68,7 +90,7 @@ describe("AppShell", () => {
 
   it("draws the seal for the system's theme, reversed on a dark ground", async () => {
     const { container } = renderUi(
-      <AppShell kind="folder" folder="my-profile" attention={0} onDisconnect={vi.fn()}>
+      <AppShell kind="folder" folder="my-profile" attention={0} review={0} onDisconnect={vi.fn()}>
         {null}
       </AppShell>,
     );
@@ -88,7 +110,7 @@ describe("AppShell", () => {
 
   it("links to the third-party licences from the footer", async () => {
     renderUi(
-      <AppShell kind="folder" folder="my-profile" attention={0} onDisconnect={vi.fn()}>
+      <AppShell kind="folder" folder="my-profile" attention={0} review={0} onDisconnect={vi.fn()}>
         {null}
       </AppShell>,
     );
@@ -100,7 +122,7 @@ describe("AppShell", () => {
 
   it("says where the profile is kept, in the browser's own storage or a folder", async () => {
     renderUi(
-      <AppShell kind="browser" folder="This browser" attention={0} onDisconnect={vi.fn()}>
+      <AppShell kind="browser" folder="This browser" attention={0} review={0} onDisconnect={vi.fn()}>
         {null}
       </AppShell>,
     );
@@ -111,7 +133,7 @@ describe("AppShell", () => {
 
   it("counts what needs attention, in words read with the link", async () => {
     renderUi(
-      <AppShell kind="folder" folder="my-profile" attention={3} onDisconnect={vi.fn()}>
+      <AppShell kind="folder" folder="my-profile" attention={3} review={0} onDisconnect={vi.fn()}>
         {null}
       </AppShell>,
     );
@@ -122,7 +144,7 @@ describe("AppShell", () => {
   it("disconnects the folder it names", async () => {
     const onDisconnect = vi.fn();
     renderUi(
-      <AppShell kind="folder" folder="my-profile" attention={0} onDisconnect={onDisconnect}>
+      <AppShell kind="folder" folder="my-profile" attention={0} review={0} onDisconnect={onDisconnect}>
         {null}
       </AppShell>,
     );

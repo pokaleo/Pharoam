@@ -13,6 +13,7 @@ import { answersOf } from "../evidence/answers.ts";
 import { EvidenceFiles, useAttachments } from "../evidence/evidence-files.tsx";
 import { useSession } from "../profile/session.tsx";
 import { skillChoices, skillName } from "../profile/skills.ts";
+import { AiMark } from "../ui/ai-mark.tsx";
 import { Button, buttonClassName } from "../ui/button.tsx";
 import { Icon } from "../ui/icon.tsx";
 import { Markdown } from "../ui/markdown.tsx";
@@ -73,6 +74,12 @@ export function EvidencePage({
         crumbsLabel={t("app.crumbs")}
         actions={
           <>
+            {record.kind === "assessment" ? null : (
+              <Link to="/scan" search={{ kind: "links", only: id }} className={buttonClassName("secondary")}>
+                <AiMark />
+                {t("evidence.suggest")}
+              </Link>
+            )}
             {editable ? (
               <Link to="/evidence/$id/edit" params={{ id }} className={buttonClassName("secondary")}>
                 <Icon of={Pencil} />

@@ -14,6 +14,7 @@ import { dayName, levelName } from "../skills/labels.ts";
 import { Level } from "../skills/level.tsx";
 import { SourceTag } from "../skills/source-tag.tsx";
 import { ObservationLine, ReviewLine, Timeline, TimelineEntry } from "../skills/timeline.tsx";
+import { AiMark } from "../ui/ai-mark.tsx";
 import { buttonClassName } from "../ui/button.tsx";
 import { Empty } from "../ui/empty.tsx";
 import { CONTROL } from "../ui/field.tsx";
@@ -76,6 +77,12 @@ export function SkillsPage({ service }: { readonly service: CoreService }): Reac
         lead={t("skills.lead", { count: all.length })}
         actions={
           <>
+            {service.judgeableSkills().length === 0 ? null : (
+              <Link to="/scan" search={{ kind: "levels" }} className={buttonClassName("secondary")}>
+                <AiMark />
+                {t("skills.askLevels")}
+              </Link>
+            )}
             <Link to="/skills/custom" className={buttonClassName("secondary")}>
               <Icon of={Plus} />
               {t("skills.addCustom")}

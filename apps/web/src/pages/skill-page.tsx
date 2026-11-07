@@ -10,6 +10,7 @@ import { Pencil, Undo2, UserRoundPen } from "lucide-react";
 import { useEffect, useId, useRef, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { useSession } from "../profile/session.tsx";
+import { AiMark } from "../ui/ai-mark.tsx";
 import { dayName, levelName } from "../skills/labels.ts";
 import { LevelChoice } from "../skills/level-choice.tsx";
 import { Level } from "../skills/level.tsx";
@@ -82,6 +83,8 @@ function SkillDetail({
   }
   const name = item?.name ?? entry?.name ?? skill;
   const domain = item?.domain ?? entry?.domain;
+  const judgeable = service.judgeableSkills().includes(skill);
+  const outOfDate = judgeable && service.levelOutOfDate(skill);
 
   return (
     <>
@@ -95,11 +98,24 @@ function SkillDetail({
         ]}
         crumbsLabel={t("app.crumbs")}
         actions={
-          <Link to="/skills/record" search={{ skill }} className={buttonClassName("primary")}>
-            {t("skills.record")}
-          </Link>
+          <>
+            {judgeable ? (
+              <Link
+                to="/scan"
+                search={{ kind: "levels", only: skill }}
+                className={buttonClassName("secondary")}
+              >
+                <AiMark />
+                {t(outOfDate ? "skills.skillPage.askAgain" : "skills.skillPage.askLevel")}
+              </Link>
+            ) : null}
+            <Link to="/skills/record" search={{ skill }} className={buttonClassName("primary")}>
+              {t("skills.record")}
+            </Link>
+          </>
         }
       />
+      {outOfDate ? <Notice tone="info" title={t("skills.skillPage.outOfDate")} /> : null}
       <div className="grid items-start gap-(--gap) lg:grid-cols-[minmax(0,1fr)_360px]">
         <section
           aria-labelledby={shownId}

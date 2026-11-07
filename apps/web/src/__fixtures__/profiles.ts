@@ -103,7 +103,8 @@ export async function openProfile(
 ): Promise<RenderedApp> {
   const rendered = renderApp({ name: "my-profile", memory, ...(providers === undefined ? {} : { providers }) });
   await user.click(await screen.findByRole("button", { name: "Choose a folder" }));
-  await screen.findByRole("link", { name: "Profile" });
+  // Opening reads every record and the content pack, which can take more than a second while the whole suite runs.
+  await screen.findByRole("link", { name: "Profile" }, { timeout: 5000 });
   if (link !== undefined) await user.click(await navLink(link));
   return rendered;
 }
