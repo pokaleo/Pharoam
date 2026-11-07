@@ -23,6 +23,11 @@ export interface CallRecord {
    * person then accepted or discarded an answer is recorded by the screen that asked them.
    */
   readonly outcome: "answered" | "rejected" | "failed";
+  /**
+   * What came back: the model's answer exactly as it came, before the schema dropped anything, or the provider's
+   * error. Kept so the person can see why an answer was rejected (MVP S17.1).
+   */
+  readonly received: { readonly answer: unknown } | { readonly error: ProviderError };
 }
 
 /** A task's checked answer, ready to show the person. */
@@ -82,25 +87,38 @@ export async function runTask<I, O>(
     .toISOString()
     .replace(/\.\d{3}Z$/, "Z");
   const model = modelName(provider, options.model);
-  const record = (outcome: CallRecord["outcome"]): CallRecord => ({
+  const record = (outcome: CallRecord["outcome"], received: CallRecord["received"]): CallRecord => ({
     task: task.id,
     model,
     at,
     sent: request,
     outcome,
+    received,
   });
 
-  const answer = await provider.complete(request, { model: options.model });
-  if (!answer.ok) return err({ reason: { kind: "provider", error: answer.error }, call: record("failed") });
+  let answer: Result<unknown, ProviderError>;
+  try {
+    answer = await provider.complete(request, { model: options.model });
+  } catch (error) {
+    // A provider should return its failures; one that throws may already have sent the request, so the call is
+    // still recorded (MVP S17.1).
+    answer = err({ kind: "failed", message: error instanceof Error ? error.message : String(error) });
+  }
+  if (!answer.ok)
+    return err({
+      reason: { kind: "provider", error: answer.error },
+      call: record("failed", { error: answer.error }),
+    });
+  const received = { answer: answer.value };
   const checked = task.output.safeParse(answer.value);
   if (!checked.success) {
     const issues = checked.error.issues.map(
       (issue) => `${issue.path.map(String).join(".") || "the answer"}: ${issue.message}`,
     );
-    return err({ reason: { kind: "invalid-answer", issues }, call: record("rejected") });
+    return err({ reason: { kind: "invalid-answer", issues }, call: record("rejected", received) });
   }
   const problems = task.check?.(task.input.parse(input), checked.data) ?? [];
   if (problems.length > 0)
-    return err({ reason: { kind: "invalid-answer", issues: problems }, call: record("rejected") });
-  return ok({ output: checked.data, ai: { task: task.id, model, at }, call: record("answered") });
+    return err({ reason: { kind: "invalid-answer", issues: problems }, call: record("rejected", received) });
+  return ok({ output: checked.data, ai: { task: task.id, model, at }, call: record("answered", received) });
 }

@@ -108,5 +108,26 @@ test.describe("with Anthropic set up", () => {
     expect(python).toContain("provenance: ai-judged");
     expect(python).toContain("task: judge-skill-level@1");
     expect(python).not.toMatch(/confidence/);
+
+    // Every call so far, newest first, each with what was sent and what came back (S17).
+    await app.nav("Activity log").click();
+    const calls = page.getByRole("list", { name: "AI calls this session" }).getByRole("listitem");
+    await expect(calls).toHaveCount(2);
+    await expect(calls.nth(0).getByRole("heading", { level: 3 })).toHaveText("Judging a level");
+    await expect(calls.nth(1).getByRole("heading", { level: 3 })).toHaveText("Suggesting skills");
+    await calls.nth(1).getByText("What was sent and what came back").click();
+    await expect(
+      calls
+        .nth(1)
+        .getByRole("heading", { level: 4, name: "The person's material" })
+        .locator("xpath=following-sibling::pre"),
+    ).toContainText("Title: Payments API");
+    await expect(
+      calls
+        .nth(1)
+        .getByRole("heading", { level: 4, name: "What came back" })
+        .locator("xpath=following-sibling::pre"),
+    ).toContainText('"skill": "sql"');
+    await app.expectAccessible("activity log");
   });
 });

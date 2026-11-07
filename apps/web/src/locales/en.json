@@ -522,6 +522,37 @@
     "deleteFailed": "Pharoam couldn't delete the scan's record. Nothing was changed.",
     "scanAgain": "Scan it again"
   },
+  "activity": {
+    "title": "Activity log",
+    "lead": "Every AI call made with this profile in this session, newest first: what was sent, to which model, and what came back.",
+    "memory": "It's kept in memory only. Closing the profile or reloading the page clears it, and nothing here is written to your storage.",
+    "none": "No AI calls yet in this session.",
+    "list": "AI calls this session",
+    "tasks": {
+      "check-model": "Model test",
+      "normalise-evidence": "Reading pasted text",
+      "suggest-skill-links": "Suggesting skills",
+      "judge-skill-level": "Judging a level",
+      "other": "An AI task"
+    },
+    "meta": "{{model}} · {{time}} · {{task}}",
+    "outcomes": {
+      "answered": "Answered",
+      "rejected": "Rejected by Pharoam's checks",
+      "failed": "Failed",
+      "accepted": "Accepted",
+      "discarded": "Discarded",
+      "inReview": "Answered: its suggestions are decided in Review"
+    },
+    "size": "Sent {{size}} characters.",
+    "details": "What was sent and what came back",
+    "instructions": "Pharoam's instructions",
+    "material": "The person's material",
+    "received": "What came back",
+    "error": "No answer: {{reason}}.",
+    "shape": "The answer's shape asked for",
+    "nothing": "Nothing came back."
+  },
   "skills": {
     "title": "Skills",
     "lead_zero": "Every level says where it came from.",

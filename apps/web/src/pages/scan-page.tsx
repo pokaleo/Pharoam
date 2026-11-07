@@ -199,7 +199,7 @@ function Run({
   readonly onBack: () => void;
 }): ReactElement {
   const { t } = useTranslation();
-  const { services, changed } = useSession();
+  const { services, changed, logCall } = useSession();
   const label = useCallLabel(service);
   const titleId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
@@ -242,6 +242,9 @@ function Run({
           if (!stop.current) setStep({ step: "running", done, total });
         },
         stopped: () => stop.current,
+        onCall: (call) => {
+          logCall(call);
+        },
       });
     } catch {
       // Something broke mid-scan, such as the provider's code: the session keeps what finished.
@@ -335,7 +338,7 @@ function Run({
                 </div>
                 <details>
                   <summary className="cursor-pointer text-meta text-channel">{t("scan.send.show")}</summary>
-                  <pre className="mt-1 max-h-60 overflow-auto rounded-md bg-panel px-3 py-2 font-mono text-[13px] whitespace-pre-wrap">
+                  <pre className="mt-1 rounded-md bg-panel px-3 py-2 font-mono text-[13px] break-words whitespace-pre-wrap">
                     {call.call.parts.map((part) => part.text).join("\n\n")}
                   </pre>
                 </details>

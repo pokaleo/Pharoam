@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { examplePack } from "./__fixtures__/content-records.ts";
 import type { ModelRequest } from "./ai/provider.ts";
+import type { CallRecord } from "./ai/run-task.ts";
 import { createCoreService, type CoreService } from "./core-service.ts";
 import { err, ok } from "./result.ts";
 import { fakeProvider } from "./testing/fake-provider.ts";
@@ -126,6 +127,22 @@ describe("running a scan into a review session (MVP S16.4, S16.5, S16.11)", () =
     // Already linked, so listed as already so; a skill on no list is dropped.
     expect(record.already).toEqual([{ kind: "skill-link", evidence: A, skill: "python" }]);
     expect(storage.text("evidence/a.md")).toBe(FILES["evidence/a.md"]);
+  });
+
+  it("reports every call it makes, with its record, for the activity log (MVP S17.1)", async () => {
+    const { service } = await profile();
+    const calls: CallRecord[] = [];
+
+    await service.runScan(service.linkScan([A, B]), model().provider, {
+      ...RUN,
+      onCall: (call) => calls.push(call),
+    });
+
+    expect(calls.map((call) => [call.task, call.outcome])).toEqual([
+      ["suggest-skill-links@1", "answered"],
+      ["suggest-skill-links@1", "answered"],
+    ]);
+    expect(calls[0]?.sent.prompt).toContain("Backend Engineer");
   });
 
   it("sets aside a record whose call fails, and carries on with the rest", async () => {

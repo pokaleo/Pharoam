@@ -221,6 +221,7 @@ function CurrentModel({
   readonly onRemove: () => void;
 }): ReactElement {
   const { t } = useTranslation();
+  const { logCall } = useSession();
   const [busy, setBusy] = useState(false);
   const [outcome, setOutcome] = useState<{ readonly works: boolean; readonly text: string } | undefined>(
     undefined,
@@ -238,6 +239,7 @@ function CurrentModel({
       {},
       { model: setup.model, now: () => new Date() },
     );
+    logCall(answer.ok ? answer.value.call : answer.error.call);
     setBusy(false);
     setOutcome(
       answer.ok

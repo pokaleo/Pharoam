@@ -8,7 +8,7 @@
  * @packageDocumentation
  */
 import type { ModelProvider } from "./ai/provider.ts";
-import { runTask, type TaskError } from "./ai/run-task.ts";
+import { runTask, type CallRecord, type TaskError } from "./ai/run-task.ts";
 import { judgeSkillLevel } from "./ai/tasks/judge-skill-level.ts";
 import { suggestSkillLinks } from "./ai/tasks/suggest-skill-links.ts";
 import { MAX_ATTACHMENT_BYTES, attachmentName, numberedName } from "./attachments.ts";
@@ -319,6 +319,8 @@ export interface ScanOptions {
   readonly onProgress?: (done: number, total: number) => void;
   /** Asked before each call; when it says yes, the scan stops, keeping what finished. */
   readonly stopped?: () => boolean;
+  /** Told of each call as it ends, with its record, for the activity log (MVP S17.1). */
+  readonly onCall?: (call: CallRecord) => void;
 }
 
 /** Why the service didn't run a scan: the reasons a save fails, or nothing was given to scan. */
@@ -1560,6 +1562,7 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
         if (options.stopped?.() === true) break;
         if (call.kind === "skill-links") {
           const answer = await runTask(provider, suggestSkillLinks, call.input, options);
+          options.onCall?.(answer.ok ? answer.value.call : answer.error.call);
           if (!answer.ok) setAside.push({ evidence: call.evidence, reason: reasonOf(answer.error.reason) });
           else {
             const linked = evidenceNow(call.evidence)?.record.skills ?? [];
@@ -1576,6 +1579,7 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
           }
         } else {
           const answer = await runTask(provider, judgeSkillLevel, call.input, options);
+          options.onCall?.(answer.ok ? answer.value.call : answer.error.call);
           if (!answer.ok) setAside.push({ skill: call.skill, reason: reasonOf(answer.error.reason) });
           else {
             const found = levelFindings(

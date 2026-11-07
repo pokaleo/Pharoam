@@ -52,6 +52,7 @@ const SECTIONS = [
   ["/pathways", "shell.pathways"],
   ["/about", "shell.about"],
   ["/attention", "shell.attention"],
+  ["/activity", "shell.activity"],
 ] as const;
 
 /**
@@ -175,7 +176,10 @@ export function AppShell({
               <Icon of={UserRoundPen} />
               {t("shell.about")}
             </Link>
-            <Later icon={ScrollText} name={t("shell.activity")} />
+            <Link to="/activity" className={NAV_LINK}>
+              <Icon of={ScrollText} />
+              {t("shell.activity")}
+            </Link>
             <Link to="/settings" className={NAV_LINK}>
               <Icon of={Settings} />
               {t("shell.settings")}

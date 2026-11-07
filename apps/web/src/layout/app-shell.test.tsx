@@ -26,6 +26,7 @@ describe("AppShell", () => {
       "Pathways",
       "Needs attention",
       "About you",
+      "Activity log",
       "Settings",
     ]);
     screen.getByText("my-profile");
@@ -41,7 +42,7 @@ describe("AppShell", () => {
     );
 
     const nav = await screen.findByRole("navigation", { name: "Main" });
-    for (const name of ["Assess", "Learning plan", "Prepare", "Activity log", "Help"]) {
+    for (const name of ["Assess", "Learning plan", "Prepare", "Help"]) {
       const slot = within(nav).getByText(name).closest("[aria-disabled]");
       expect(slot?.getAttribute("aria-disabled"), name).toBe("true");
       expect(slot?.textContent, name).toContain("Later");

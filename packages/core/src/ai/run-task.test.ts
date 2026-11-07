@@ -33,6 +33,7 @@ describe("runTask (ADR-0004, PRD D6, MVP S17.1)", () => {
           at: "2026-11-04T10:00:00Z",
           sent: prepareCall(tag, { text: "I built an API in Python." }).request,
           outcome: "answered",
+          received: { answer: { tags: ["python", "apis"] } },
         },
       },
     });
@@ -50,6 +51,8 @@ describe("runTask (ADR-0004, PRD D6, MVP S17.1)", () => {
     if (answer.ok) return;
     expect(answer.error.reason.kind).toBe("invalid-answer");
     expect(answer.error.call.outcome).toBe("rejected");
+    // What came back is kept exactly, even what the schema would have dropped, so the person can see why.
+    expect(answer.error.call.received).toEqual({ answer: { tags: ["a", "b", "c", "d"], level: 4 } });
     expect("output" in answer.error).toBe(false);
   });
 
@@ -62,7 +65,12 @@ describe("runTask (ADR-0004, PRD D6, MVP S17.1)", () => {
       ok: false,
       error: {
         reason: { kind: "provider", error: { kind: "unauthorised" } },
-        call: { task: "tag-text@2", outcome: "failed", sent: prepareCall(tag, { text: "x" }).request },
+        call: {
+          task: "tag-text@2",
+          outcome: "failed",
+          sent: prepareCall(tag, { text: "x" }).request,
+          received: { error: { kind: "unauthorised" } },
+        },
       },
     });
   });
@@ -91,5 +99,20 @@ describe("runTask (ADR-0004, PRD D6, MVP S17.1)", () => {
       { model: "m-1", now },
     );
     expect(allowed.ok).toBe(true);
+  });
+
+  it("records a call whose provider throws as failed, since its data may have been sent (S17.1)", async () => {
+    const base = fakeProvider(() => ok({ tags: [] }));
+    const provider = {
+      ...base,
+      complete: () => Promise.reject(new Error("The adapter broke after sending.")),
+    };
+
+    const answer = await runTask(provider, tag, { text: "x" }, { model: "m-1", now });
+
+    expect(answer.ok ? null : answer.error).toMatchObject({
+      reason: { kind: "provider", error: { kind: "failed", message: "The adapter broke after sending." } },
+      call: { outcome: "failed", sent: prepareCall(tag, { text: "x" }).request },
+    });
   });
 });
