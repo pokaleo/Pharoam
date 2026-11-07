@@ -1,4 +1,4 @@
-// A model for tests that answers the evidence scan's tasks, and a way to set it up as a person would.
+// A model for tests that answers the AI tasks, and a way to set it up as a person would.
 import { err, ok, type ModelRequest, type ProviderError } from "@pharoam/core";
 import { fakeProvider } from "@pharoam/core/testing";
 import { screen } from "@testing-library/react";
@@ -13,6 +13,8 @@ export interface ScanAnswers {
   readonly level?: number;
   /** What it answers when asked to read pasted text. */
   readonly pasted?: unknown;
+  /** What it answers when asked to explain a gap. */
+  readonly gap?: unknown;
   /** A failure for records whose title has this word. */
   readonly failFor?: { readonly word: string; readonly error: ProviderError };
   /** Throws, as a broken adapter would, for records whose title has this word. */
@@ -20,6 +22,12 @@ export interface ScanAnswers {
   /** Holds back the answer for records whose title has this word until the test lets it go. */
   readonly holdFor?: { readonly word: string; readonly until: Promise<void> };
 }
+
+/** What the test model says a gap might mean, unless a test says otherwise. */
+export const GAP_ANSWER = {
+  meaning: "Your SQL is a start; most of the pathway isn't in your profile yet.",
+  starts: [{ skill: "python", why: "It is core, and nothing in your profile shows it yet." }],
+};
 
 /**
  * A provider loader whose model answers the scan's tasks as the test decides, keeping every request sent.
@@ -34,6 +42,7 @@ export function scanModel(answers: ScanAnswers = {}): { load: LoadProvider; sent
       return err(answers.failFor.error);
     if (request.output.name === "check-model") return ok({ ready: true });
     if (request.output.name === "normalise-evidence") return ok(answers.pasted ?? { records: [] });
+    if (request.output.name === "explain-gap") return ok(answers.gap ?? GAP_ANSWER);
     if (request.output.name === "judge-skill-level")
       return ok({
         level: answers.level ?? 3,

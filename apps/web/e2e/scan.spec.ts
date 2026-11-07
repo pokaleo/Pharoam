@@ -14,19 +14,24 @@ async function anthropic(route: Route): Promise<void> {
   const body = JSON.parse(request.postData() ?? "{}") as { tools?: { name?: string }[] };
   const task = body.tools?.[0]?.name ?? "";
   const input =
-    task === "judge-skill-level"
+    task === "explain-gap"
       ? {
-          level: 3,
-          explanation: "Built and ran a payments API.",
-          limits: "One record only.",
-          evidence: ["E1"],
+          meaning: "Little of the pathway is in your profile yet.",
+          starts: [{ skill: "python", why: "It is core, and your payments work may already show it." }],
         }
-      : {
-          links: [
-            { skill: "python", explanation: "The refunds flow was written in Python." },
-            { skill: "sql", explanation: "It kept payments in a database." },
-          ],
-        };
+      : task === "judge-skill-level"
+        ? {
+            level: 3,
+            explanation: "Built and ran a payments API.",
+            limits: "One record only.",
+            evidence: ["E1"],
+          }
+        : {
+            links: [
+              { skill: "python", explanation: "The refunds flow was written in Python." },
+              { skill: "sql", explanation: "It kept payments in a database." },
+            ],
+          };
   return route.fulfill({
     headers: cors,
     json: {
@@ -129,5 +134,42 @@ test.describe("with Anthropic set up", () => {
         .locator("xpath=following-sibling::pre"),
     ).toContainText('"skill": "sql"');
     await app.expectAccessible("activity log");
+  });
+
+  test("S18: explains a gap, shows what is sent first, and keeps only the note the person accepts", async ({
+    app,
+    page,
+  }) => {
+    await page.route("https://api.anthropic.com/**", anthropic);
+    await app.start();
+    await app.put("pharoam.md", PHAROAM);
+    await app.put("evidence/payments-api--0192f3a1.md", PAYMENTS_API);
+    await app.choose();
+    await app.nav("Settings").click();
+    await page.getByRole("radio", { name: "Anthropic" }).check();
+    await page.getByLabel("API key").fill("sk-ant-test");
+    await page.getByLabel("Or type a model ID").fill("claude-test");
+    await page.getByRole("button", { name: "Use this model" }).click();
+
+    await app.nav("Pathways").click();
+    await page.getByRole("link", { name: "Backend engineer" }).click();
+    await page.getByRole("link", { name: "See my gap to this pathway" }).click();
+    const card = page.getByRole("region", { name: "What this gap might mean" });
+    await card.getByRole("button", { name: "Explain this gap" }).click();
+    await expect(card.getByRole("region", { name: "What will be sent" })).toBeVisible();
+    await app.expectAccessible("gap explanation, what will be sent");
+    await card.getByRole("button", { name: "Send" }).click();
+    await expect(card.getByText("Little of the pathway is in your profile yet.")).toBeVisible();
+    await app.expectAccessible("gap explanation, answer");
+    expect(await app.list("notes")).toHaveLength(0);
+
+    await card.getByRole("button", { name: "Accept as a note" }).click();
+    await expect(card.getByText(/^Saved as a note in /)).toBeVisible();
+    const [note] = await app.list("notes");
+    const text = (await app.read(`notes/${note ?? ""}`)) ?? "";
+    expect(text).toContain("schema: note/1");
+    expect(text).toContain("task: explain-gap@1");
+    expect(text).toContain("- **Python**: It is core, and your payments work may already show it.");
+    await app.expectAccessible("gap explanation, note");
   });
 });

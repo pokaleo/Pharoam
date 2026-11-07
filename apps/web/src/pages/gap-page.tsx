@@ -22,7 +22,6 @@ import {
   FileText,
   Footprints,
   History,
-  Info,
   MessageSquareQuote,
   Paperclip,
   Plus,
@@ -31,12 +30,12 @@ import {
 } from "lucide-react";
 import { useEffect, useId, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
+import { GapMeaning } from "../pathways/gap-meaning.tsx";
 import { PathwayProvenance } from "../pathways/provenance.tsx";
 import { useSession } from "../profile/session.tsx";
 import { dayName, levelName } from "../skills/labels.ts";
 import { Level } from "../skills/level.tsx";
 import { SourceTag } from "../skills/source-tag.tsx";
-import { AiMark } from "../ui/ai-mark.tsx";
 import { Button, buttonClassName } from "../ui/button.tsx";
 import { ChangedOutsideNotice } from "../ui/changed-outside.tsx";
 import { Icon } from "../ui/icon.tsx";
@@ -151,7 +150,14 @@ export function GapPage({
             <PathwayProvenance pathway={pathway} />
             {/* What the gap means and what the pathway is come first, side by side (the design system's gap view). */}
             <div className="grid gap-(--gap) lg:grid-cols-2">
-              <GapMeaning />
+              <GapMeaning
+                service={service}
+                pathway={pathway}
+                onGap={(gap) => {
+                  explore.reset();
+                  setShown({ view: gap, at: Date.now() });
+                }}
+              />
               <AboutPathway pathway={pathway} />
             </div>
           </>
@@ -185,35 +191,6 @@ function FailureNotice({ failure }: { readonly failure: GapFailure }): ReactElem
     case "failed":
       return <Notice tone="problem" title={t("gap.failed")} />;
   }
-}
-
-// Where AI will say what the gap might mean, once AI-assisted mode arrives (MVP §2, v0.2). It keeps the design
-// system's AI frame so the layout is whole, and says plainly that nothing in it is AI-written yet (hard rule 6).
-function GapMeaning(): ReactElement {
-  const { t } = useTranslation();
-  const titleId = useId();
-  return (
-    <section
-      aria-labelledby={titleId}
-      className="flex flex-col rounded-lg border border-dashed border-ai-edge bg-surface"
-    >
-      <div className="flex flex-wrap items-center gap-2 rounded-t-lg border-b border-dashed border-ai-edge bg-src-ai-wash bg-(image:--ai-hatch) px-(--pad) py-2 text-meta text-src-ai">
-        <Tag tone="ai-judged" mark={<AiMark />}>
-          {t("gap.meaning.mark")}
-        </Tag>
-      </div>
-      <div className="grid flex-1 content-start gap-(--space-3) p-(--pad)">
-        <h2 id={titleId} className="text-section font-bold tracking-[-0.01em]">
-          {t("gap.meaning.title")}
-        </h2>
-        <p className="max-w-(--reading-measure) text-ink-2">{t("gap.meaning.lead")}</p>
-        <p className="flex gap-1.5 text-meta text-ink-2">
-          <Icon of={Info} size="sm" className="mt-px" />
-          {t("gap.meaning.disclaimer")}
-        </p>
-      </div>
-    </section>
-  );
 }
 
 // What the pathway is, in the pack's own words. Its sources stay on the pathway's page, beside each requirement:
