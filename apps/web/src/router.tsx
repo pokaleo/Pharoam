@@ -28,6 +28,8 @@ import { EvidenceListPage } from "./pages/evidence-list-page.tsx";
 import { EvidencePage } from "./pages/evidence-page.tsx";
 import { NewEvidencePage } from "./pages/new-evidence-page.tsx";
 import { PastePage } from "./pages/paste-evidence-page.tsx";
+import { ReviewPage } from "./pages/review-page.tsx";
+import { ScanPage, type ScanKind } from "./pages/scan-page.tsx";
 import { HomePage } from "./pages/home-page.tsx";
 import { SettingsPage } from "./pages/settings-page.tsx";
 import { UnsupportedPage } from "./pages/unsupported-page.tsx";
@@ -90,6 +92,32 @@ const editEvidenceRoute = createRoute({
     const { id } = editEvidenceRoute.useParams();
     return <ProfileRoute page={(service) => <EditEvidencePage key={id} service={service} id={id} />} />;
   },
+});
+
+const scanRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/scan",
+  // What to scan for, and the one record or skill to start from, when coming from its page.
+  validateSearch: (search: Record<string, unknown>): { kind: ScanKind; only?: string } => ({
+    kind: search.kind === "levels" ? "levels" : "links",
+    ...(typeof search.only === "string" && { only: search.only }),
+  }),
+  component: function Scan() {
+    const { kind, only } = scanRoute.useSearch();
+    return (
+      <ProfileRoute
+        page={(service) => (
+          <ScanPage key={`${kind}${only ?? ""}`} service={service} kind={kind} only={only} />
+        )}
+      />
+    );
+  },
+});
+
+const reviewRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/review",
+  component: () => <ProfileRoute page={(service) => <ReviewPage service={service} />} />,
 });
 
 const skillsRoute = createRoute({
@@ -175,6 +203,8 @@ const routeTree = rootRoute.addChildren([
   aboutRoute,
   evidenceListRoute,
   pasteRoute,
+  scanRoute,
+  reviewRoute,
   newEvidenceRoute,
   evidenceRoute,
   editEvidenceRoute,

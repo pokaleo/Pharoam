@@ -47,6 +47,8 @@ const NAV_LINK = `${NAV_ROW} hover:bg-panel hover:text-ink aria-[current=page]:b
 const SECTIONS = [
   ["/skills", "shell.skills"],
   ["/evidence", "shell.evidence"],
+  ["/review", "shell.review"],
+  ["/scan", "shell.review"],
   ["/pathways", "shell.pathways"],
   ["/about", "shell.about"],
   ["/attention", "shell.attention"],
@@ -59,20 +61,22 @@ const SECTIONS = [
  * @remarks The design system's open plane: the sidebar sits on the page ground with one soft rule. Areas the design
  * system has places for but this version doesn't have yet are shown in their places, marked "Later", and are not
  * links. Under 1024px the sidebar folds behind a menu button in a top bar that names the page.
- * @param props - Where the profile is kept and its name, how many files need attention, what disconnecting does, and
- * the page.
+ * @param props - Where the profile is kept and its name, how many files need attention and how many AI suggestions
+ * wait for review, what disconnecting does, and the page.
  * @returns The page in the shell.
  */
 export function AppShell({
   kind,
   folder,
   attention,
+  review,
   onDisconnect,
   children,
 }: {
   readonly kind: PlaceKind;
   readonly folder: string;
   readonly attention: number;
+  readonly review: number;
   readonly onDisconnect: () => void;
   readonly children: ReactNode;
 }): ReactElement {
@@ -138,7 +142,16 @@ export function AppShell({
             <Icon of={FileText} />
             {t("shell.evidence")}
           </Link>
-          <Later icon={ListChecks} name={t("shell.review")} />
+          <Link to="/review" className={NAV_LINK}>
+            <Icon of={ListChecks} />
+            {t("shell.review")}
+            {review === 0 ? null : (
+              <>
+                {" "}
+                <span className="ms-auto text-meta text-ink-2 tabular-nums">{review}</span>
+              </>
+            )}
+          </Link>
           <Later icon={ClipboardPen} name={t("shell.assess")} />
           <p className="px-2 pt-3.5 pb-1 text-meta text-ink-3">{t("shell.whereNext")}</p>
           <Link to="/pathways" className={NAV_LINK}>

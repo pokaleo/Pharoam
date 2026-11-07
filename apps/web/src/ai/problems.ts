@@ -42,3 +42,24 @@ export function taskProblem(t: TFunction, error: TaskError, provider: string): s
     ? providerProblem(t, error.error, provider)
     : t("settings.errors.invalidAnswer");
 }
+
+const REASONS = [
+  "unauthorised",
+  "rate-limited",
+  "unreachable",
+  "refused",
+  "failed",
+  "invalid-answer",
+] as const;
+
+/**
+ * Why a scan set a record or skill aside, in plain words (MVP S16.5).
+ *
+ * @param t - The translation function.
+ * @param kind - The kind the session records, such as `unreachable`.
+ * @returns A phrase for the person; a general one for a kind this version doesn't know.
+ */
+export function setAsideReason(t: TFunction, kind: string): string {
+  const known = REASONS.find((one) => one === kind);
+  return known === undefined ? t("scan.reasons.other") : t(`scan.reasons.${known}`);
+}

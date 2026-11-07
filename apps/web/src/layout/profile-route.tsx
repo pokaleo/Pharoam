@@ -30,6 +30,7 @@ export function ProfileRoute({
       kind={services.places.kind}
       folder={services.places.kind === "browser" ? t("place.thisBrowser") : session.place}
       attention={session.service.needsAttention().length + session.service.conflicts().length}
+      review={session.service.reviewItems().length}
       onDisconnect={() => void disconnect()}
     >
       {page(session.service, session.place)}

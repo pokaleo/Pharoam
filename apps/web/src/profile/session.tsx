@@ -118,7 +118,15 @@ export function SessionProvider({
         if (session.status === "no-profile") setSession({ ...session, status: "open", revision: 0 });
       },
       changed: () => {
-        if (session.status === "open") setSession({ ...session, revision: session.revision + 1 });
+        if (session.status !== "open") return;
+        const { service } = session;
+        // Only for the profile it was made for: a scan that finishes after the profile was closed, or another
+        // opened, changes nothing on screen.
+        setSession((current) =>
+          current.status === "open" && current.service === service
+            ? { ...current, revision: current.revision + 1 }
+            : current,
+        );
       },
       disconnect: async () => {
         closeService(session);

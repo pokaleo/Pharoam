@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createI18n } from "../i18n.ts";
-import { providerProblem, taskProblem } from "./problems.ts";
+import { providerProblem, setAsideReason, taskProblem } from "./problems.ts";
 
 const { t } = createI18n();
 
@@ -26,5 +26,11 @@ describe("why an AI call didn't work, in plain words (MVP S13.3, S15.6)", () => 
     expect(taskProblem(t, { kind: "provider", error: { kind: "unauthorised" } }, "OpenAI")).toContain(
       "OpenAI",
     );
+  });
+
+  it("says why a scan set a record or skill aside, in plain words, whatever the kind", () => {
+    expect(setAsideReason(t, "unreachable")).toBe("the provider couldn't be reached");
+    expect(setAsideReason(t, "invalid-answer")).toBe("the answer wasn't in the shape asked for");
+    expect(setAsideReason(t, "a-kind-from-a-later-version")).toBe("something went wrong");
   });
 });

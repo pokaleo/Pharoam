@@ -7,6 +7,7 @@ import { err, ok, type StorageConnector } from "@pharoam/core";
 import { fakeProvider, type MemoryConnector } from "@pharoam/core/testing";
 import type { LoadProvider } from "../ai/providers.ts";
 import { createMemoryHistory } from "@tanstack/react-router";
+import { StrictMode } from "react";
 import { render, type RenderResult } from "@testing-library/react";
 import { App } from "../app.tsx";
 import { loadContentPack } from "../content.ts";
@@ -108,14 +109,17 @@ export function renderApp(folder: TestFolder, path = "/"): RenderedApp {
   };
 
   const history = createMemoryHistory({ initialEntries: [path] });
+  // In StrictMode, as the app runs (composition/main.tsx), so effects that don't survive running twice are caught.
   const rendered = render(
-    <App
-      history={history}
-      supported={folder.supported ?? true}
-      places={folder.kind === "browser" ? browserPlaces : folderPlaces}
-      content={loadContentPack}
-      providers={folder.providers ?? UNREACHABLE}
-    />,
+    <StrictMode>
+      <App
+        history={history}
+        supported={folder.supported ?? true}
+        places={folder.kind === "browser" ? browserPlaces : folderPlaces}
+        content={loadContentPack}
+        providers={folder.providers ?? UNREACHABLE}
+      />
+    </StrictMode>,
   );
   return { ...rendered, lists: () => lists, forgotten: () => forgotten };
 }

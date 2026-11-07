@@ -16,6 +16,8 @@ describe("createAppRouter (ADR-0008)", () => {
         "/evidence/$id/edit",
         "/evidence/new",
         "/evidence/paste",
+        "/review",
+        "/scan",
         "/pathways",
         "/pathways/$slug",
         "/pathways/$slug/gap",

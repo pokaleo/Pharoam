@@ -45,6 +45,12 @@ export function EvidenceListPage({ service }: { readonly service: CoreService })
         lead={t("evidence.lead", { count: evidence.length })}
         actions={
           <>
+            {evidence.length === 0 ? null : (
+              <Link to="/scan" search={{ kind: "links" }} className={buttonClassName("secondary")}>
+                <AiMark />
+                {t("evidence.suggest")}
+              </Link>
+            )}
             <Link to="/evidence/paste" className={buttonClassName("secondary")}>
               <AiMark />
               {t("evidence.paste")}
