@@ -10,7 +10,13 @@ import { useSession, type LoggedCall } from "../profile/session.tsx";
 import { AiMark } from "../ui/ai-mark.tsx";
 import { PageTitle } from "../ui/page-title.tsx";
 
-const TASKS = ["check-model", "normalise-evidence", "suggest-skill-links", "judge-skill-level"] as const;
+const TASKS = [
+  "check-model",
+  "normalise-evidence",
+  "suggest-skill-links",
+  "judge-skill-level",
+  "explain-gap",
+] as const;
 
 /**
  * The activity log: each AI call this session, newest first, with its task, model, time and outcome, and in full
