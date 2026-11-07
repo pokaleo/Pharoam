@@ -88,10 +88,9 @@ describe("GapPage (MVP S11)", () => {
     within(about).getByText(/Builds and runs the services behind apps/);
     // The file's own title heading isn't repeated under the card's heading.
     expect(within(about).queryByRole("heading", { name: "Backend engineer" })).toBeNull();
-    // AI isn't here yet: the card says what will come, and writes nothing as if an AI had.
+    // Without a model the card says what AI could do, and offers to set one up (MVP S18).
     const meaning = screen.getByRole("region", { name: "What this gap might mean" });
-    within(meaning).getByText("Coming with AI-assisted mode");
-    expect(within(meaning).queryByRole("button")).toBeNull();
+    within(meaning).getByRole("link", { name: "Set up a model" });
     const headings = screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent);
     expect(headings.slice(0, 2)).toEqual(["What this gap might mean", "About this pathway"]);
     await expectNoAxeViolations(container);
