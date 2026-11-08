@@ -213,3 +213,58 @@ describe("ReviewPage (MVP S16.6, S16.7)", () => {
     expect(memory.text(SESSION)).toBeUndefined();
   });
 });
+
+// A newer scan's session that judged Python again, at level 2.
+function newerLevel(): string {
+  return lines(
+    "---",
+    "schema: session/1",
+    "id: 0192f3a1-0000-7000-8000-000000000040",
+    "created: 2026-11-07T10:00:00Z",
+    "updated: 2026-11-07T10:01:00Z",
+    "workflow: evidence-scan@1",
+    "scan: skill-levels",
+    "status: in-progress",
+    "suggestions:",
+    "  - id: 0192f3a1-0000-7000-8000-000000000041",
+    "    kind: skill-level",
+    "    skill: python",
+    "    level: 2",
+    "    explanation: Ran the refunds flow in Python.",
+    "    limits: Judged from one record only.",
+    "    evidence:",
+    `      - ${EVIDENCE_ID}`,
+    "    read:",
+    `      - evidence: ${EVIDENCE_ID}`,
+    `        sent: ${sent()}`,
+    "    ai: { task: judge-skill-level@1, model: anthropic/claude-test, at: 2026-11-07T10:00:40Z }",
+    "---",
+  );
+}
+
+describe("one level per skill (review follow-up)", () => {
+  it("can't accept a level that a newer scan of the same skill replaced, only discard it", async () => {
+    const user = userEvent.setup();
+    const { container, memory } = await review(
+      user,
+      folder({ "sessions/evidence-scan-2026-11-07--00000040.md": newerLevel() }),
+    );
+
+    const older = item("Python: level 3, Proficient");
+    within(older).getByText("A newer scan judged this skill again. Decide its suggestion instead.");
+    expect(within(older).getByRole("button", { name: "Accept" })).toHaveProperty("disabled", true);
+    expect(within(older).getByRole("button", { name: "Discard" })).toHaveProperty("disabled", false);
+    const newer = screen.getByRole("article", { name: /^Python: level 2\b/ });
+    expect(within(newer).queryByText(/A newer scan judged this skill again/)).toBeNull();
+    await expectNoAxeViolations(container);
+
+    // Choosing both can't accept both.
+    await user.click(within(older).getByRole("checkbox", { name: "Select" }));
+    await user.click(within(newer).getByRole("checkbox", { name: "Select" }));
+    expect(screen.getByRole("button", { name: "Accept 2 selected" })).toHaveProperty("disabled", true);
+
+    await user.click(within(newer).getByRole("button", { name: "Accept" }));
+    await screen.findByText("1 accepted.");
+    expect([...(await pythonText(memory)).matchAll(/^ {2}- id: /gm)]).toHaveLength(1);
+  });
+});

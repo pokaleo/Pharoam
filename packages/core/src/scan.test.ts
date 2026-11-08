@@ -536,3 +536,39 @@ describe("deciding safely (review findings)", () => {
     expect(pythonText(service, storage)).toBe("");
   });
 });
+
+describe("one level per skill (review follow-up)", () => {
+  // The IDs of the entries in a skill record's history.
+  const ids = (text: string): string[] => [...text.matchAll(/^ {2}- id: (\S+)$/gm)].map((m) => m[1] ?? "");
+
+  it("lets only the newest scan's level for a skill be accepted, as an older one was replaced", async () => {
+    const clock = { now: Date.UTC(2026, 10, 8, 10) };
+    const storage = createMemoryConnector(FILES);
+    const service = createCoreService({
+      ...OPTIONS,
+      storage: storage.connector,
+      ids: { ...OPTIONS.ids, now: () => clock.now },
+    });
+    await service.open();
+    await service.runScan(service.levelScan(["python"]), model(3).provider, RUN);
+    clock.now += 60_000;
+    await service.runScan(service.levelScan(["python"]), model(2).provider, RUN);
+
+    const [older, newer] = service.reviewItems();
+    if (older?.suggestion.kind !== "skill-level" || newer?.suggestion.kind !== "skill-level")
+      throw new Error("No level suggestions.");
+    expect([older.suggestion.level, older.replaced, newer.replaced]).toEqual([3, true, false]);
+
+    const decided = await service.decideSuggestions([older, newer], "accept");
+
+    expect(decided).toEqual({
+      decided: [newer.suggestion.id],
+      refused: [{ id: older.suggestion.id, reason: "replaced" }],
+    });
+    const python = pythonText(service, storage);
+    expect(ids(python)).toHaveLength(1);
+    expect(python).toMatch(/level: 2\n\s+provenance: ai-judged/);
+    // A replaced suggestion can still be discarded, so Review can be cleared.
+    expect((await service.decideSuggestions([older], "discard")).decided).toEqual([older.suggestion.id]);
+  });
+});

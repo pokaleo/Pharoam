@@ -342,9 +342,12 @@ export interface DecisionReport {
   readonly decided: readonly string[];
   /**
    * The suggestions left as they were: `stale`, its evidence changed since the scan read it (S16.10);
-   * `not-pending`, already decided or gone.
+   * `replaced`, a level that a newer scan of the same skill judged again; `not-pending`, already decided or gone.
    */
-  readonly refused: readonly { readonly id: string; readonly reason: "stale" | "not-pending" }[];
+  readonly refused: readonly {
+    readonly id: string;
+    readonly reason: "stale" | "replaced" | "not-pending";
+  }[];
   /**
    * The write that failed, if one did: deciding stopped there. Everything listed under `decided` was written
    * and marked; the failed suggestion stays pending, and deciding it again is safe, since an accepted level is
@@ -754,7 +757,7 @@ export interface CoreService {
    * @remarks Accepting a link adds the skill to the evidence record's `skills` and lists it under `ai-skill-links`
    * (S16.8); accepting a level appends an `ai-judged` observation citing its evidence, with the suggestion's ID
    * (S16.9). Discarding writes nothing but the decision. A suggestion whose evidence changed since the scan read it
-   * isn't accepted (S16.10). Skipping is simply not deciding: the suggestion stays pending and never counts.
+   * isn't accepted (S16.10), nor is a level that a newer scan of the same skill replaced. Skipping is simply not deciding: the suggestion stays pending and never counts.
    */
   readonly decideSuggestions: (
     items: readonly Pick<ReviewItem, "session" | "suggestion">[],
@@ -1117,6 +1120,25 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
   }
 
   // Whether a suggestion can't be accepted, only scanned again (MVP S16.10).
+  // Whether a newer session, not abandoned, also judged this level suggestion's skill. Sessions are ordered by when
+  // they started; their UUIDv7 IDs, which sort as they were made, break a tie.
+  function replacedNow(location: string, suggestion: SuggestionInput): boolean {
+    if (suggestion.kind !== "skill-level") return false;
+    const own = loaded.find((one) => one.location === location)?.record;
+    if (own?.schema !== "session/1") return false;
+    const newer = (other: typeof own): boolean =>
+      Date.parse(other.created) - Date.parse(own.created) > 0 ||
+      (other.created === own.created && other.id > own.id);
+    return loaded.some(
+      ({ record }) =>
+        record.schema === "session/1" &&
+        record.id !== own.id &&
+        record.status !== "abandoned" &&
+        newer(record) &&
+        record.suggestions.some((one) => one.kind === "skill-level" && one.skill === suggestion.skill),
+    );
+  }
+
   function staleNow(suggestion: SuggestionInput): boolean {
     if (isStale(suggestion, evidenceNow)) return true;
     if (suggestion.kind === "skill-link") {
@@ -1709,13 +1731,18 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
         .flatMap(({ location, record }) =>
           record.suggestions
             .filter((suggestion) => suggestion.decision === undefined)
-            .map((suggestion) => ({ session: location, suggestion, stale: staleNow(suggestion) })),
+            .map((suggestion) => ({
+              session: location,
+              suggestion,
+              stale: staleNow(suggestion),
+              replaced: replacedNow(location, suggestion),
+            })),
         ),
 
     decideSuggestions: async (items, decision) => {
       const now = timestamp(ids.now());
       const decided: string[] = [];
-      const refused: { id: string; reason: "stale" | "not-pending" }[] = [];
+      const refused: { id: string; reason: "stale" | "replaced" | "not-pending" }[] = [];
       let failed: { id: string; error: SaveError } | undefined;
       for (const location of new Set(items.map((item) => item.session))) {
         const session = loaded.find((one) => one.location === location);
@@ -1736,6 +1763,10 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
           if (decision === "accept") {
             if (staleNow(suggestion)) {
               refused.push({ id, reason: "stale" });
+              continue;
+            }
+            if (replacedNow(location, suggestion)) {
+              refused.push({ id, reason: "replaced" });
               continue;
             }
             const applied = await applySuggestion(suggestion, now);
