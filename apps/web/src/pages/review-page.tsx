@@ -24,6 +24,8 @@ type Outcome =
       readonly accepted: number;
       readonly discarded: number;
       readonly refused: number;
+      /** Levels a newer scan of the same skill replaced, so not accepted. */
+      readonly replaced: number;
       readonly failed: boolean;
     }
   | { readonly kind: "failed" }
@@ -82,6 +84,7 @@ export function ReviewPage({ service }: { readonly service: CoreService }): Reac
         accepted: decision === "accept" ? report.decided.length : 0,
         discarded: decision === "discard" ? report.decided.length : 0,
         refused: report.refused.filter((one) => one.reason === "stale").length,
+        replaced: report.refused.filter((one) => one.reason === "replaced").length,
         failed: report.failed !== undefined,
       };
     });
@@ -116,7 +119,7 @@ export function ReviewPage({ service }: { readonly service: CoreService }): Reac
               <div className="flex flex-wrap gap-(--space-2)">
                 <Button
                   variant="primary"
-                  disabled={busy || chosen.some((item) => item.stale)}
+                  disabled={busy || chosen.some((item) => item.stale || item.replaced)}
                   onClick={() => void decide(chosen, "accept")}
                 >
                   {t("review.acceptSelected", { count: chosen.length })}
@@ -204,6 +207,7 @@ function OutcomeLine({ outcome }: { readonly outcome: Outcome | undefined }): Re
             ...(outcome.accepted > 0 ? [t("review.accepted", { count: outcome.accepted })] : []),
             ...(outcome.discarded > 0 ? [t("review.discarded", { count: outcome.discarded })] : []),
             ...(outcome.refused > 0 ? [t("review.refused", { count: outcome.refused })] : []),
+            ...(outcome.replaced > 0 ? [t("review.replacedRefused", { count: outcome.replaced })] : []),
           ]
         : [t(outcome.kind === "adjusted" ? "review.adjusted" : "review.deleted")];
   return (
@@ -241,7 +245,7 @@ function SuggestionCard({
 }): ReactElement {
   const { t } = useTranslation();
   const titleId = useId();
-  const { suggestion, stale } = item;
+  const { suggestion, stale, replaced } = item;
   const [adjusting, setAdjusting] = useState(false);
   const [level, setLevel] = useState<number>();
 
@@ -308,6 +312,7 @@ function SuggestionCard({
           </Link>
         </Notice>
       ) : null}
+      {replaced && !stale ? <Notice tone="attention" title={t("review.replaced")} /> : null}
       {adjusting && suggestion.kind === "skill-level" ? (
         <fieldset className="grid gap-(--space-2)">
           <legend className="font-semibold">{t("review.adjustLegend")}</legend>
@@ -347,7 +352,7 @@ function SuggestionCard({
         <div className="flex flex-wrap gap-(--space-2)">
           <Button
             variant="primary"
-            disabled={busy || stale}
+            disabled={busy || stale || replaced}
             onClick={() => {
               onDecide("accept");
             }}

@@ -67,6 +67,11 @@ export interface ReviewItem {
   readonly suggestion: Suggestion;
   /** Whether evidence it was built on changed or went since the scan read it, so it can't be accepted (S16.10). */
   readonly stale: boolean;
+  /**
+   * Whether a newer scan judged the same skill's level, so this older level can't be accepted: accepting both would
+   * leave whichever was accepted last as the shown level, however old its judgement.
+   */
+  readonly replaced: boolean;
 }
 
 /**
