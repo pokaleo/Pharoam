@@ -9,6 +9,10 @@ export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
   forbidOnly: ci,
+  // A shared runner can stall a journey past its limit, as the WebKit folder copy did twice while passing in a few
+  // seconds alone. One retry tells a stall from a failure: a journey that passes on retry is reported as flaky,
+  // never silently, and one that fails twice fails the run. Locally, a failure is seen at once.
+  retries: ci ? 1 : 0,
   reporter: ci ? [["github"], ["list"]] : "list",
   use: { baseURL: `http://localhost:${String(PORT)}/`, trace: "retain-on-failure" },
   // Chromium keeps the profile in a folder; Safari's WebKit and Firefox keep it in the browser (ADR-0020).
