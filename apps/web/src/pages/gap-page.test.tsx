@@ -1,8 +1,22 @@
-import type { MemoryConnector } from "@pharoam/core/testing";
+import { createMemoryConnector, type MemoryConnector } from "@pharoam/core/testing";
 import { screen, within } from "@testing-library/react";
 import { userEvent, type UserEvent } from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { emptyProfile, fileContaining, fullProfile, openProfile, navLink } from "../__fixtures__/profiles.ts";
+import {
+  EVIDENCE,
+  EVIDENCE_ID,
+  OBSERVATION_ID,
+  PAYMENTS_API,
+  PHAROAM,
+  SKILL_ID,
+  SQL,
+  emptyProfile,
+  fileContaining,
+  fullProfile,
+  lines,
+  openProfile,
+  navLink,
+} from "../__fixtures__/profiles.ts";
 import { expectNoAxeViolations } from "../testing/axe.ts";
 
 // Opens the gap to a pathway, starting from the pathways list.
@@ -105,5 +119,38 @@ describe("GapPage (MVP S11)", () => {
     const unknown = names.indexOf("Nothing in your profile yet");
     expect(unknown).toBeGreaterThanOrEqual(0);
     expect(unknown).toBeLessThan(names.indexOf("Your word, or an AI judgement you accepted"));
+  });
+
+  it("labels a level from an accepted AI judgement as one, not as the person's own rating (S11.7, S16.9)", async () => {
+    const user = userEvent.setup();
+    const memory = createMemoryConnector({
+      "pharoam.md": PHAROAM,
+      [EVIDENCE]: PAYMENTS_API,
+      [SQL]: lines(
+        "---",
+        "schema: skill-record/1",
+        `id: ${SKILL_ID}`,
+        "created: 2026-10-03T09:00:00Z",
+        "skill: sql",
+        "entries:",
+        `  - id: ${OBSERVATION_ID}`,
+        "    level: 3",
+        "    provenance: ai-judged",
+        "    observed_at: 2026-10-03T09:00:00Z",
+        "    evidence:",
+        `      - ${EVIDENCE_ID}`,
+        "    explanation: Ran the payments database.",
+        "    limits: One record only.",
+        "    ai: { task: judge-skill-level@1, model: anthropic/claude-test, at: 2026-10-03T08:59:00Z, confirmed_by_user: 2026-10-03T09:00:00Z }",
+        "---",
+      ),
+    });
+    await openGap(user, memory, "Backend engineer");
+
+    const claimed = screen.getByRole("region", { name: /^Claimed\b/ });
+    const sql = within(claimed).getByRole("row", { name: /SQL/ });
+    within(sql).getByText("AI judgement");
+    expect(within(sql).queryByText(/your own rating/)).toBeNull();
+    within(sql).getByText(/Payments API/);
   });
 });

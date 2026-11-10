@@ -85,7 +85,7 @@ type Step =
  */
 export function PastePage({ service }: { readonly service: CoreService }): ReactElement {
   const { t } = useTranslation();
-  const { model, decideCall } = useSession();
+  const { model } = useSession();
   const [text, setText] = useState("");
   const [step, setStep] = useState<Step>({ step: "write" });
 
@@ -137,7 +137,6 @@ export function PastePage({ service }: { readonly service: CoreService }): React
           initial={step.drafts}
           call={step.call}
           onAgain={() => {
-            decideCall(step.call, "discarded");
             setStep({ step: "write" });
           }}
         />
@@ -230,9 +229,18 @@ function Confirm({
   readonly onDone: (step: Step) => void;
 }): ReactElement {
   const { t } = useTranslation();
-  const { services, logCall } = useSession();
+  const { services, logCall, decideCall } = useSession();
   const titleId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
+  // Whether this step is still shown: a call that answers after the person left is logged, but counts as discarded,
+  // since nothing from it can be saved (S17.1).
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
   const provider = t(`settings.model.names.${setup.choice.kind}`);
   const modelName = setup.name ?? setup.model;
   const number = new Intl.NumberFormat(t("app.locale"));
@@ -247,7 +255,7 @@ function Confirm({
     try {
       loaded = await services.providers(setup.choice);
     } catch {
-      onDone({ step: "write", problem: t("paste.loadFailed", { provider }) });
+      onDone({ step: "write", problem: t("ai.loadFailed", { provider }) });
       return;
     }
     const answer = await runTask(
@@ -257,6 +265,10 @@ function Confirm({
       { model: setup.model, now: () => new Date() },
     );
     const call = logCall(answer.ok ? answer.value.call : answer.error.call);
+    if (!alive.current) {
+      if (answer.ok) decideCall(call, "discarded");
+      return;
+    }
     if (!answer.ok) {
       onDone({ step: "write", problem: taskProblem(t, answer.error.reason, provider) });
       return;
@@ -287,9 +299,9 @@ function Confirm({
             </div>
           ))}
           {call === undefined ? null : (
-            <p className="text-ink-2">{t("paste.send.size", { size: number.format(call.size) })}</p>
+            <p className="text-ink-2">{t("ai.send.size", { size: number.format(call.size) })}</p>
           )}
-          <p className="text-ink-2">{t("paste.send.model", { model: modelName, provider })}</p>
+          <p className="text-ink-2">{t("ai.send.model", { model: modelName, provider })}</p>
         </section>
         <p role="status" className="empty:hidden">
           {call === undefined ? t("paste.send.reading", { model: modelName }) : ""}
@@ -371,6 +383,18 @@ function Review({
   useEffect(() => {
     heading.current?.focus();
   }, []);
+  // Until a record is saved, leaving this step, by starting again or going elsewhere, discards the answer (S17.1).
+  const accepted = useRef(false);
+  const decide = useRef(decideCall);
+  useEffect(() => {
+    decide.current = decideCall;
+  }, [decideCall]);
+  useEffect(
+    () => () => {
+      if (!accepted.current) decide.current(call, "discarded");
+    },
+    [call],
+  );
 
   const redraft = (draft: Draft, form: EvidenceForm, keep: boolean): Draft => {
     const file = service.draftPastedEvidence(form, {
@@ -397,7 +421,8 @@ function Review({
         return;
       }
       saved.push(draft.key);
-      decideCall(call, "accepted");
+      if (!accepted.current) decideCall(call, "accepted");
+      accepted.current = true;
     }
     changed();
     await navigate({ to: "/evidence", state: { pasted: saved.length } });

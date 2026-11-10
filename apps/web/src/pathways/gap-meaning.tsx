@@ -130,7 +130,7 @@ export function GapMeaning({
     try {
       loaded = await services.providers(model.choice);
     } catch {
-      setStep({ step: "rest", problem: t("paste.loadFailed", { provider }) });
+      setStep({ step: "rest", problem: t("ai.loadFailed", { provider }) });
       return;
     }
     const answer = await runTask(loaded, explainGap, prepared.input, {
@@ -382,8 +382,8 @@ function Confirm({
             </pre>
           </div>
         ))}
-        <p className="text-ink-2">{t("paste.send.size", { size: number.format(prepared.call.size) })}</p>
-        <p className="text-ink-2">{t("paste.send.model", { model, provider })}</p>
+        <p className="text-ink-2">{t("ai.send.size", { size: number.format(prepared.call.size) })}</p>
+        <p className="text-ink-2">{t("ai.send.model", { model, provider })}</p>
       </section>
       {sending ? null : (
         <div className="flex flex-wrap gap-(--space-2)">

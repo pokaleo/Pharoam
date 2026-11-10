@@ -366,6 +366,13 @@
       "listFailed": "Pharoam couldn't list this evidence's files."
     }
   },
+  "ai": {
+    "loadFailed": "Pharoam couldn't load what it needs to reach {{provider}}. Check your connection and try again.",
+    "send": {
+      "size": "{{size}} characters in all, with Pharoam's instructions to the model.",
+      "model": "Model: {{model}} from {{provider}}."
+    }
+  },
   "paste": {
     "title": "Paste text",
     "lead": "Paste your CV or a list of modules, and the model you set up turns it into evidence records for you to check. Nothing is saved until you confirm.",
@@ -377,7 +384,6 @@
     "empty": "Paste some text first.",
     "tooLong": "That's more than {{max}} characters. Paste a part at a time.",
     "continue": "Continue",
-    "loadFailed": "Pharoam couldn't load what it needs to reach {{provider}}. Check your connection and try again.",
     "failed": "Nothing was saved. Your text is still here.",
     "send": {
       "title": "What will be sent",
@@ -385,8 +391,6 @@
       "parts": {
         "pasted-text": "Your pasted text"
       },
-      "size": "{{size}} characters in all, with Pharoam's instructions to the model.",
-      "model": "Model: {{model}} from {{provider}}.",
       "send": "Send",
       "back": "Back to the text",
       "reading": "Reading your text with {{model}}…"

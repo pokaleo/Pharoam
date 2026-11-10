@@ -71,7 +71,9 @@ describe("ActivityPage (MVP S17)", () => {
       "Model test",
     ]);
     within(first(list)).getByText(/anthropic\/claude-test/);
-    within(first(list)).getByText("Answered");
+    // Leaving the pasted text's review without saving discards its answer; the model test is simply answered.
+    within(first(list)).getByText("Discarded");
+    within(calls[1] ?? list).getByText("Answered");
     await expectNoAxeViolations(container);
   });
 
@@ -116,6 +118,29 @@ describe("ActivityPage (MVP S17)", () => {
     expect(
       calls.map((call) => within(call).getByText(/^(Accepted|Discarded|Answered)$/).textContent),
     ).toEqual(["Discarded", "Accepted"]);
+  });
+
+  it("counts a pasted answer left without saving as discarded, even one still being read (S17.1)", async () => {
+    const user = userEvent.setup();
+    let release = (): void => undefined;
+    const until = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await withModel(user, { pasted: { records: [JOB] }, holdFor: { word: CV, until } });
+    // Left while the model is still reading.
+    await paste(user);
+    await user.click(screen.getByRole("link", { name: "Evidence" }));
+    release();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(within(await activity(user)).getAllByRole("listitem")).toHaveLength(1);
+    within(first(await activity(user))).getByText("Discarded");
+
+    // Left with the answer on screen; the hold is over, so this answer comes at once.
+    await paste(user);
+    await screen.findByRole("button", { name: "Save 1 record" });
+    await user.click(screen.getByRole("link", { name: "Evidence" }));
+
+    within(first(await activity(user))).getByText("Discarded");
   });
 
   it("lists every call of an evidence scan", async () => {
