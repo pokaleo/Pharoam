@@ -18,7 +18,7 @@
     "@pharoam/provider-openai-compatible": "workspace:*",
     "@tanstack/react-query": "5.105.0",
     "@tanstack/react-router": "1.170.46",
-    "i18next": "26.5.11",
+    "i18next": "26.7.2",
     "lucide-react": "1.61.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
