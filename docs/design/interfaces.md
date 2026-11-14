@@ -73,7 +73,7 @@ A provider only sends what the core prepared and returns the parsed answer. **Th
 
 ## 4. Workflows
 
-Workflows (AI-led diagnostic, profile update, later CVs and interview practice) are LangGraph graphs defined in the core. The question-bank diagnostic runs the same way with plain-logic nodes only, so it needs no AI. Each workflow declares:
+Workflows (AI-led diagnostic, profile update, later CVs and interview practice) are LangGraph graphs defined in the core, loaded only with the AI code. The question-bank diagnostic needs no AI, so it is a plain state machine in the core with the same session record, not a graph: minimal mode loads no AI library (AD11a, MVP §9). Each workflow declares:
 - `name@version`, with nodes that are either **plain logic** or **registered tasks** (§2);
 - **approval points** where the user must confirm before anything is written (interrupts, R5). A diagnostic writes its result when it ends, without an approval point (ADR-0019);
 - **every step appends an entry to the readable session log** ([data model](data-model.md) §10);
