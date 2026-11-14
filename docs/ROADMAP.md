@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| **Version** | 0.2 (draft) |
-| **Date** | 3 November 2026 |
+| **Version** | 0.3 (draft) |
+| **Date** | 14 November 2026 |
 | **Source** | [MVP and release plan](MVP.md) (what each release contains) · [Architecture](ARCHITECTURE.md) (how it's built) |
 | **Status** | The order of work. MVP.md says *what*; this says *in what order* and *what depends on what*. No dates or estimates: a phase is done when its checks pass. Work is tracked in the GitHub project; this file is the plan it follows. |
 
@@ -75,21 +75,43 @@ What v0.2 contains, its exit criteria and its stories (S13–S18) are in MVP §8
 
 Phase 12 can run alongside 10 and 11. Phase 16 needs only the foundations, so it can move earlier, or slip to the next release if the rest is ready first. Before release, the hand-run check is run against a real model and recorded in the release PR.
 
-## 5. Later releases (outline)
+## 5. v0.3 phases
+
+What v0.3 contains, its exit criteria and its stories (S19–S24) are in MVP §9. It ships in two halves: v0.3a, the question-bank diagnostic with no AI, goes live before v0.3b, the AI-led diagnostic, starts. Spike S2 is done ([findings](research/spike-s2-langgraph-readable-log.md)): the AI-led diagnostic pauses with `NodeInterrupt` and resumes from the session record through `updateState`; the question-bank diagnostic needs no LangGraph at all.
+
+```
+17 Stories signed off ──▶ 18 Question bank ──▶ 19 Diagnostic engine ──▶ 20 Diagnostic screens ──▶ 21 Reads and writes in the log ──▶ v0.3a live
+                                                                                                                                         │
+                                                        22 AI-led diagnostic core ──▶ 23 AI-led screens ──▶ 24 Hand-run check and release ◀┘
+```
+
+| Phase | Contents | Depends on | Done when |
+|---|---|---|---|
+| **17. Stories signed off** | MVP §9 agreed; the v0.3 milestone and issues in GitHub (§7) | — | The founder signs off §9 |
+| **18. Question bank** (S20) | The `assessment-item/1` schema and its published JSON Schema; `content/items/`; the pack build validates items and counts them; the first bank: backend engineer's 12 core skills, 3 items per level, AI-drafted and founder-reviewed in their PRs | 17 | The pack builds with the bank, and refuses an invalid or unreviewed item |
+| **19. Diagnostic engine** (S19 core) | The question-bank diagnostic as a plain state machine in `packages/core`: the published rule, item choice, the session record written after each answer and resumed from alone, the `assessment` evidence and `demonstrated` observation at the end; `assessment` evidence fingerprinted (data model §4) | 18 | Core tests cover the rule, resuming, retakes and the records written |
+| **20. Diagnostic screens** (S19, S21) | Starting a diagnostic from the skill page, the gap view and Review's adjust; the question screen; the result with its path; resuming and abandoning; next steps after a level; journeys in Chromium, WebKit and Firefox with axe | 19 | Every S19 and S21 criterion passes; the S19.8 journey shows no AI code loads |
+| **21. Reads and writes in the log** (S22) | Storage events from the core service, listed in the Activity log beside AI calls | 19 | Every S22 criterion passes; **v0.3a is live** |
+| **22. AI-led diagnostic core** (S23 core) | LangGraph added to the AI code, loaded only with it; tasks `write-diagnostic-item@1`, `mark-diagnostic-answer@1` and `explain-diagnostic@1`; the graph with `NodeInterrupt` pauses and `updateState` resumes; the `ai-correlated` result and its record | 21 | Core tests with a fake provider cover the graph, resuming, the tasks' checks and the records written |
+| **23. AI-led screens** (S21, S23) | What will be sent before each call; the question screen for open answers and practical tasks; the explained result; the Activity log's calls; journeys with canned replies | 22 | Every S23 criterion passes |
+| **24. Hand-run check and release** (S24) | The tasks' inputs in the hand-run check; the founder's own diagnostics; the release PR | 23 | MVP §9's exit criteria are recorded |
+
+Phase 18 is mostly content and can run alongside 19 once the schema is in. Phase 21 can run alongside 20.
+
+## 6. Later releases (outline)
 
 Moved into GitHub when the release before is nearly done. Details and what each resumes from are in MVP §7.
 
 | Release | First steps | Then |
 |---|---|---|
-| **v0.3** Diagnostics | **Spike S2** (LangGraph in the browser, resuming from the readable log), since diagnostics are the first workflows that pause and resume; the `assessment-item` schema and the first question-bank items | Adaptive question-bank diagnostics (`demonstrated`); AI-led diagnostics with open answers and practical tasks (`ai-correlated`); sessions |
 | **v0.4** Learning | Aspirations | Learning plans, pathway comparison, full pathway detail |
 | **Later** | **Spike S3** (WebAuthn PRF) before the app lock and remembered keys | More connectors and browsers, the offline app, career readiness, the relay |
 
-## 6. GitHub setup
+## 7. GitHub setup
 
 | Item | Setup |
 |---|---|
 | **Milestones** | One per release in GitHub (`v0.1`, then `v0.2`); later releases when they're moved in |
-| **Labels** | Type: `feat`, `build`, `docs`, `security`, `spike`, `content`. Area: `area:core`, `area:connector-folder`, `area:web`, `area:content`. Phase: `phase:1` … `phase:16`. Area for v0.2: `area:provider`. |
+| **Labels** | Type: `feat`, `build`, `docs`, `security`, `spike`, `content`. Area: `area:core`, `area:connector-folder`, `area:web`, `area:content`. Phase: `phase:1` … `phase:24`. Area for v0.2: `area:provider`. |
 | **Project board** | "Pharoam" with the columns Backlog → Ready → In progress → In review → Done |
 | **Issue text** | What and why, the PRD/ADR/story IDs, acceptance criteria as a checklist, and what it depends on |

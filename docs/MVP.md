@@ -21,7 +21,7 @@
 |---|---|---|
 | **v0.1 MVP** | Profile in a local folder, evidence by forms, skill records, skill view, 4 pathways, gap view | A, B, C, F (part), I (part) |
 | **v0.2** | AI-assisted mode: model settings, normalising pasted text, AI judgements of levels and skill links from evidence, explaining a gap; attachments; the transparency view (§8) | D, B2, B3, B5, B6, J1, J3 |
-| **v0.3** | Diagnostics: adaptive question bank (no AI) and AI-led diagnostics with open answers and practical tasks | E |
+| **v0.3** | Diagnostics: adaptive question bank (no AI) and AI-led diagnostics with open answers and practical tasks (§9) | E, J3 |
 | **v0.4** | Learning plans and aspirations; pathway comparison | G, F2 |
 | **Later** | Career readiness, more connectors and browsers, offline app, sharing, operator toolkit | H, A3, K, L |
 
@@ -191,7 +191,7 @@ Everything here is part of the product (PRD) but left out of v0.1 on purpose. Ea
 | File attachments on evidence | B2 | v0.2 (§8, S14) | `evidence/_attachments/<id>/`; needed for the original input of pasted text |
 | AI explanation of a gap ("What this gap might mean") | D3, D6 | v0.2 (§8, S18) | The gap view already shows the card as a placeholder in the AI frame; an accepted explanation needs a record of its own, since the stored gap is regenerated |
 | Importers (LinkedIn export, GitHub, transcripts) | B3 | Later | Each one normalises into the standard evidence shape |
-| Diagnostics: adaptive question bank (`demonstrated`) and AI-led with open answers and practical tasks (`ai-correlated`) | E1–E9, ADR-0019 | v0.3 | The question bank first (it needs no AI); diagnostic records are never edited; sessions with readable logs (spike S2) |
+| Diagnostics: adaptive question bank (`demonstrated`) and AI-led with open answers and practical tasks (`ai-correlated`) | E1–E9, ADR-0019 | v0.3 (§9, S19–S24) | The question bank first (it needs no AI, so it runs on a plain state machine in the core); diagnostic records are never edited; sessions with readable logs (spike S2, done) |
 | Learning plans | G1–G4 | v0.4 | Progress comes from new observations, not checkboxes |
 | Aspirations (interests, goals, constraints) | Data model §10 | v0.4 | With learning plans |
 | Pathway comparison side by side | F2 | v0.4 | The gap logic from S11 is reused per pathway |
@@ -313,3 +313,93 @@ Everything in the v0.1 quality bar (§5), and:
 - **S18.3** Given the explanation, then I can accept it as a note, edit it, or discard it, and nothing is written until I accept.
 - **S18.4** Given I accept it, then a `note/1` record is written to `notes/` with the pathway pinned to its version and the time of the gap it explained (data model §10); it is never rewritten, and asking again writes a new note.
 - **S18.5** Given a note, then the gap view shows the latest one, and says so when my profile has changed since the gap it explained.
+
+
+## 9. v0.3: Diagnostics
+
+**The person can test a skill and get a level that rests only on what they showed: first with a reviewed question bank that needs no AI and works offline, then, with a model of their choice, with an AI-led diagnostic that asks open questions and practical tasks and explains its result.**
+
+### Scope
+
+**In, v0.3a (no AI):**
+- **The question bank as content** (PRD I3): reviewed multiple-choice items, each tagged with its skill and the level it tests, in `content/items/`, compiled into the built-in pack and shipped with the app. The first bank covers **backend engineer's 12 core skills**, 3 items per level (0–4), about 180 items, AI-drafted and founder-reviewed in their PRs. The other pathways' skills follow as ongoing content, as skill-specific level descriptions do (§7).
+- **The question-bank diagnostic** (PRD E1, E2): one skill at a time, adaptive, marked by a **fixed, published rule**, run by a plain state machine in the core. It loads no AI code and makes no network request (S13.1 still holds). It pauses and resumes from its readable session record alone (data model §10).
+- **The result as evidence** (E6, E7): the whole diagnostic as `assessment` evidence, never edited and fingerprinted (data model §4, §7), and a `demonstrated` observation linking to it, written when the diagnostic ends with no acceptance step (ADR-0019). The latest result counts; every attempt stays in the history.
+- **Next steps after a level** (E8), including the diagnostic as the way to check a claimed level, which Review's "adjust" has pointed to since v0.2 (§7).
+- **The Activity log lists what Pharoam read and wrote** to the person's storage, beside its AI calls (PRD J3), still in memory only.
+
+**In, v0.3b (AI-assisted mode):**
+- **The AI-led diagnostic** (E3, E4, E5): starts where the person's evidence and earlier results point, mixes bank items, open answers and practical tasks marked by AI review (ADR-0014), and ends with an `ai-correlated` level and an explanation that compares the session with the person's claims and evidence in either direction, lists what it considered, and offers a next step. It is a LangGraph graph whose AI nodes are registered tasks (ADR-0012, spike S2), pausing with `NodeInterrupt` and resuming from the session record through `updateState`.
+- **The hand-run check's inputs** for its tasks (§8, exit criterion 2).
+
+**Out:** running the person's code in a sandbox (a future feature, E3); signed or shareable results (Charter §6, K1–K2); learning plans (v0.4); diagnostics for custom skills (they have no bank and no level descriptions).
+
+**Order of work:** the bank's schema and first items, then the engine and its screens, then the Activity log's reads and writes; v0.3a ships and goes live before v0.3b starts ([implementation plan](ROADMAP.md) §5). Every pull request delivers a whole working slice, as in v0.2.
+
+### Exit criteria
+
+v0.3 is done when:
+1. the founder has taken a question-bank diagnostic for at least three skills and an AI-led one for at least one, with a real model, and the results are in their own profile as `assessment` evidence;
+2. **the hand-run check passes** for the AI-led diagnostic's tasks, run by hand against a real model and recorded in the release PR (§8);
+3. the question bank covers backend engineer's core skills with at least 3 reviewed items per level, every item's review is recorded, and the pack build refuses an invalid item;
+4. a question-bank diagnostic runs with no model set up, loading no AI code and making no request beyond loading itself;
+5. a diagnostic paused mid-way is resumed after a reload from its session record alone, in Chromium, WebKit and Firefox;
+6. **every story's acceptance criteria pass** as automated tests, and **axe accessibility checks pass** on every new screen;
+7. `pnpm check` and CI are green.
+
+### Quality bar for every v0.3 story
+
+Everything in the v0.1 and v0.2 quality bars (§5, §8), and:
+- A diagnostic's level rests only on what the person showed in it; claims and evidence shape the questions and the explanation, never the level (E4, ADR-0019).
+- A question-bank result is explained by the published rule and the path taken, never by a score, percentage or confidence (Charter R1, hard rule 9).
+- `assessment` evidence is written once and never edited; a retake is a new record (hard rule 4, E6).
+- An answer in an AI-led diagnostic goes to the model as marked data, never as instructions (security §3).
+- The session record is the only state: resuming never needs an engine checkpoint from storage (ADR-0017).
+
+### S19. Take a question-bank diagnostic
+*As a user, I want to test a skill with reviewed questions, so that my level rests on what I can show, not on what I claim.* Implements E1, E2, E4, E6, E7.
+
+- **S19.1** Given a skill the bank covers, when I start its diagnostic, then I'm told how it works (one question at a time, adaptive, the published rule, and that my evidence isn't considered) and it starts at my shown level, or at level 2 when I have none. A skill the bank doesn't cover says so, and never offers a diagnostic.
+- **S19.2** Given a question, then I see its prompt and its options, answer one, and move on; the marking isn't shown until the end, so later answers aren't steered by earlier ones.
+- **S19.3** Given my answers, then the next question's level follows the published rule: a right answer moves up a level, a wrong one down, within 0–4; the diagnostic ends when my level is settled (two right at a level, and two wrong at the level above or level 4 reached), or when the bank has no more items at the level needed; it never asks more than 12 questions.
+- **S19.4** Given the end, then the result is the highest level at which I answered two questions right, or 0; I see it with the path taken (each question, my answer, right or wrong) and the note "Based on this session only. Your evidence wasn't considered."
+- **S19.5** Given the end, then one `assessment` evidence record is written with the diagnostic, the skill, the starting level, each step with its item ID, answer and marking, the result and the rule's name, fingerprinted and never edited; and a `demonstrated` observation linking to it is appended to the skill's history, with no acceptance step. The latest result counts in the shown level and the gap view's *supported* group; every attempt stays in the history.
+- **S19.6** Given a diagnostic in progress, then its session record in `sessions/` holds every question asked and answer given, so leaving and coming back, or reloading, resumes at the same question from the record alone; I can abandon it, which keeps the record as abandoned and writes no result.
+- **S19.7** Given a retake, then it draws items I haven't seen at each level where the bank has them.
+- **S19.8** Given no model is set up, then everything above works, loading no AI code (S13.1).
+
+### S20. The question bank
+*As the founder, I want reviewed, tagged items as content, so that diagnostics test what they claim and the bank can grow without code changes.* Implements I3, data model §11.
+
+- **S20.1** Given an item file in `content/items/<skill>/`, then it declares `schema: assessment-item/1`, its skill, the level it tests, `format: mcq`, a prompt, 2–6 options, the right answer, a one-sentence explanation, its licence and origin, the `ai` block if drafted, and who reviewed it and when; the pack build refuses an item that is invalid, names a skill or level the pack doesn't have, or has no review.
+- **S20.2** Given the built pack, then it holds the bank, and the app finds a skill's items by slug and level without network requests.
+- **S20.3** Given the first bank, then backend engineer's 12 core skills each have at least 3 reviewed items per level 0–4, drafted with AI and reviewed by the founder in their PRs, and the pack's manifest counts them.
+- **S20.4** Given the published JSON Schema (`schemas/`), then `assessment-item-1.schema.json` matches the Zod schema, like the other record types.
+
+### S21. Next steps after a level
+*As a user, I want to be shown what I could do next with a level, so that a claim becomes something I can check.* Implements E8.
+
+- **S21.1** Given a self-reported level the bank covers, then the skill page and Review's "record my own level" offer to check it with a question-bank diagnostic, and with an AI-led one when a model is set up (v0.3b), or to skip.
+- **S21.2** Given a `demonstrated` result and a model set up, then I'm offered "Get a more accurate result with AI", with why (tailored questions, open answers and practical tasks, use of my evidence, an explained result); without a model, the offer says a model is needed (v0.3b).
+- **S21.3** Given an `ai-correlated` result, then I'm offered to run the diagnostic again (v0.3b).
+
+### S22. See what Pharoam read and wrote
+*As a user, I want the Activity log to show what Pharoam read from and wrote to my storage, so that nothing happens to my files unseen.* Implements J3.
+
+- **S22.1** Given the open profile, then every read of my storage (opening, refreshing) and every write (a record created, changed or deleted, a file attached or removed) this session is logged with its time, the record or file, and what was done, in memory only (S17.3).
+- **S22.2** Given the Activity log, then storage events and AI calls are listed together, newest first, each kind told apart, and nothing from them is written to my storage.
+
+### S23. Take an AI-led diagnostic
+*As a user, I want a diagnostic that asks about what my evidence shows and explains its result, so that I get a more accurate level than reviewed questions alone give.* Implements E3, E4, E5, E6, E7, D4, D6. v0.3b.
+
+- **S23.1** Given a skill and a model, when I start an AI-led diagnostic, then I'm shown what will be sent before each AI call (the skill, my linked evidence, my earlier question-bank results and my answers so far) and its size; nothing goes before I agree.
+- **S23.2** Given the diagnostic, then it starts where my evidence points, probes where it is thin or conflicts with my claims, and mixes bank items with open questions and practical tasks the model writes through the registered task `write-diagnostic-item@1`; my answers are marked through `mark-diagnostic-answer@1` against the item's rubric, as data, never as instructions.
+- **S23.3** Given the end, then the result is an `ai-correlated` level with an explanation from `explain-diagnostic@1`: what the session showed, how it compares with my claims and evidence in either direction, likely reasons offered as possibilities, a next step, and what it considered; labelled with the model and the disclaimer. The level rests on my answers' marking only.
+- **S23.4** Given the end, then one `assessment` evidence record holds every item in full, each answer, its marking and reasons, the explanation and the `ai` block, fingerprinted and never edited; an `ai-correlated` observation linking to it is appended with no acceptance step; and every call is in the Activity log.
+- **S23.5** Given a diagnostic in progress, then it pauses with `NodeInterrupt` at each question and resumes after a reload from its session record alone, through `updateState` (spike S2); I can abandon it.
+- **S23.6** Given an answer that tries to steer the marking, then it is marked as an answer, and the task's schema and checks reject a result that names a level it wasn't asked to mark.
+
+### S24. Hand-run check for the AI-led diagnostic
+*As the founder, I want fixed inputs for the new tasks, so that the release can be checked against a real model.* Implements §8 exit criterion 2. v0.3b.
+
+- **S24.1** Given the hand-run check, then it has inputs for `write-diagnostic-item@1`, `mark-diagnostic-answer@1` and `explain-diagnostic@1`, each with what a good answer must and mustn't contain, including an answer with an instruction to the model in it.
