@@ -21,6 +21,7 @@ import {
   type InvalidEvidenceError,
 } from "./evidence-form.ts";
 import { customSkillSlug } from "./custom-skills.ts";
+import { sentFingerprint } from "./evidence-text.ts";
 import {
   ORIGINAL_INPUT,
   isSameEvidence,
@@ -923,6 +924,27 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
   const pinnedPathway = (slug: string): string =>
     `${content.manifest.name}@${content.manifest.version}:${slug}`;
 
+  // What a note on the gap fingerprints: each requirement's skill, the level asked, the level shown with its source,
+  // and the group, in this fixed form, so neither a new field on the gap record nor its key order changes it.
+  function gapFingerprint(slug: string): string | undefined {
+    const gap = storedGap(slug)?.record;
+    if (gap?.schema !== "gap/1") return undefined;
+    const form = gap.requirements.map(({ skill, required, shown, group }) => [
+      skill,
+      required,
+      shown === null ? null : [shown.level, shown.provenance],
+      group,
+    ]);
+    return sentFingerprint(JSON.stringify(form));
+  }
+
+  // The fingerprint of a gap just brought up to date, which is therefore stored; its absence would be a bug.
+  function gapRead(slug: string): string {
+    const read = gapFingerprint(slug);
+    if (read === undefined) throw new Error(`The gap to ${slug} was refreshed but isn't stored.`);
+    return read;
+  }
+
   const storedGap = (pathway: string): LoadedRecord | undefined =>
     loaded.find((r) => r.record.schema === "gap/1" && pathwaySlug(r.record.pathway) === pathway);
 
@@ -1455,6 +1477,7 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
       return ok({
         pathway: pinnedPathway(slug),
         gapUpdated: gap.value.updated,
+        gapRead: gapRead(slug),
         gap: gap.value,
         input,
         call: prepareCall(explainGap, input),
@@ -1485,13 +1508,19 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
       if (latest === undefined) return undefined;
       const gap = storedGap(slug)?.record;
       const gapUpdated = gap?.schema === "gap/1" ? Date.parse(gap.updated ?? gap.created) : undefined;
+      // A note with a fingerprint is compared by it, which sees a change within the same second; an older note
+      // without one goes by the gap's time.
+      const changed =
+        latest.note.gap_read === undefined
+          ? gapUpdated !== Date.parse(latest.note.gap_updated)
+          : gapFingerprint(slug) !== latest.note.gap_read;
       return {
         id: latest.note.id,
         location: latest.location,
         created: latest.note.created,
         ai: latest.note.ai,
         text: noteText(latest.file.body),
-        outOfDate: gapProblems.has(slug) || gapUpdated !== Date.parse(latest.note.gap_updated),
+        outOfDate: gapProblems.has(slug) || changed,
       };
     },
 

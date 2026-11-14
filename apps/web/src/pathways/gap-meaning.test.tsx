@@ -181,9 +181,7 @@ describe("what a gap might mean (MVP S18)", () => {
     expect(within(card()).queryByText(/changed since/)).toBeNull();
     within(card()).getByRole("button", { name: "Ask again" });
 
-    // The person rates another of the pathway's skills, so the gap moves on. Times are written to the second, so
-    // the change comes in a later second than the gap the note explained, as it always would by hand.
-    await new Promise((resolve) => setTimeout(resolve, 1100));
+    // The person rates another of the pathway's skills, so the gap moves on.
     const [rate] = within(screen.getByRole("region", { name: /^Unknown\b/ })).getAllByRole("link", {
       name: "Say where you stand",
     });

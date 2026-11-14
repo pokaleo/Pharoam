@@ -44,6 +44,14 @@ jobs:
         run: pnpm --filter @pharoam/web exec playwright install --with-deps chromium webkit firefox
       - name: End-to-end tests with accessibility checks (builds the app)
         run: pnpm test:e2e
+      - name: Keep the traces of journeys that failed, including one that then passed on retry, so a stall on the runner can be examined afterwards
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-test-results
+          path: apps/web/test-results/
+          retention-days: 7
+          if-no-files-found: ignore
       - name: Commit messages
         if: github.event_name == 'pull_request'
         run: pnpm exec commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }}

@@ -9,6 +9,7 @@ const A = "0192f3a1-0000-7000-8000-00000000000a";
 const EVIDENCE = `---\nschema: evidence/1\nid: ${A}\ncreated: 2026-10-02T09:00:00Z\nkind: job\ntitle: Backend Engineer\nskills: [python]\n---\nBuilt the payments API.\n`;
 const AI = { task: "explain-gap@1", model: "anthropic/claude-sonnet-5-5", at: "2026-11-07T10:00:00Z" };
 const DISCLAIMER = "AI-generated and accepted by you. AI can make mistakes.";
+const READ = `sha256:${"0".repeat(64)}`;
 const TEXT = "Python is close.\n\n## Places to start\n\n- **Python**: one level to go.";
 
 async function profile(): Promise<{
@@ -49,6 +50,7 @@ describe("preparing a gap's explanation (MVP S18.1)", () => {
     expect(prepared.value).toMatchObject({
       pathway: "pharoam-core@0.1.0:ml-engineer",
       gapUpdated: explored.value.updated,
+      gapRead: expect.stringMatching(/^sha256:[0-9a-f]{64}$/) as unknown,
       gap: { updated: explored.value.updated },
       call: { task: "explain-gap@1" },
     });
@@ -126,7 +128,12 @@ describe("accepting a gap's explanation as a note (MVP S18.3, S18.4)", () => {
     const before = service.records().map((r) => [r.location, storage.text(r.location)] as const);
 
     const saved = await service.saveGapNote(
-      { pathway: prepared.value.pathway, gapUpdated: prepared.value.gapUpdated, ai: AI },
+      {
+        pathway: prepared.value.pathway,
+        gapUpdated: prepared.value.gapUpdated,
+        gapRead: prepared.value.gapRead,
+        ai: AI,
+      },
       TEXT,
       DISCLAIMER,
     );
@@ -141,6 +148,7 @@ describe("accepting a gap's explanation as a note (MVP S18.3, S18.4)", () => {
           ai: { ...AI, confirmed_by_user: "2026-11-07T10:05:00Z" },
           pathway: "pharoam-core@0.1.0:ml-engineer",
           gap_updated: prepared.value.gapUpdated,
+          gap_read: prepared.value.gapRead,
         },
         body: `> ⚠️ ${DISCLAIMER}\n\n${TEXT}\n`,
       },
@@ -154,7 +162,12 @@ describe("accepting a gap's explanation as a note (MVP S18.3, S18.4)", () => {
     await service.exploreGap("ml-engineer");
     const writes = storage.writes();
     const saved = await service.saveGapNote(
-      { pathway: "pharoam-core@0.1.0:ml-engineer", gapUpdated: "2026-11-07T10:00:00Z", ai: AI },
+      {
+        pathway: "pharoam-core@0.1.0:ml-engineer",
+        gapUpdated: "2026-11-07T10:00:00Z",
+        gapRead: READ,
+        ai: AI,
+      },
       " \n ",
       DISCLAIMER,
     );
@@ -165,7 +178,12 @@ describe("accepting a gap's explanation as a note (MVP S18.3, S18.4)", () => {
   it("keeps only an explanation of a gap, with its disclaimer", async () => {
     const { service } = await profile();
     await service.exploreGap("ml-engineer");
-    const gap = { pathway: "pharoam-core@0.1.0:ml-engineer", gapUpdated: "2026-11-07T10:00:00Z", ai: AI };
+    const gap = {
+      pathway: "pharoam-core@0.1.0:ml-engineer",
+      gapUpdated: "2026-11-07T10:00:00Z",
+      gapRead: READ,
+      ai: AI,
+    };
     const other = await service.saveGapNote(
       { ...gap, ai: { ...AI, task: "judge-skill-level@1" } },
       TEXT,
@@ -178,7 +196,12 @@ describe("accepting a gap's explanation as a note (MVP S18.3, S18.4)", () => {
   it("never rewrites a note: asking again writes a new one", async () => {
     const { service, storage, clock } = await profile();
     await service.exploreGap("ml-engineer");
-    const gap = { pathway: "pharoam-core@0.1.0:ml-engineer", gapUpdated: "2026-11-07T10:00:00Z", ai: AI };
+    const gap = {
+      pathway: "pharoam-core@0.1.0:ml-engineer",
+      gapUpdated: "2026-11-07T10:00:00Z",
+      gapRead: READ,
+      ai: AI,
+    };
     const first = await service.saveGapNote(gap, "First.", DISCLAIMER);
     if (!first.ok) throw new Error(first.error.kind);
     const written = storage.text(first.value.location);
@@ -198,7 +221,14 @@ describe("the latest note on a gap (MVP S18.5)", () => {
     const explored = await service.exploreGap("ml-engineer");
     if (!explored.ok) throw new Error(explored.error.kind);
     expect(service.latestGapNote("ml-engineer")).toBeUndefined();
-    const gap = { pathway: "pharoam-core@0.1.0:ml-engineer", gapUpdated: explored.value.updated, ai: AI };
+    const prepared = await service.explainGapCall("ml-engineer");
+    if (!prepared.ok) throw new Error(prepared.error.kind);
+    const gap = {
+      pathway: "pharoam-core@0.1.0:ml-engineer",
+      gapUpdated: explored.value.updated,
+      gapRead: prepared.value.gapRead,
+      ai: AI,
+    };
     await service.saveGapNote(gap, "Older.", DISCLAIMER);
     later(clock, 1);
     const newer = await service.saveGapNote(gap, TEXT, DISCLAIMER);
@@ -226,13 +256,19 @@ describe("the latest note on a gap (MVP S18.5)", () => {
 
   it("says so when the gap has changed since the one it explained", async () => {
     const { service, clock } = await profile();
-    const explored = await service.exploreGap("ml-engineer");
-    if (!explored.ok) throw new Error(explored.error.kind);
+    const prepared = await service.explainGapCall("ml-engineer");
+    if (!prepared.ok) throw new Error(prepared.error.kind);
     await service.saveGapNote(
-      { pathway: "pharoam-core@0.1.0:ml-engineer", gapUpdated: explored.value.updated, ai: AI },
+      {
+        pathway: prepared.value.pathway,
+        gapUpdated: prepared.value.gapUpdated,
+        gapRead: prepared.value.gapRead,
+        ai: AI,
+      },
       TEXT,
       DISCLAIMER,
     );
+    expect(service.latestGapNote("ml-engineer")?.outOfDate).toBe(false);
     later(clock, 10);
 
     await service.recordLevel({ skill: "docker", level: 2 });
@@ -240,15 +276,106 @@ describe("the latest note on a gap (MVP S18.5)", () => {
     expect(service.latestGapNote("ml-engineer")?.outOfDate).toBe(true);
   });
 
-  it("is out of date when the gap couldn't be brought up to date after a change", async () => {
-    const { service, storage } = await profile();
-    const explored = await service.exploreGap("ml-engineer");
-    if (!explored.ok) throw new Error(explored.error.kind);
+  it("sees a change to the gap within the same second, by the fingerprint of the gap it explained", async () => {
+    const { service } = await profile();
+    const prepared = await service.explainGapCall("ml-engineer");
+    if (!prepared.ok) throw new Error(prepared.error.kind);
     await service.saveGapNote(
-      { pathway: "pharoam-core@0.1.0:ml-engineer", gapUpdated: explored.value.updated, ai: AI },
+      {
+        pathway: prepared.value.pathway,
+        gapUpdated: prepared.value.gapUpdated,
+        gapRead: prepared.value.gapRead,
+        ai: AI,
+      },
       TEXT,
       DISCLAIMER,
     );
+    expect(service.latestGapNote("ml-engineer")?.outOfDate).toBe(false);
+
+    // The clock hasn't moved, so the gap's time is unchanged; only its requirements are.
+    await service.recordLevel({ skill: "docker", level: 2 });
+
+    expect(service.latestGapNote("ml-engineer")?.outOfDate).toBe(true);
+  });
+
+  it("gives the same fingerprint after the profile is opened again, so a note stays current", async () => {
+    const { service, storage } = await profile();
+    const prepared = await service.explainGapCall("ml-engineer");
+    if (!prepared.ok) throw new Error(prepared.error.kind);
+    await service.saveGapNote(
+      {
+        pathway: prepared.value.pathway,
+        gapUpdated: prepared.value.gapUpdated,
+        gapRead: prepared.value.gapRead,
+        ai: AI,
+      },
+      TEXT,
+      DISCLAIMER,
+    );
+
+    const reopened = createCoreService({
+      storage: storage.connector,
+      ids: { now: () => Date.UTC(2026, 10, 8), fillRandom: (bytes: Uint8Array) => bytes.fill(7) },
+      overview: () => "",
+      content: examplePack(),
+      gapSummary: () => "",
+    });
+    await reopened.open();
+
+    expect(reopened.latestGapNote("ml-engineer")?.outOfDate).toBe(false);
+  });
+
+  it("goes by the gap's time for a note written before fingerprints, which has none", async () => {
+    const clock = { now: Date.UTC(2026, 10, 7, 10, 0, 0) };
+    const storage = createMemoryConnector({
+      "evidence/a.md": EVIDENCE,
+      "notes/old.md": `---
+schema: note/1
+id: 0192f3a1-0000-7000-8000-000000000040
+created: 2026-11-07T10:00:00Z
+ai: { task: explain-gap@1, model: m, at: 2026-11-07T09:59:00Z, confirmed_by_user: 2026-11-07T10:00:00Z }
+pathway: pharoam-core@0.1.0:ml-engineer
+gap_updated: 2026-11-07T10:00:00Z
+---
+> ⚠️ ${DISCLAIMER}
+
+Old.
+`,
+    });
+    const service = createCoreService({
+      storage: storage.connector,
+      ids: { now: () => clock.now, fillRandom: (bytes: Uint8Array) => bytes.fill(7) },
+      overview: () => "",
+      content: examplePack(),
+      gapSummary: () => "",
+    });
+    await service.open();
+    await service.recordLevel({ skill: "python", level: 2, evidence: [A] });
+    await service.exploreGap("ml-engineer");
+    expect(service.latestGapNote("ml-engineer")?.outOfDate).toBe(false);
+
+    later(clock, 1);
+    await service.recordLevel({ skill: "docker", level: 2 });
+
+    expect(service.latestGapNote("ml-engineer")?.outOfDate).toBe(true);
+  });
+
+  it("is out of date when the gap couldn't be brought up to date after a change", async () => {
+    const { service, storage } = await profile();
+    const prepared = await service.explainGapCall("ml-engineer");
+    if (!prepared.ok) throw new Error(prepared.error.kind);
+    const explored = { value: { location: prepared.value.gap.location } };
+    await service.saveGapNote(
+      {
+        pathway: prepared.value.pathway,
+        gapUpdated: prepared.value.gapUpdated,
+        gapRead: prepared.value.gapRead,
+        ai: AI,
+      },
+      TEXT,
+      DISCLAIMER,
+    );
+    expect(service.latestGapNote("ml-engineer")?.outOfDate).toBe(false);
     await storage.putOutside(
       explored.value.location,
       `${storage.text(explored.value.location) ?? ""}\nMine.\n`,
@@ -263,8 +390,15 @@ describe("the latest note on a gap (MVP S18.5)", () => {
   it("reads a gap's time written as an offset as the same moment", async () => {
     const { service } = await profile();
     await service.exploreGap("ml-engineer");
+    const prepared = await service.explainGapCall("ml-engineer");
+    if (!prepared.ok) throw new Error(prepared.error.kind);
     await service.saveGapNote(
-      { pathway: "pharoam-core@0.1.0:ml-engineer", gapUpdated: "2026-11-07T10:00:00+00:00", ai: AI },
+      {
+        pathway: "pharoam-core@0.1.0:ml-engineer",
+        gapUpdated: "2026-11-07T10:00:00+00:00",
+        gapRead: prepared.value.gapRead,
+        ai: AI,
+      },
       TEXT,
       DISCLAIMER,
     );

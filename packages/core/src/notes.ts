@@ -21,6 +21,8 @@ export interface GapExplanationCall {
   readonly pathway: string;
   /** The stored gap's `updated` time, which the note keeps (S18.5). */
   readonly gapUpdated: string;
+  /** A fingerprint of the gap's requirements as stored, which the note keeps, so a change within the same second shows. */
+  readonly gapRead: string;
   /** The gap it explains, brought up to date first, for the app to show beside the explanation. */
   readonly gap: GapView;
   /** The task's input. */
@@ -35,6 +37,8 @@ export interface ExplainedGap {
   readonly pathway: string;
   /** The `updated` time of the gap it explained, from {@link GapExplanationCall}. */
   readonly gapUpdated: string;
+  /** The fingerprint of the gap it explained, from {@link GapExplanationCall}. */
+  readonly gapRead: string;
   /** The `ai` block from the task's answer: the task, the model and when it answered. */
   readonly ai: AiProvenance;
 }
@@ -111,6 +115,7 @@ export function gapNoteFile(
     ai: { ...gap.ai, confirmed_by_user: now },
     pathway: gap.pathway,
     gap_updated: gap.gapUpdated,
+    gap_read: gap.gapRead,
   };
   const line = disclaimer.replace(/\s+/g, " ").trim();
   if (line === "") throw new Error("A note needs its disclaimer.");

@@ -156,7 +156,7 @@ export function GapMeaning({
     setStep({ ...current, saving: true });
     const { prepared, ai, text, call } = current;
     const saved = await service.saveGapNote(
-      { pathway: prepared.pathway, gapUpdated: prepared.gapUpdated, ai },
+      { pathway: prepared.pathway, gapUpdated: prepared.gapUpdated, gapRead: prepared.gapRead, ai },
       text,
       t("gap.meaning.noteDisclaimer"),
     );
