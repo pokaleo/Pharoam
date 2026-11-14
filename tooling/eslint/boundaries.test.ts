@@ -44,7 +44,8 @@ function typeErrors(pkg: string, code: string): string[] {
   return ts.getPreEmitDiagnostics(program).map((d) => ts.flattenDiagnosticMessageText(d.messageText, "\n"));
 }
 
-describe("architecture boundaries", () => {
+// Each case compiles a probe with tsc, which takes seconds while the whole suite runs on a busy machine.
+describe("architecture boundaries", { timeout: 30_000 }, () => {
   describe("packages/core stays pure", () => {
     it("rejects importing a connector", async () => {
       expect(await violations("packages/core/src/probe.ts", "../../connector-folder/src/index")).toContain(

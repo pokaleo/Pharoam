@@ -248,7 +248,7 @@ Profile records reference skills by **Pharoam inventory slug only** (for example
 
 ### `note`
 - An AI explanation of a gap (PRD D3) that the person accepted, as they accepted or edited it, with its `ai` block and the disclaimer at the top of its body (§5).
-- `pathway`, pinned to a version (`pack@version:pathway`), and `gap_updated`: the `updated` time of the gap it explained.
+- `pathway`, pinned to a version (`pack@version:pathway`), `gap_updated`: the `updated` time of the gap it explained, and `gap_read`: a SHA-256 fingerprint of that gap's requirements (each one's skill, the level asked, the level shown with its source, and the group, in a fixed form), which sees a change within the same second. A change to the pathway's text alone, as a pack upgrade may bring, leaves the note current: the explanation still fits the same gap.
 - **Never rewritten.** Asking again writes a new note. The gap view shows the latest one, and says so when the profile has changed since `gap_updated`.
 - A gap's note (`schema: note/1`) is kept as `notes/<pathway>-<day>--<short id>.md`. Its `ai` block names a version of `explain-gap`, such as `explain-gap@1`, and is confirmed by the person. The body is the explanation in Markdown, under the disclaimer. It carries no level and no score (Charter R1).
 
@@ -259,12 +259,13 @@ Profile records reference skills by **Pharoam inventory slug only** (for example
   ai: { task: explain-gap@1, model: anthropic/claude-sonnet-5-5, at: 2026-11-07T10:00:00Z, confirmed_by_user: 2026-11-07T10:05:00Z }
   pathway: pharoam-core@0.1.0:ml-engineer
   gap_updated: 2026-11-07T09:58:00Z   # the gap it explained
+  gap_read: sha256:9f2c…              # its requirements, in a fixed form
   ```
 
 ### `session`
 - Workflow name and version, `status` (in progress, completed or abandoned), started and updated times.
 - **AI review session:** one per scan. It holds the suggestions that await the person's decision (PRD D2): skill links for each evidence record read, or a level for each skill judged, each with its explanation, limits, the evidence it cites and its `ai` block, and the decision once made. **Accept** writes the observation or link to the skill and evidence records; **skip** leaves it pending, never counting; **discard** drops it, writing nothing else. A suggestion whose evidence changed after the scan read it can't be accepted, only scanned again. Nor can a level that a newer scan of the same skill judged again: only the newest judgement can be accepted, so an older one, accepted later, never becomes the shown level. Suggestions that would change nothing are listed as already so, not offered. The session completes when nothing is pending, and is then kept as a readable record unless the person deletes it.
-- **An evidence scan's session** (`schema: session/1`, `workflow: evidence-scan@1`) is kept as `sessions/evidence-scan-<day>--<short id>.md`. Its `scan` is `skill-links` or `skill-levels`. Each suggestion has its own ID, the skill, an explanation, its `ai` block and, once decided, `decision` (`accepted`, `discarded` or `adjusted`) and `decided_at`; a skipped suggestion has no decision. Each suggestion also keeps `read`, a SHA-256 fingerprint of exactly what the scan sent about each evidence record, which is how a later change to that evidence is seen (MVP S16.10). An accepted level's `ai-judged` observation takes the suggestion's ID. `already` lists suggestions that would have changed nothing, and `set_aside` the records or skills whose call failed. Nothing in a session ever carries a confidence (hard rule 9).
+- **An evidence scan's session** (`schema: session/1`, `workflow: evidence-scan@1`) is kept as `sessions/evidence-scan-<day>--<short id>.md`. Its `scan` is `skill-links` or `skill-levels`. Each suggestion has its own ID, the skill, an explanation, its `ai` block and, once decided, `decision` (`accepted`, `discarded` or `adjusted`) and `decided_at`; a skipped suggestion has no decision. Each suggestion also keeps `read`, a SHA-256 fingerprint of exactly what the scan sent about each evidence record, which is how a later change to that evidence is seen (MVP S16.10). An accepted level's `ai-judged` observation takes the suggestion's ID. `already` lists suggestions that would have changed nothing, and `set_aside` the records or skills whose call failed. Nothing in a session ever carries a confidence (hard rule 9). Suggestions carry no integrity fingerprint either: a suggestion counts for nothing until accepted, and what accepting writes, the observation or the link, is what is sealed (§4).
 
   ```yaml
   schema: session/1

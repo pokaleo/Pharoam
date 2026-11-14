@@ -18,6 +18,14 @@ export const NoteRecord = z.object({
   pathway: PinnedPathwayField,
   /** The `updated` time of the gap it explained, so a later change to the gap can be seen (MVP S18.5). */
   gap_updated: TimestampField,
+  /**
+   * A SHA-256 fingerprint of the gap's requirements as it explained them, so a change within the same second shows
+   * too. Notes written before it have none and go by the time alone.
+   */
+  gap_read: z
+    .string()
+    .regex(/^sha256:[0-9a-f]{64}$/)
+    .optional(),
 });
 
 /** A `note` record as Pharoam reads it. */
