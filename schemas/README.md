@@ -13,6 +13,7 @@ Each record file names its format in its top block, for example `schema: evidenc
 | `session/1` | [session-1.schema.json](session-1.schema.json) | A review session: one evidence scan's suggestions, awaiting the person's decisions |
 | `note/1` | [note-1.schema.json](note-1.schema.json) | An AI explanation of a gap that the person accepted |
 | `skill/1` | [skill-1.schema.json](skill-1.schema.json) | An entry in the skill inventory |
+| `assessment-item/1` | [assessment-item-1.schema.json](assessment-item-1.schema.json) | A question or task in the question bank |
 | `pathway/1` | [pathway-1.schema.json](pathway-1.schema.json) | A career pathway |
 | `pack/1` | [pack-1.schema.json](pack-1.schema.json) | A content pack's manifest |
 | `levels/1` | [levels-1.schema.json](levels-1.schema.json) | The shared level scale, 0 to 4 |
@@ -22,7 +23,7 @@ Each record file names its format in its top block, for example `schema: evidenc
 - **The file as written**, before Pharoam fills in defaults: a field Pharoam defaults, such as `ai`, may be left out.
 - **Fields Pharoam doesn't know are allowed**, as Pharoam keeps them.
 - **Values are read with YAML 1.2**, so `yes` and `2026-10-24` are strings.
-- **Some rules can't be written in JSON Schema** and are checked only by Pharoam: an end date after its start, a name for a custom skill, a replacement for a deprecated skill, each pathway skill required once, and investment ranges from low to high.
+- **Some rules can't be written in JSON Schema** and are checked only by Pharoam: an end date after its start, a name for a custom skill, a replacement for a deprecated skill, each pathway skill required once, investment ranges from low to high, and for an assessment item: an answer that names one of its options, each skill and option once, and no field from the other format.
 
 ## Licence
 

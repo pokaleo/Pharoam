@@ -1,5 +1,5 @@
 /**
- * The content the app is built with: the skill vocabulary, the level scale and the pathways.
+ * The content the app is built with: the skill vocabulary, the level scale, the pathways and the question bank.
  *
  * @packageDocumentation
  */
@@ -10,7 +10,7 @@ import { ContentPack } from "@pharoam/core";
  *
  * @remarks Loaded on demand, so the start page doesn't wait for the vocabulary. Packs are data, never code, and are
  * validated against their schema like any other (security §5).
- * @returns The vocabulary, level scale and pathways, validated.
+ * @returns The vocabulary, level scale, pathways and question bank, validated.
  * @throws When the bundled pack doesn't match its schema, which the build prevents, so it means a bug.
  */
 export async function loadContentPack(): Promise<ContentPack> {

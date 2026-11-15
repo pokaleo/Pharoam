@@ -8,6 +8,7 @@
  * @packageDocumentation
  */
 import { z } from "zod";
+import { AssessmentItem } from "./assessment-item.ts";
 import { LevelScale } from "./levels.ts";
 import { PackManifest } from "./pack.ts";
 import { PathwayRecord } from "./pathway.ts";
@@ -22,6 +23,7 @@ const PUBLISHED: readonly (readonly [type: string, label: string, schema: z.ZodT
   ["gap", "gap record", PROFILE_RECORD_SCHEMAS.gap],
   ["session", "review session record", PROFILE_RECORD_SCHEMAS.session],
   ["note", "note record", PROFILE_RECORD_SCHEMAS.note],
+  ["assessment-item", "assessment item", AssessmentItem],
   ["skill", "skill inventory entry", SkillEntry],
   ["pathway", "pathway", PathwayRecord],
   ["pack", "content pack manifest", PackManifest],

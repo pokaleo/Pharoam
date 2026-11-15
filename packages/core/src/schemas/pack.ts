@@ -39,11 +39,12 @@ export const PackManifest = z.object({
       }),
     )
     .min(1),
-  /** What the pack holds, by slug. */
+  /** What the pack holds: skills and pathways by slug, and how many assessment items (MVP S20.3). */
   contents: z
     .object({
       skills: z.array(InventorySkillSlugField).default([]),
       pathways: z.array(PathwaySlugField).default([]),
+      items: z.int().min(0).default(0),
     })
     .prefault({}),
   /** The languages the pack's text is available in. */

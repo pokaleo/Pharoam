@@ -43,7 +43,8 @@
         "pathways": {
           "type": "array",
           "items": { "type": "string", "pattern": "^(?=.{1,64}$)[a-z0-9]+(?:-[a-z0-9]+)*$" }
-        }
+        },
+        "items": { "default": 0, "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
       }
     },
     "translations": {

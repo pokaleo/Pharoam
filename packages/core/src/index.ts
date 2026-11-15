@@ -174,6 +174,7 @@ export { AiSkillLink, EvidenceRecord } from "./schemas/evidence.ts";
 export { AiProvenance, ConfirmedAiProvenance, Provenance } from "./schemas/fields.ts";
 export { GapRecord, GapRequirement } from "./schemas/gap.ts";
 export { NoteRecord } from "./schemas/note.ts";
+export { AssessmentItem, McqItem, RubricItem } from "./schemas/assessment-item.ts";
 export {
   LevelSuggestion,
   LinkSuggestion,

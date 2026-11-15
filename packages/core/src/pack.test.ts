@@ -131,3 +131,126 @@ describe("compiling a content pack (AD16)", () => {
     ]);
   });
 });
+
+// A multiple-choice item for the question bank (MVP S20.1).
+const item = (slug: string, skill: string, level: number, extra = ""): string =>
+  `---\nschema: assessment-item/1\nslug: ${slug}\nskills: [${skill}]\nlevel: ${String(level)}\nformat: mcq\nprompt: Which is it?\noptions: [a, b, c]\nanswer: 1\nexplanation: Because b.\norigin: { source: Pharoam content, licence: CC-BY-SA-4.0 }\n${extra}---\n`;
+const REVIEWED = "review: { by: The Pharoam founder, at: 2026-11-14 }\n";
+
+describe("compiling the question bank (MVP S20)", () => {
+  it("compiles reviewed items sorted by slug, and counts them in the manifest (S20.2, S20.3)", () => {
+    const result = compileContentPack([
+      ...VALID,
+      { path: "content/items/sql/sql-2-b.md", text: item("sql-2-b", "sql", 2, REVIEWED) },
+      { path: "content/items/sql/sql-2-a.md", text: item("sql-2-a", "sql", 2, REVIEWED) },
+    ]);
+    if (!result.ok) throw new Error(JSON.stringify(result.error));
+    expect(result.value.items.map((one) => one.slug)).toEqual(["sql-2-a", "sql-2-b"]);
+    expect(result.value.manifest.contents.items).toBe(2);
+    expect(ContentPack.safeParse(result.value).success).toBe(true);
+  });
+
+  it("compiles a pack with no items, as before the bank", () => {
+    const result = compileContentPack(VALID);
+    expect(result.ok && result.value.items).toEqual([]);
+    expect(result.ok && result.value.manifest.contents.items).toBe(0);
+  });
+
+  it("refuses an item that is invalid, unreviewed, for an unknown skill, or repeated (S20.1)", () => {
+    expect(
+      problems([
+        ...VALID,
+        {
+          path: "content/items/sql/bad.md",
+          text: item("sql-2-a", "sql", 2, REVIEWED).replace("answer: 1", "answer: 7"),
+        },
+        { path: "content/items/sql/unreviewed.md", text: item("sql-2-b", "sql", 2) },
+        { path: "content/items/cobol/cobol-1-a.md", text: item("cobol-1-a", "cobol", 1, REVIEWED) },
+        { path: "content/items/sql/again.md", text: item("sql-2-c", "sql", 2, REVIEWED) },
+        { path: "content/items/sql/twice.md", text: item("sql-2-c", "sql", 2, REVIEWED) },
+      ]),
+    ).toEqual([
+      { path: "content/items/cobol/cobol-1-a.md", message: "Tests the unknown skill cobol." },
+      { path: "content/items/sql/bad.md", message: "Has an invalid field: answer." },
+      {
+        path: "content/items/sql/twice.md",
+        message: "Repeats the item sql-2-c, also in content/items/sql/again.md.",
+      },
+      { path: "content/items/sql/unreviewed.md", message: "Has an invalid field: review." },
+    ]);
+  });
+
+  describe("the question bank's rules (review findings)", () => {
+    it("compiles an open item, and refuses an unknown format", () => {
+      const open = item("sql-3-plan", "sql", 3, REVIEWED)
+        .replace("format: mcq", "format: open")
+        .replace("options: [a, b, c]\nanswer: 1\nexplanation: Because b.\n", "rubric: Names the index.\n");
+      const result = compileContentPack([...VALID, { path: "content/items/sql/sql-3-plan.md", text: open }]);
+      expect(result.ok && result.value.items.map((one) => one.format)).toEqual(["open"]);
+      expect(
+        problems([
+          ...VALID,
+          { path: "content/items/sql/odd.md", text: open.replace("format: open", "format: essay") },
+        ]),
+      ).toEqual([{ path: "content/items/sql/odd.md", message: "Has an invalid field: format." }]);
+    });
+
+    it("refuses an item kept in another skill's folder, since a diagnostic draws it for its first skill", () => {
+      expect(
+        problems([
+          ...VALID,
+          { path: "content/items/python/sql-2-a.md", text: item("sql-2-a", "sql", 2, REVIEWED) },
+        ]),
+      ).toEqual([
+        {
+          path: "content/items/python/sql-2-a.md",
+          message: "Is in the folder for python, but tests sql first.",
+        },
+      ]);
+    });
+
+    it("refuses text below an item's top block, which the pack wouldn't keep", () => {
+      expect(
+        problems([
+          ...VALID,
+          { path: "content/items/sql/sql-2-a.md", text: `${item("sql-2-a", "sql", 2, REVIEWED)}\nA note.\n` },
+        ]),
+      ).toEqual([
+        {
+          path: "content/items/sql/sql-2-a.md",
+          message: "Has text below its top block, which the pack doesn't keep; put it in the prompt.",
+        },
+      ]);
+    });
+
+    it("refuses an item that tests a deprecated skill", () => {
+      const deprecated = skill("mysql5", "status: deprecated\nreplaced_by: sql\n");
+      expect(
+        problems([
+          ...VALID,
+          { path: "data/skills/mysql5.md", text: deprecated },
+          { path: "content/items/mysql5/mysql5-1-a.md", text: item("mysql5-1-a", "mysql5", 1, REVIEWED) },
+        ]),
+      ).toEqual([
+        {
+          path: "content/items/mysql5/mysql5-1-a.md",
+          message: "Tests the deprecated skill mysql5; use sql.",
+        },
+      ]);
+    });
+
+    it("loads a pack built before the question bank, and refuses one whose count doesn't match its items", () => {
+      const compiled = compileContentPack(VALID);
+      if (!compiled.ok) throw new Error("Invalid example.");
+      const older: Record<string, unknown> = { ...compiled.value };
+      delete older.items;
+      const olderManifest = { ...compiled.value.manifest, contents: { skills: [], pathways: [] } };
+      expect(ContentPack.safeParse({ ...older, manifest: olderManifest }).success).toBe(true);
+      const claimed = {
+        ...compiled.value.manifest,
+        contents: { ...compiled.value.manifest.contents, items: 40 },
+      };
+      expect(ContentPack.safeParse({ ...compiled.value, manifest: claimed }).success).toBe(false);
+    });
+  });
+});

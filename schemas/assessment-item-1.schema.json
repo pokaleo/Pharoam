@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pharoam assessment item, format 1",
+  "description": "The top block of a Pharoam file whose `schema` is `assessment-item/1`.",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "schema": { "type": "string", "const": "assessment-item/1" },
+        "slug": { "type": "string", "pattern": "^(?=.{1,64}$)[a-z0-9]+(?:-[a-z0-9]+)*$" },
+        "skills": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "allOf": [{ "pattern": "^(?=.{1,64}$)[a-z0-9]+(?:-[a-z0-9]+)*$" }, { "pattern": "^(?!custom-)" }]
+          }
+        },
+        "level": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "prompt": { "type": ["string", "number"] },
+        "language": { "default": "en", "type": "string", "pattern": "^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$" },
+        "origin": {
+          "type": "object",
+          "properties": {
+            "source": { "type": ["string", "number"] },
+            "url": { "type": "string", "format": "uri" },
+            "licence": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9.+-]*$" }
+          },
+          "required": ["source", "licence"]
+        },
+        "review": {
+          "type": "object",
+          "properties": {
+            "by": { "type": ["string", "number"] },
+            "at": {
+              "type": "string",
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            }
+          },
+          "required": ["by", "at"]
+        },
+        "ai": {
+          "default": null,
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "task": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*@[1-9]\\d*$" },
+                "model": { "type": "string", "minLength": 1 },
+                "at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "confirmed_by_user": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                }
+              },
+              "required": ["task", "model", "at"]
+            },
+            { "type": "null" }
+          ]
+        },
+        "format": { "type": "string", "const": "mcq" },
+        "options": {
+          "minItems": 2,
+          "maxItems": 6,
+          "type": "array",
+          "items": { "type": ["string", "number"] }
+        },
+        "answer": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "explanation": { "type": ["string", "number"] },
+        "rubric": { "not": {} }
+      },
+      "required": [
+        "schema",
+        "slug",
+        "skills",
+        "level",
+        "prompt",
+        "origin",
+        "review",
+        "format",
+        "options",
+        "answer",
+        "explanation"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "schema": { "type": "string", "const": "assessment-item/1" },
+        "slug": { "type": "string", "pattern": "^(?=.{1,64}$)[a-z0-9]+(?:-[a-z0-9]+)*$" },
+        "skills": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "allOf": [{ "pattern": "^(?=.{1,64}$)[a-z0-9]+(?:-[a-z0-9]+)*$" }, { "pattern": "^(?!custom-)" }]
+          }
+        },
+        "level": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "prompt": { "type": ["string", "number"] },
+        "language": { "default": "en", "type": "string", "pattern": "^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$" },
+        "origin": {
+          "type": "object",
+          "properties": {
+            "source": { "type": ["string", "number"] },
+            "url": { "type": "string", "format": "uri" },
+            "licence": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9.+-]*$" }
+          },
+          "required": ["source", "licence"]
+        },
+        "review": {
+          "type": "object",
+          "properties": {
+            "by": { "type": ["string", "number"] },
+            "at": {
+              "type": "string",
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            }
+          },
+          "required": ["by", "at"]
+        },
+        "ai": {
+          "default": null,
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "task": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*@[1-9]\\d*$" },
+                "model": { "type": "string", "minLength": 1 },
+                "at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "confirmed_by_user": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                }
+              },
+              "required": ["task", "model", "at"]
+            },
+            { "type": "null" }
+          ]
+        },
+        "format": { "type": "string", "enum": ["open", "practical"] },
+        "rubric": { "type": ["string", "number"] },
+        "options": { "not": {} },
+        "answer": { "not": {} },
+        "explanation": { "not": {} }
+      },
+      "required": ["schema", "slug", "skills", "level", "prompt", "origin", "review", "format", "rubric"]
+    }
+  ]
+}

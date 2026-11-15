@@ -310,10 +310,11 @@ Profile records reference skills by **Pharoam inventory slug only** (for example
 - The Markdown body says what the work is, for reading. The compiled pack keeps it, and the gap view shows it as "About this pathway", without the file's title heading and rendered as untrusted Markdown.
 
 ### `assessment-item`
-- `slug`, `skills`, targeted `level`, `format` (mcq, practical or open), `prompt`.
-- Multiple choice: `options` and `answer`. Multiple-choice items make up the **question bank** for question-bank diagnostics; AI-led diagnostics can use them too.
-- Practical and open: a **`rubric`** the AI marks against.
-- `language`, `origin` and licence, and the AI block if drafted.
+- `slug`, `skills` (each once; the first is the one a diagnostic draws it for, and names its folder), targeted `level`, `format` (mcq, practical or open), `prompt`. Its whole text is in the top block; text below it isn't kept.
+- Multiple choice: 2–6 different `options`, the index of the right `answer`, and an `explanation` shown with the marking; no `rubric`. Multiple-choice items make up the **question bank** for question-bank diagnostics; AI-led diagnostics can use them too.
+- Practical and open: a **`rubric`** the AI marks against; no options, answer or explanation.
+- `language` (`en` unless said), `origin` and licence, `review` (who and when; an item ships only once reviewed), and the AI block if drafted.
+- Kept in `content/items/<skill>/<slug>.md` and compiled into the pack, whose manifest counts them (MVP S20).
 
 ### `pack` (manifest)
 - `name`, `version`, `min_app_version`, `licences` (one per data source), contents, available translations.

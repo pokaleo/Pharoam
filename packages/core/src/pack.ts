@@ -1,5 +1,5 @@
 /**
- * Content packs: the skill vocabulary, level scale and pathways, compiled into one versioned bundle.
+ * Content packs: the skill vocabulary, level scale, pathways and question bank, compiled into one versioned bundle.
  *
  * @remarks Content is written as Markdown records in `data/` and `content/` and compiled at build time into a JSON
  * pack with a manifest (ADR-0005, AD16). The app ships one built-in pack and works offline; packs loaded later from a
@@ -9,6 +9,7 @@
 import { z } from "zod";
 import { parseRecordFile } from "./record-file.ts";
 import { err, ok, type Result } from "./result.ts";
+import { AssessmentItem } from "./schemas/assessment-item.ts";
 import { LevelScale } from "./schemas/levels.ts";
 import { PackManifest } from "./schemas/pack.ts";
 import { PathwayRecord } from "./schemas/pathway.ts";
@@ -20,18 +21,26 @@ const PackPathway = PathwayRecord.extend({ body: z.string().default("") });
 type PackPathway = z.output<typeof PackPathway>;
 
 /** A compiled content pack, as the app loads it. */
-export const ContentPack = z.object({
-  /** The compiled format and its version. */
-  format: z.literal("pharoam-pack/1"),
-  /** The pack's manifest, with `contents` listing every skill and pathway in it. */
-  manifest: PackManifest,
-  /** The shared level scale. */
-  levels: LevelScale,
-  /** Every skill in the vocabulary, by slug. */
-  skills: z.array(SkillEntry),
-  /** Every pathway, by slug. */
-  pathways: z.array(PackPathway),
-});
+export const ContentPack = z
+  .object({
+    /** The compiled format and its version. */
+    format: z.literal("pharoam-pack/1"),
+    /** The pack's manifest, with `contents` listing every skill and pathway in it. */
+    manifest: PackManifest,
+    /** The shared level scale. */
+    levels: LevelScale,
+    /** Every skill in the vocabulary, by slug. */
+    skills: z.array(SkillEntry),
+    /** Every pathway, by slug. */
+    pathways: z.array(PackPathway),
+    /** Every assessment item, by slug; a pack built before the question bank has none (MVP S20). */
+    items: z.array(AssessmentItem).default([]),
+  })
+  // A pack loaded from elsewhere must hold the items its manifest counts.
+  .refine((pack) => pack.manifest.contents.items === pack.items.length, {
+    path: ["manifest", "contents", "items"],
+    message: "Counts a different number of items than the pack holds.",
+  });
 
 /** A compiled content pack as Pharoam reads it. */
 export type ContentPack = z.output<typeof ContentPack>;
@@ -68,18 +77,20 @@ interface Found<T> {
 /**
  * Compiles content files into a pack.
  *
- * @remarks Every file must be a valid `skill/1`, `pathway/1`, `levels/1` or `pack/1` record, with exactly one
- * manifest and one level scale. Every skill a pathway or another skill refers to must exist. All problems are
+ * @remarks Every file must be a valid `skill/1`, `pathway/1`, `assessment-item/1`, `levels/1` or `pack/1` record,
+ * with exactly one manifest and one level scale. Every skill a pathway, an item or another skill refers to must
+ * exist, and an item ships only once reviewed, which its schema requires (MVP S20.1). All problems are
  * reported, not just the first, so one build shows everything to fix. The output is the same whatever order the
  * files come in.
  * @param files - The content files, such as everything in `data/` and `content/` except READMEs.
- * @returns The pack, with skills and pathways sorted by slug and the manifest's `contents` filled in; or every
- * problem found.
+ * @returns The pack, with skills, pathways and items sorted by slug and the manifest's `contents` filled in; or
+ * every problem found.
  */
 export function compileContentPack(files: readonly ContentFile[]): Result<ContentPack, InvalidContentError> {
   const problems: ContentProblem[] = [];
   const skills = new Map<string, Found<SkillEntry>>();
   const pathways = new Map<string, Found<PackPathway>>();
+  const items = new Map<string, Found<AssessmentItem>>();
   let manifest: Found<PackManifest> | undefined;
   let levels: Found<LevelScale> | undefined;
 
@@ -118,6 +129,25 @@ export function compileContentPack(files: readonly ContentFile[]): Result<Conten
           problems.push({ path, message: `Repeats the pathway ${pathway.slug}, also in ${earlier.path}.` });
         break;
       }
+      case "assessment-item/1": {
+        const item = validate(AssessmentItem, top, path);
+        if (item === undefined) break;
+        if (body.trim() !== "")
+          problems.push({
+            path,
+            message: "Has text below its top block, which the pack doesn't keep; put it in the prompt.",
+          });
+        const folder = /^content\/items\/([^/]+)\//.exec(path)?.[1];
+        if (folder !== undefined && folder !== item.skills[0])
+          problems.push({
+            path,
+            message: `Is in the folder for ${folder}, but tests ${item.skills[0] ?? ""} first.`,
+          });
+        const earlier = items.get(item.slug);
+        if (earlier === undefined) items.set(item.slug, { path, value: item });
+        else problems.push({ path, message: `Repeats the item ${item.slug}, also in ${earlier.path}.` });
+        break;
+      }
       case "levels/1": {
         const scale = validate(LevelScale, top, path);
         if (scale === undefined) break;
@@ -154,6 +184,17 @@ export function compileContentPack(files: readonly ContentFile[]): Result<Conten
         problems.push({ path, message: `Lists the unknown transferable skill ${skill}.` });
     }
   }
+  for (const { path, value } of items.values()) {
+    for (const skill of value.skills) {
+      const found = skills.get(skill)?.value;
+      if (found === undefined) problems.push({ path, message: `Tests the unknown skill ${skill}.` });
+      else if (found.status === "deprecated")
+        problems.push({
+          path,
+          message: `Tests the deprecated skill ${skill}; use ${found.replaced_by ?? "its replacement"}.`,
+        });
+    }
+  }
   if (manifest === undefined) problems.push({ path: "", message: "Has no pack manifest (pack/1)." });
   if (levels === undefined) problems.push({ path: "", message: "Has no level scale (levels/1)." });
 
@@ -167,15 +208,23 @@ export function compileContentPack(files: readonly ContentFile[]): Result<Conten
   const pathwayList = [...pathways.values()]
     .map((found) => found.value)
     .toSorted((a, b) => compare(a.slug, b.slug));
+  const itemList = [...items.values()]
+    .map((found) => found.value)
+    .toSorted((a, b) => compare(a.slug, b.slug));
   return ok({
     format: "pharoam-pack/1",
     manifest: {
       ...manifest.value,
-      contents: { skills: skillList.map((s) => s.slug), pathways: pathwayList.map((p) => p.slug) },
+      contents: {
+        skills: skillList.map((s) => s.slug),
+        pathways: pathwayList.map((p) => p.slug),
+        items: itemList.length,
+      },
     },
     levels: levels.value,
     skills: skillList,
     pathways: pathwayList,
+    items: itemList,
   });
 }
 

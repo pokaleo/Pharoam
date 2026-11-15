@@ -12,6 +12,7 @@ describe("published JSON Schemas", () => {
       "gap-1.schema.json",
       "session-1.schema.json",
       "note-1.schema.json",
+      "assessment-item-1.schema.json",
       "skill-1.schema.json",
       "pathway-1.schema.json",
       "pack-1.schema.json",
