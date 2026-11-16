@@ -168,14 +168,16 @@ What each level means for a specific skill comes from that skill's **level descr
 
 ## 7. Evidence
 
-Each evidence item is **one `.md` file**. Evidence records what the person did; it **carries no level** (Charter R4).
+Each evidence item is **one `.md` file**. Evidence records what the person did; it **carries no level** (Charter R4). The one exception is a diagnostic's `assessment` evidence, a transcript of what the diagnostic found: it lists each item's level and the result, and the level counts only through the diagnostic's observation.
 - **Common fields:** `kind`, `title`, `organisation`, `start`/`end` or `date` (to the year, month or day: `2024`, `2024-09` or `2024-09-30`), `links` (`http` or `https` only), `skills`, `attachments` (the names of files of any type, up to 10 MB each, kept in `evidence/_attachments/<id>/` under the record's full ID and never shown inside the page; a name is made safe for any folder on any system, and numbered, as in `cv (2).pdf`, when the record or the folder already has it), and `source` (`manual`, `paste` or `import`). Evidence made from pasted text keeps its own copy of that text as an attachment, `original-input.txt`, named in `original_input`, unless the person chose to discard it; several records made from one paste each keep their own copy (MVP S15.5).
 - **`skills`** lists the skills the item involved. They are entered by hand or proposed by AI and confirmed by the person (PRD B6). Confirmed AI-proposed links are also listed under `ai-skill-links` with the task, model, time and `confirmed_by_user`, so the record shows which links came from AI without labelling the whole record AI-made. AI tasks use these links to find a skill's evidence locally, without sending the whole profile (PRD D4).
 - **Extra fields per kind:** for example a module's course code, credits and grade; a certificate's issuer, credential ID and expiry; a repository's URL and the person's role.
 - **`assessment` evidence** is the full record of one diagnostic, in the top block for exact proof:
-  - `diagnostic`: `question-bank` or `ai-led`, the skill, and the starting level;
-  - each step of the adaptive path: the item (its bank ID, or the full text of an AI-written item), the answer, the marking and its reasons;
-  - the result level and, for a question bank, the marking rule that produced it;
+  - `diagnostic`: `type` (`question-bank` or `ai-led`), the `skill`, and the `start` level;
+  - `steps`, the adaptive path in order: each `item` (its bank slug, or the full text of an AI-written item), its `level`, the `answer`, and whether it was `correct` (with the marking's reasons, for an AI-led diagnostic);
+  - the `result` level and, for a question bank, the `rule` that produced it, such as `two-right-to-settle@1`;
+  - `date`, the day it ended, in UTC;
+  - `integrity`, the record's fingerprint (§4).
   - for an AI-led diagnostic: the evidence and earlier results it considered, the explanation (PRD E5) and the `ai` block.
 
   The body shows a readable summary.
@@ -287,6 +289,17 @@ Profile records reference skills by **Pharoam inventory slug only** (for example
     - { kind: skill-link, evidence: 0192f3a1-…, skill: python }
   ```
   A level suggestion (`kind: skill-level`) also has `level`, `limits`, the `evidence` it rests on, and `read` as a list of each record sent with its fingerprint.
+- **A question-bank diagnostic's session** (`schema: session/1`, `workflow: question-bank@1`) is kept in `sessions/` while it runs. Its `diagnostic` names the `skill`, the `start` level and the `rule`; `steps` lists each question asked and answered, in order; `next` names the item posed now, so leaving and coming back, or reloading, resumes at the same question from this record alone (MVP S19.6). It needs no scan, as a scan's session needs no diagnostic. When the diagnostic ends, its result is written as `assessment` evidence and a `demonstrated` observation, and the session is completed; abandoning it writes no result.
+
+  ```yaml
+  schema: session/1
+  workflow: question-bank@1
+  status: in-progress
+  diagnostic: { skill: sql, start: 2, rule: two-right-to-settle@1 }
+  steps:
+    - { item: sql-2-a, level: 2, answer: 3, correct: true }
+  next: sql-3-b
+  ```
 - **A readable log of what has happened so far**: for a diagnostic, the items asked, the answers given and the marking so far, plus what the next step is.
 - Pharoam rebuilds its working state (for example a LangGraph checkpoint) from this log. Any engine checkpoint is kept only in the local cache.
 - When the session completes, its results are written as evidence and observations. The session is then archived as a readable record, or deleted if the person chooses.

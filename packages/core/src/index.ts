@@ -40,6 +40,12 @@ export {
   type AttentionItem,
   type CoreService,
   type CoreServiceOptions,
+  type AssessmentFacts,
+  type AssessmentWriter,
+  type DiagnosticError,
+  type DiagnosticNext,
+  type DiagnosticOutcome,
+  type DiagnosticView,
   type ChangeLevelError,
   type Conflict,
   type CreateError,
@@ -87,6 +93,15 @@ export { explainGap } from "./ai/tasks/explain-gap.ts";
 export { judgeSkillLevel } from "./ai/tasks/judge-skill-level.ts";
 export { suggestSkillLinks } from "./ai/tasks/suggest-skill-links.ts";
 export { evidenceText, sentFingerprint } from "./evidence-text.ts";
+export {
+  MAX_QUESTIONS,
+  QUESTION_BANK_RULE,
+  QUESTION_BANK_WORKFLOW,
+  diagnosticResult,
+  nextQuestion,
+  type DiagnosticStep,
+  type NextQuestion,
+} from "./diagnostic.ts";
 export { type ExplainedGap, type GapExplanationCall, type GapNote } from "./notes.ts";
 export {
   SCAN_WORKFLOW,

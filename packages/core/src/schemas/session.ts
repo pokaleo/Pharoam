@@ -1,15 +1,19 @@
 /**
- * The `session` record: a readable review session holding one evidence scan's suggestions (data model §10).
+ * The `session` record: a readable log of a workflow in progress, an evidence scan's review or a diagnostic
+ * (data model §10).
  *
- * @remarks Suggestions wait here until the person decides (PRD D2). Nothing in a session counts: a skill link is
- * written to the evidence record, and a level to the skill record, only when the person accepts it. Each
- * suggestion keeps what the scan sent, so one whose evidence changed afterwards can't be accepted (MVP S16.10).
+ * @remarks A scan's suggestions wait here until the person decides (PRD D2). Nothing in a session counts: a skill
+ * link is written to the evidence record, and a level to the skill record, only when the person accepts it. Each
+ * suggestion keeps what the scan sent, so one whose evidence changed afterwards can't be accepted (MVP S16.10). A
+ * diagnostic's session holds every question asked and answered, so it resumes from this record alone (MVP S19.6).
  * @packageDocumentation
  */
 import { z } from "zod";
+import { DiagnosticStep } from "./evidence.ts";
 import {
   AiProvenance,
   ENVELOPE_FIELDS,
+  InventorySkillSlugField,
   LevelField,
   ProfileRecordIdField,
   SkillSlugField,
@@ -82,19 +86,49 @@ const SetAside = z.object({
 });
 
 /** The `session/1` record's top block, for an evidence scan's review session. */
-export const SessionRecord = z.object({
-  schema: z.literal("session/1"),
-  ...ENVELOPE_FIELDS,
-  /** The workflow and its version, such as `evidence-scan@1`. */
-  workflow: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*@[1-9]\d*$/),
-  /** What the scan asked for: skill links for evidence records, or levels for skills. */
-  scan: z.literal(["skill-links", "skill-levels"]),
-  /** In progress while anything is pending; completed when nothing is; abandoned if the person gave it up. */
-  status: z.literal(["in-progress", "completed", "abandoned"]),
-  suggestions: z.array(Suggestion).default([]),
-  already: z.array(AlreadySo).default([]),
-  set_aside: z.array(SetAside).default([]),
-});
+export const SessionRecord = z
+  .object({
+    schema: z.literal("session/1"),
+    ...ENVELOPE_FIELDS,
+    /** The workflow and its version, such as `evidence-scan@1` or `question-bank@1`. */
+    workflow: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*@[1-9]\d*$/),
+    /** An evidence scan's: what it asked for, skill links for evidence records, or levels for skills. */
+    scan: z.literal(["skill-links", "skill-levels"]).optional(),
+    /** In progress while anything is pending; completed when nothing is; abandoned if the person gave it up. */
+    status: z.literal(["in-progress", "completed", "abandoned"]),
+    suggestions: z.array(Suggestion).default([]),
+    already: z.array(AlreadySo).default([]),
+    set_aside: z.array(SetAside).default([]),
+    /** A diagnostic's: the skill it tests, the level it started at, and the published rule (MVP S19.6). */
+    diagnostic: z
+      .object({ skill: InventorySkillSlugField, start: LevelField, rule: z.string().min(1) })
+      .optional(),
+    /** A diagnostic's questions asked and answered so far, in order. */
+    steps: z.array(DiagnosticStep).default([]),
+    /** A diagnostic's question posed now, by item slug, so the person sees the same one on coming back. */
+    next: z.string().min(1).optional(),
+    /**
+     * A finished diagnostic's assessment evidence, by the ID chosen before it is written, so finishing again after
+     * a failed write never writes the result twice.
+     */
+    assessment: ProfileRecordIdField.optional(),
+  })
+  .superRefine((session, ctx) => {
+    // Each workflow needs its own fields; a scan's session names its scan, a diagnostic's its diagnostic.
+    const name = session.workflow.split("@")[0];
+    if (name === "evidence-scan" && session.scan === undefined)
+      ctx.addIssue({
+        code: "custom",
+        path: ["scan"],
+        message: "A scan's session names what it scanned for.",
+      });
+    if (name === "question-bank" && session.diagnostic === undefined)
+      ctx.addIssue({
+        code: "custom",
+        path: ["diagnostic"],
+        message: "A diagnostic's session names its skill.",
+      });
+  });
 
 /** A `session` record as Pharoam reads it. */
 export type SessionRecord = z.output<typeof SessionRecord>;

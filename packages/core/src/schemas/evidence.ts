@@ -10,10 +10,28 @@ import {
   ConfirmedAiProvenance,
   ENVELOPE_FIELDS,
   HttpUrlField,
+  IntegrityField,
+  InventorySkillSlugField,
+  LevelField,
   PartialDateField,
   SkillSlugField,
   TextField,
 } from "./fields.ts";
+
+/** One question a question-bank diagnostic asked: the item, the option chosen, and whether it was right. */
+export const DiagnosticStep = z.object({
+  /** The item's slug in the question bank. */
+  item: z.string().min(1),
+  /** The level the item tests. */
+  level: LevelField,
+  /** The index of the option chosen. */
+  answer: z.int().min(0),
+  /** Whether it was the right option. */
+  correct: z.boolean(),
+});
+
+/** One question a question-bank diagnostic asked, as Pharoam reads it. */
+export type DiagnosticStep = z.output<typeof DiagnosticStep>;
 
 /**
  * A skill link AI proposed and the person confirmed (PRD B6).
@@ -65,8 +83,32 @@ export const EvidenceRecord = z
     }),
     z.object({
       ...COMMON_FIELDS,
-      kind: z.literal(["job", "project", "publication", "reflection", "assessment", "other"]),
+      kind: z.literal(["job", "project", "publication", "reflection", "other"]),
       role: TextField.optional(),
+    }),
+    // A diagnostic's full record, never edited and fingerprinted (data model §4, §7, PRD E6). One written by hand
+    // has none of the diagnostic's fields, and is still evidence.
+    z.object({
+      ...COMMON_FIELDS,
+      kind: z.literal("assessment"),
+      role: TextField.optional(),
+      /** Which diagnostic, the skill it tested, and the level it started at. */
+      diagnostic: z
+        .object({
+          type: z.literal(["question-bank", "ai-led"]),
+          skill: InventorySkillSlugField,
+          start: LevelField,
+        })
+        .optional(),
+      /** Each question asked, in order, with the answer and its marking: the adaptive path. */
+      steps: z.array(DiagnosticStep).default([]),
+      /** The level the diagnostic gave. */
+      result: LevelField.optional(),
+      /** The published rule that gave it, for a question-bank diagnostic (PRD E2). */
+      rule: z.string().min(1).optional(),
+      /** The record's fingerprint, so a change made outside Pharoam shows (data model §4). */
+      integrity: IntegrityField.optional(),
+      signature: z.null().optional(),
     }),
   ])
   .superRefine((record, ctx) => {

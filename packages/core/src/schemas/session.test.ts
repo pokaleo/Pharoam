@@ -90,3 +90,30 @@ describe("the session record (data model §10, MVP S16.4)", () => {
     expect(SessionRecord.safeParse({ ...SESSION, scan: "everything" }).success).toBe(false);
   });
 });
+
+describe("a diagnostic's session (data model §10, MVP S19.6)", () => {
+  const DIAGNOSTIC = {
+    schema: "session/1",
+    id: "0192f3a1-0000-7000-8000-000000000050",
+    created: "2026-11-15T10:00:00Z",
+    workflow: "question-bank@1",
+    status: "in-progress",
+    diagnostic: { skill: "sql", start: 2, rule: "two-right-to-settle@1" },
+    steps: [{ item: "sql-2-a", level: 2, answer: 1, correct: true }],
+    next: "sql-3-b",
+  };
+
+  it("holds the diagnostic, each question asked and answered, and the question posed now", () => {
+    expect(SessionRecord.parse(DIAGNOSTIC)).toMatchObject({
+      diagnostic: DIAGNOSTIC.diagnostic,
+      steps: DIAGNOSTIC.steps,
+      next: "sql-3-b",
+      suggestions: [],
+    });
+  });
+
+  it("needs a diagnostic for a diagnostic's workflow, and a scan for a scan's", () => {
+    expect(SessionRecord.safeParse({ ...DIAGNOSTIC, diagnostic: undefined }).success).toBe(false);
+    expect(SessionRecord.safeParse({ ...SESSION, scan: undefined }).success).toBe(false);
+  });
+});

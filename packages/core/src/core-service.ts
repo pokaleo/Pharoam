@@ -31,7 +31,14 @@ import {
 } from "./pasted-evidence.ts";
 import { gapItems, type GapItem, type GapWriter } from "./gaps.ts";
 import { createProfileRecordIdGenerator, type IdSource } from "./ids.ts";
-import { checkEntry, sealEntry, type IntegrityStatus } from "./integrity.ts";
+import {
+  QUESTION_BANK_RULE,
+  QUESTION_BANK_WORKFLOW,
+  diagnosticResult,
+  nextQuestion,
+  type DiagnosticStep,
+} from "./diagnostic.ts";
+import { checkEntry, checkRecord, recordFingerprint, sealEntry, type IntegrityStatus } from "./integrity.ts";
 import { overviewFacts, withOverview, type OverviewWriter } from "./overview.ts";
 import type { ContentPack } from "./pack.ts";
 import {
@@ -76,6 +83,7 @@ import {
 } from "./skill-history.ts";
 import { skillView, type SkillFilter, type SkillViewItem } from "./skill-view.ts";
 import { parseProfileRecord, type ProfileRecord, type ProfileRecordError } from "./schemas/profile-record.ts";
+import type { McqItem } from "./schemas/assessment-item.ts";
 import type { EvidenceRecord } from "./schemas/evidence.ts";
 import type { SuggestionInput } from "./schemas/session.ts";
 import type { Observation } from "./schemas/skill-record.ts";
@@ -205,6 +213,8 @@ export interface LoadedRecord {
   readonly record: ProfileRecord;
   /** For a skill record, each entry's integrity, in file order; otherwise empty (MVP S12.3). */
   readonly entryIntegrity: readonly IntegrityStatus[];
+  /** For a diagnostic's assessment evidence, whether it is as Pharoam wrote it (data model §4). */
+  readonly recordIntegrity?: IntegrityStatus;
 }
 
 /**
@@ -785,7 +795,139 @@ export interface CoreService {
    * S16.12).
    */
   readonly levelOutOfDate: (skill: string) => boolean;
+  /**
+   * Whether the question bank has items for a skill, so a diagnostic can be offered (MVP S19.1).
+   *
+   * @param skill - The skill's slug.
+   * @returns `true` when the bank has a multiple-choice item for it.
+   */
+  readonly bankCovers: (skill: string) => boolean;
+  /**
+   * Starts a question-bank diagnostic of a skill, or resumes the one in progress (MVP S19.1, S19.6).
+   *
+   * @remarks It starts at the skill's shown level, or level 2 when there is none, or the nearest level the bank has
+   * items for, and poses the first question by the published rule. Only its session record is written; nothing
+   * counts until it ends. It needs no AI (S19.8). Resuming poses another question if the one posed has left the
+   * bank. Starting twice at once starts one diagnostic.
+   * @param skill - The skill's slug.
+   * @returns The diagnostic, with the question posed, or why it can't start.
+   */
+  readonly startDiagnostic: (skill: string) => Promise<Result<DiagnosticView, DiagnosticError>>;
+  /**
+   * The question-bank diagnostic of a skill in progress, if there is one, as its session record holds it.
+   *
+   * @remarks Writes nothing. To go on with it, call {@link CoreService.startDiagnostic}, which resumes it; a view
+   * with no question is waiting for {@link CoreService.finishDiagnostic}.
+   */
+  readonly diagnosticInProgress: (skill: string) => DiagnosticView | undefined;
+  /**
+   * Answers the question posed, recording the answer in the session, and poses the next or ends (MVP S19.2–S19.5).
+   *
+   * @remarks An answer to any other question is refused, and answers to one diagnostic are taken one at a time, so
+   * a second click can't answer twice. When the rule ends the diagnostic, the result is written as
+   * {@link CoreService.finishDiagnostic} does.
+   * @param location - The session record's location.
+   * @param item - The slug of the question being answered.
+   * @param answer - The index of the option chosen.
+   * @param writer - The assessment record's readable title and summary, used if this answer ends it.
+   * @returns The next question, or the end with its result; or why the answer wasn't taken.
+   */
+  readonly answerDiagnostic: (
+    location: string,
+    item: string,
+    answer: number,
+    writer: AssessmentWriter,
+  ) => Promise<Result<DiagnosticNext, DiagnosticError>>;
+  /**
+   * Writes an ended diagnostic's result: its assessment evidence, fingerprinted and never edited, and a
+   * `demonstrated` observation linking to it, with no acceptance step; then completes the session (MVP S19.5).
+   *
+   * @remarks Safe to call again after a failed write: the evidence's ID is chosen and kept in the session first,
+   * so neither the evidence nor the observation is ever written twice.
+   * @param location - The session record's location.
+   * @param writer - The assessment record's readable title and summary.
+   * @returns What the diagnostic gave, or why it couldn't be written.
+   * @throws Error when a record Pharoam builds can't be fingerprinted, which is a bug.
+   */
+  readonly finishDiagnostic: (
+    location: string,
+    writer: AssessmentWriter,
+  ) => Promise<Result<DiagnosticOutcome, DiagnosticError>>;
+  /**
+   * Abandons a diagnostic: its session is kept as abandoned, and no result is written (MVP S19.6).
+   *
+   * @remarks One whose result is being written can only be finished.
+   * @param location - The session record's location.
+   * @returns Nothing, or why it couldn't be abandoned.
+   */
+  readonly abandonDiagnostic: (location: string) => Promise<Result<undefined, DiagnosticError>>;
 }
+
+/** A question-bank diagnostic as the app shows it (MVP S19). */
+export interface DiagnosticView {
+  /** Where its session record is stored. */
+  readonly location: string;
+  /** The skill it tests. */
+  readonly skill: string;
+  /** The level it started at. */
+  readonly start: number;
+  /** How many questions have been answered. */
+  readonly asked: number;
+  /** The question posed now; none once the last answer is in and the result still has to be written. */
+  readonly item?: McqItem;
+}
+
+/** What a diagnostic gave when it ended (MVP S19.4, S19.5). */
+export interface DiagnosticOutcome {
+  /** The level it gave. */
+  readonly result: number;
+  /** Each question asked, with the answer and its marking: the path taken. */
+  readonly steps: readonly DiagnosticStep[];
+  /** The assessment evidence written. */
+  readonly evidence: LoadedRecord;
+}
+
+/** What comes after an answer: the next question, or the end with its result. */
+export type DiagnosticNext =
+  | { readonly kind: "ask"; readonly view: DiagnosticView }
+  | { readonly kind: "end"; readonly outcome: DiagnosticOutcome };
+
+/** What a diagnostic's assessment record reports, for its readable title and summary. */
+export interface AssessmentFacts {
+  /** The skill's slug. */
+  readonly skill: string;
+  /** The skill's name. */
+  readonly name: string;
+  /** The level it started at. */
+  readonly start: number;
+  /** The level it gave. */
+  readonly result: number;
+  /** The path taken. */
+  readonly steps: readonly DiagnosticStep[];
+  /** The published rule's name. */
+  readonly rule: string;
+  /** The day it ended, as `YYYY-MM-DD`. */
+  readonly date: string;
+}
+
+/**
+ * Writes an assessment record's title and Markdown summary in the person's language, from the app's translation
+ * files, so the record reads well outside Pharoam (hard rule 12).
+ */
+export type AssessmentWriter = (facts: AssessmentFacts) => { readonly title: string; readonly body: string };
+
+/**
+ * Why a diagnostic couldn't go on: storage refused a write; the bank doesn't cover the skill; the session isn't a
+ * diagnostic in progress; the answer isn't to the question posed, as a second click would send; the answer names
+ * no option; or its result is being written, so it can only be finished, not abandoned.
+ */
+export type DiagnosticError =
+  | SaveError
+  | { readonly kind: "not-covered"; readonly skill: string }
+  | { readonly kind: "not-in-progress"; readonly location: string }
+  | { readonly kind: "not-posed"; readonly item: string }
+  | { readonly kind: "not-an-option"; readonly answer: number }
+  | { readonly kind: "finishing"; readonly location: string };
 
 /** What the core service needs. */
 export interface CoreServiceOptions {
@@ -1112,6 +1254,250 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
       entries: [observation.value],
     };
     return createRecord(createRecordFile(top, ""));
+  }
+
+  // A number from 0 up to 1 from the secure random source, for choosing among a diagnostic's items.
+  function randomUnit(): number {
+    const bytes = new Uint8Array(4);
+    ids.fillRandom(bytes);
+    return new DataView(bytes.buffer).getUint32(0) / 2 ** 32;
+  }
+
+  // The question bank's multiple-choice items for a skill.
+  const bankFor = (skill: string): McqItem[] =>
+    content.items.filter((item): item is McqItem => item.format === "mcq" && item.skills[0] === skill);
+
+  // The items shown in earlier diagnostics of a skill, finished or abandoned, so a retake draws others (S19.7).
+  function seenItems(skill: string): Set<string> {
+    return new Set(
+      loaded.flatMap((one) => {
+        const { record } = one;
+        if (
+          record.schema === "evidence/1" &&
+          record.kind === "assessment" &&
+          record.diagnostic?.skill === skill
+        )
+          return record.steps.map((step) => step.item);
+        const session = diagnosticSession(one.location);
+        if (session?.record.status === "abandoned" && session.diagnostic.skill === skill)
+          return [
+            ...session.record.steps.map((step) => step.item),
+            ...(session.record.next === undefined ? [] : [session.record.next]),
+          ];
+        return [];
+      }),
+    );
+  }
+
+  // The newest diagnostic of a skill in progress, the one both starting and asking resume.
+  function runningSession(skill: string): LoadedRecord | undefined {
+    return loaded
+      .filter((one) => {
+        const found = diagnosticSession(one.location);
+        return found?.record.status === "in-progress" && found.diagnostic.skill === skill;
+      })
+      .toSorted((a, b) => (a.record.id < b.record.id ? -1 : a.record.id > b.record.id ? 1 : 0))
+      .at(-1);
+  }
+
+  // Runs one change to a diagnostic after the last one queued for the same key has finished, so two clicks never
+  // write from the same version of its record.
+  const queues = new Map<string, Promise<unknown>>();
+  function oneAtATime<T>(key: string, change: () => Promise<T>): Promise<T> {
+    const before = queues.get(key) ?? Promise.resolve();
+    const run = before.then(change, change);
+    queues.set(
+      key,
+      run.then(
+        () => undefined,
+        () => undefined,
+      ),
+    );
+    return run;
+  }
+
+  // A question-bank diagnostic's session record, if the location holds one.
+  function diagnosticSession(location: string) {
+    const found = loaded.find((one) => one.location === location);
+    return found?.record.schema === "session/1" &&
+      found.record.workflow === QUESTION_BANK_WORKFLOW &&
+      found.record.diagnostic !== undefined
+      ? { loaded: found, record: found.record, diagnostic: found.record.diagnostic }
+      : undefined;
+  }
+
+  function diagnosticView(location: string): DiagnosticView | undefined {
+    const session = diagnosticSession(location);
+    if (session === undefined) return undefined;
+    const item = bankFor(session.diagnostic.skill).find((one) => one.slug === session.record.next);
+    return {
+      location,
+      skill: session.diagnostic.skill,
+      start: session.diagnostic.start,
+      asked: session.record.steps.length,
+      ...(item !== undefined && { item }),
+    };
+  }
+
+  // Appends a sealed observation to a skill's record, creating the record when there is none.
+  function appendObservation(skill: string, entry: Readonly<Record<string, unknown>>, at: string) {
+    const current = skillRecord(skill);
+    if (current !== undefined) return appendEntry(current, entry);
+    const top = { schema: "skill-record/1", id: nextId(), created: at, ai: null, skill, entries: [entry] };
+    return createRecord(createRecordFile(top, ""));
+  }
+
+  // Begins a new diagnostic of a skill at a level, posing its first question; only its session is written.
+  async function beginDiagnostic(
+    skill: string,
+    start: number,
+  ): Promise<Result<DiagnosticView, DiagnosticError>> {
+    const first = nextQuestion(content.items, skill, start, [], seenItems(skill), randomUnit);
+    if (first.kind === "end") return err({ kind: "not-covered", skill });
+    const now = timestamp(ids.now());
+    const top = {
+      schema: "session/1",
+      id: nextId(),
+      created: now,
+      updated: now,
+      ai: null,
+      workflow: QUESTION_BANK_WORKFLOW,
+      status: "in-progress",
+      diagnostic: { skill, start, rule: QUESTION_BANK_RULE },
+      steps: [],
+      next: first.item.slug,
+    };
+    const created = await createRecord(createRecordFile(top, ""));
+    if (!created.ok) return created;
+    return ok({ location: created.value.location, skill, start, asked: 0, item: first.item });
+  }
+
+  // Resumes a diagnostic as its session holds it, posing another question when the one posed has left the bank.
+  async function resumeDiagnostic(location: string): Promise<Result<DiagnosticView, DiagnosticError>> {
+    const session = diagnosticSession(location);
+    const view = diagnosticView(location);
+    if (session?.record.status !== "in-progress" || view === undefined)
+      return err({ kind: "not-in-progress", location });
+    if (view.item !== undefined || session.record.assessment !== undefined) return ok(view);
+    const { skill, start } = session.diagnostic;
+    const next = nextQuestion(
+      content.items,
+      skill,
+      start,
+      session.record.steps,
+      seenItems(skill),
+      randomUnit,
+    );
+    const now = timestamp(ids.now());
+    const fields =
+      next.kind === "ask"
+        ? { next: next.item.slug, updated: now }
+        : { next: undefined, assessment: nextId(), updated: now };
+    const saved = await updateRecord(location, withTopFields(session.loaded.file, fields));
+    if (!saved.ok) return saved;
+    const resumed = diagnosticView(location);
+    if (resumed === undefined) throw new Error("The diagnostic just saved isn't loaded.");
+    return ok(resumed);
+  }
+
+  // Takes one answer to the question posed, then poses the next or writes the result.
+  async function answerOne(
+    location: string,
+    slug: string,
+    answer: number,
+    writer: AssessmentWriter,
+  ): Promise<Result<DiagnosticNext, DiagnosticError>> {
+    const session = diagnosticSession(location);
+    if (session?.record.status !== "in-progress") return err({ kind: "not-in-progress", location });
+    const { skill, start } = session.diagnostic;
+    const item = bankFor(skill).find((one) => one.slug === slug);
+    if (session.record.next !== slug || item === undefined) return err({ kind: "not-posed", item: slug });
+    if (!Number.isInteger(answer) || answer < 0 || answer >= item.options.length)
+      return err({ kind: "not-an-option", answer });
+    const steps = [
+      ...session.record.steps,
+      { item: slug, level: item.level, answer, correct: answer === item.answer },
+    ];
+    const next = nextQuestion(content.items, skill, start, steps, seenItems(skill), randomUnit);
+    const now = timestamp(ids.now());
+    const fields =
+      next.kind === "ask"
+        ? { steps, next: next.item.slug, updated: now }
+        : { steps, next: undefined, assessment: nextId(), updated: now };
+    const saved = await updateRecord(location, withTopFields(session.loaded.file, fields));
+    if (!saved.ok) return saved;
+    if (next.kind === "ask") {
+      const view = diagnosticView(location);
+      if (view === undefined) throw new Error("The diagnostic just saved isn't loaded.");
+      return ok({ kind: "ask", view });
+    }
+    const finished = await finishDiagnostic(location, writer);
+    return finished.ok ? ok({ kind: "end", outcome: finished.value }) : finished;
+  }
+
+  async function finishDiagnostic(
+    location: string,
+    writer: AssessmentWriter,
+  ): Promise<Result<DiagnosticOutcome, DiagnosticError>> {
+    const session = diagnosticSession(location);
+    const evidenceId = session?.record.assessment;
+    if (session?.record.status !== "in-progress" || evidenceId === undefined)
+      return err({ kind: "not-in-progress", location });
+    const { skill, start, rule } = session.diagnostic;
+    const { steps } = session.record;
+    const result = diagnosticResult(steps);
+    const now = timestamp(ids.now());
+    if (byId(evidenceId) === undefined) {
+      const name = content.skills.find((one) => one.slug === skill)?.name ?? skill;
+      const date = now.slice(0, 10);
+      const { title, body } = writer({ skill, name, start, result, steps, rule, date });
+      const top = {
+        schema: "evidence/1",
+        id: evidenceId,
+        created: now,
+        ai: null,
+        kind: "assessment",
+        title,
+        date,
+        skills: [skill],
+        diagnostic: { type: "question-bank", skill, start },
+        steps,
+        result,
+        rule,
+      };
+      const text = body.endsWith("\n") ? body : `${body}\n`;
+      const sealed = recordFingerprint(top, text);
+      // A diagnostic's record holds only plain text, numbers and booleans, which always have a fingerprint.
+      if (!sealed.ok) throw new Error("An assessment record couldn't be fingerprinted.");
+      const created = await createRecord(createRecordFile({ ...top, integrity: sealed.value }, text));
+      if (!created.ok) return created;
+    }
+    const record = skillRecord(skill)?.record;
+    const linked =
+      record?.schema === "skill-record/1" &&
+      record.entries.some((entry) => "assessment" in entry && entry.assessment === evidenceId);
+    if (!linked) {
+      const sealed = sealEntry({
+        id: nextId(),
+        level: result,
+        provenance: "demonstrated",
+        observed_at: now,
+        assessment: evidenceId,
+      });
+      // An observation holds only IDs, a level and a time, which always have a fingerprint.
+      if (!sealed.ok) throw new Error("An observation couldn't be fingerprinted.");
+      const appended = await appendObservation(skill, sealed.value, now);
+      if (!appended.ok) return appended;
+    }
+    const current = diagnosticSession(location)?.loaded ?? session.loaded;
+    const completed = await updateRecord(
+      current.location,
+      withTopFields(current.file, { status: "completed", updated: now }),
+    );
+    if (!completed.ok) return completed;
+    const evidence = byId(evidenceId);
+    if (evidence === undefined) throw new Error("The assessment record written isn't loaded.");
+    return ok({ result, steps, evidence });
   }
 
   // An evidence record as it is now, for a scan to read or compare with what it read.
@@ -1845,6 +2231,48 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
       return ok(undefined);
     },
 
+    bankCovers: (skill) => bankFor(skill).length > 0,
+
+    diagnosticInProgress: (skill) => {
+      const session = runningSession(skill);
+      return session === undefined ? undefined : diagnosticView(session.location);
+    },
+
+    startDiagnostic: (skill) =>
+      oneAtATime(`start:${skill}`, async (): Promise<Result<DiagnosticView, DiagnosticError>> => {
+        const items = bankFor(skill);
+        if (items.length === 0) return err({ kind: "not-covered", skill });
+        const running = runningSession(skill);
+        if (running !== undefined)
+          return oneAtATime(running.location, () => resumeDiagnostic(running.location));
+        const record = skillRecord(skill)?.record;
+        const shown = record?.schema === "skill-record/1" ? shownObservation(record.entries) : undefined;
+        // The shown level, or 2; or the nearest level the bank has items for, the lower when two are as near.
+        const wanted = shown?.level ?? 2;
+        const levels = [...new Set(items.map((item) => item.level))];
+        const start =
+          levels.toSorted((a, b) => Math.abs(a - wanted) - Math.abs(b - wanted) || a - b)[0] ?? wanted;
+        return beginDiagnostic(skill, start);
+      }),
+
+    answerDiagnostic: (location, slug, answer, writer) =>
+      oneAtATime(location, () => answerOne(location, slug, answer, writer)),
+
+    finishDiagnostic: (location, writer) => oneAtATime(location, () => finishDiagnostic(location, writer)),
+
+    abandonDiagnostic: (location) =>
+      oneAtATime(location, async (): Promise<Result<undefined, DiagnosticError>> => {
+        const session = diagnosticSession(location);
+        if (session?.record.status !== "in-progress") return err({ kind: "not-in-progress", location });
+        if (session.record.assessment !== undefined) return err({ kind: "finishing", location });
+        // The question posed stays in the record, so a retake counts it as seen (S19.7).
+        const saved = await updateRecord(
+          location,
+          withTopFields(session.loaded.file, { status: "abandoned", updated: timestamp(ids.now()) }),
+        );
+        return saved.ok ? ok(undefined) : saved;
+      }),
+
     levelOutOfDate: (skill) => {
       const record = skillRecord(skill)?.record;
       if (record?.schema !== "skill-record/1") return false;
@@ -1894,7 +2322,17 @@ interface Mine {
 }
 
 function toLoaded(location: string, version: string, file: RecordFile, record: ProfileRecord): LoadedRecord {
-  return { location, version, file, record, entryIntegrity: entryIntegrity(file, record) };
+  // A diagnostic's record is fingerprinted as a whole; one written by hand has no diagnostic and isn't checked.
+  const assessment =
+    record.schema === "evidence/1" && record.kind === "assessment" && record.diagnostic !== undefined;
+  return {
+    location,
+    version,
+    file,
+    record,
+    entryIntegrity: entryIntegrity(file, record),
+    ...(assessment && { recordIntegrity: checkRecord(file.top, file.body) }),
+  };
 }
 
 // Each skill-record entry checked against its own fingerprint, using the values as written. The schema has just
