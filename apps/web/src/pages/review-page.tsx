@@ -436,9 +436,12 @@ function PastScans({
   useEffect(() => {
     if (asking !== undefined) question.current?.focus();
   }, [asking]);
+  // Scans only: a diagnostic's session is a session too, but holds no suggestions to review (MVP S19.6).
   const sessions = service
     .records()
-    .flatMap(({ location, record }) => (record.schema === "session/1" ? [{ location, record }] : []))
+    .flatMap(({ location, record }) =>
+      record.schema === "session/1" && record.scan !== undefined ? [{ location, record }] : [],
+    )
     .sort((a, b) => Date.parse(b.record.created) - Date.parse(a.record.created));
   if (sessions.length === 0) return null;
   const date = new Intl.DateTimeFormat(t("app.locale"), { dateStyle: "long" });

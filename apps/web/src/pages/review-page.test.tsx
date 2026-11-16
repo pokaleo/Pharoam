@@ -268,3 +268,32 @@ describe("one level per skill (review follow-up)", () => {
     expect([...(await pythonText(memory)).matchAll(/^ {2}- id: /gm)]).toHaveLength(1);
   });
 });
+
+describe("past scans (review findings)", () => {
+  it("lists only scans, never a diagnostic's session", async () => {
+    const user = userEvent.setup();
+    const diagnostic = lines(
+      "---",
+      "schema: session/1",
+      "id: 0192f3a1-0000-7000-8000-000000000060",
+      "created: 2026-11-15T10:00:00Z",
+      "workflow: question-bank@1",
+      "status: in-progress",
+      "diagnostic: { skill: sql, start: 2, rule: two-right-to-settle@1 }",
+      "steps: []",
+      "next: sql-2-a",
+      "---",
+    );
+    await review(
+      user,
+      folder({
+        [SESSION]: session("completed", "discarded"),
+        "sessions/question-bank-2026-11-15--00000060.md": diagnostic,
+      }),
+    );
+
+    const past = screen.getByRole("region", { name: "Past scans" });
+    expect(within(past).getAllByRole("button", { name: "Delete" })).toHaveLength(1);
+    expect(within(past).queryByText(/15 November 2026/)).toBeNull();
+  });
+});

@@ -23,7 +23,7 @@ Each record file names its format in its top block, for example `schema: evidenc
 - **The file as written**, before Pharoam fills in defaults: a field Pharoam defaults, such as `ai`, may be left out.
 - **Fields Pharoam doesn't know are allowed**, as Pharoam keeps them.
 - **Values are read with YAML 1.2**, so `yes` and `2026-10-24` are strings.
-- **Some rules can't be written in JSON Schema** and are checked only by Pharoam: an end date after its start, a name for a custom skill, a replacement for a deprecated skill, each pathway skill required once, investment ranges from low to high, and for an assessment item: an answer that names one of its options, each skill and option once, and no field from the other format.
+- **Some rules can't be written in JSON Schema** and are checked only by Pharoam: an end date after its start, a name for a custom skill, a replacement for a deprecated skill, each pathway skill required once, investment ranges from low to high, for an assessment item: an answer that names one of its options, each skill and option once, and no field from the other format; and for a session, the fields its workflow needs (a scan names its scan, a diagnostic its diagnostic).
 
 ## Licence
 
