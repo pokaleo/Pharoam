@@ -688,7 +688,8 @@
       "outOfDate": "The evidence behind your AI level has changed since it was judged. Pharoam never judges it again on its own.",
       "check": "Check it with a diagnostic",
       "continue": "Continue the diagnostic",
-      "fromDiagnostic": "See the diagnostic"
+      "fromDiagnostic": "See the diagnostic",
+      "take": "Take a diagnostic"
     },
     "customPage": {
       "title": "Add your own skill",

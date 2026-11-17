@@ -11,7 +11,7 @@ import { useEffect, useId, useRef, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { useSession } from "../profile/session.tsx";
 import { AiMark } from "../ui/ai-mark.tsx";
-import { dayName, levelName } from "../skills/labels.ts";
+import { dayName, diagnosticLabel, levelName } from "../skills/labels.ts";
 import { LevelChoice } from "../skills/level-choice.tsx";
 import { Level } from "../skills/level.tsx";
 import { SourceTag } from "../skills/source-tag.tsx";
@@ -115,11 +115,10 @@ function SkillDetail({
                 params={{ skill }}
                 className={buttonClassName("secondary")}
               >
-                {t(
-                  service.diagnosticInProgress(skill) === undefined
-                    ? "skills.skillPage.check"
-                    : "skills.skillPage.continue",
-                )}
+                {diagnosticLabel(t, {
+                  inProgress: service.diagnosticInProgress(skill) !== undefined,
+                  ...(item?.shown !== undefined && { shown: item.shown.provenance }),
+                })}
               </Link>
             ) : null}
             <Link to="/skills/record" search={{ skill }} className={buttonClassName("primary")}>

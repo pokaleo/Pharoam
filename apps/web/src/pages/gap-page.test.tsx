@@ -17,6 +17,8 @@ import {
   openProfile,
   navLink,
 } from "../__fixtures__/profiles.ts";
+import { packWithBank, WRONG } from "../__fixtures__/bank.ts";
+import { renderApp } from "../__fixtures__/render-app.tsx";
 import { expectNoAxeViolations } from "../testing/axe.ts";
 
 // Opens the gap to a pathway, starting from the pathways list.
@@ -152,5 +154,60 @@ describe("GapPage (MVP S11)", () => {
     within(sql).getByText("AI judgement");
     expect(within(sql).queryByText(/your own rating/)).toBeNull();
     within(sql).getByText(/Payments API/);
+  });
+
+  it("offers a diagnostic for each skill the bank covers whose level isn't supported (S21.1)", async () => {
+    const user = userEvent.setup();
+    // The test bank covers SQL and Python. SQL is the person's own Proficient rating; Python and HTTP are unknown.
+    const { container } = renderApp({ name: "my-profile", memory: fullProfile(3), content: packWithBank });
+    await user.click(await screen.findByRole("button", { name: "Choose a folder" }));
+    await screen.findByRole("link", { name: "Profile" }, { timeout: 5000 });
+    await user.click(await navLink("Pathways"));
+    await user.click(await screen.findByRole("link", { name: "Backend engineer" }));
+    await user.click(await screen.findByRole("link", { name: "See my gap to this pathway" }));
+    await screen.findByRole("heading", { level: 1, name: "Your gap to Backend engineer" });
+
+    const sql = within(screen.getByRole("region", { name: /^Claimed\b/ })).getByRole("row", { name: /SQL/ });
+    expect(within(sql).getByRole("link", { name: "Check it with a diagnostic" }).getAttribute("href")).toBe(
+      "/skills/sql/diagnostic",
+    );
+    const unknown = screen.getByRole("region", { name: /^Unknown\b/ });
+    const python = within(unknown).getByRole("row", { name: /\bPython\b/ });
+    expect(within(python).getByRole("link", { name: "Take a diagnostic" }).getAttribute("href")).toBe(
+      "/skills/python/diagnostic",
+    );
+    within(python).getByRole("link", { name: "Say where you stand" });
+    const http = within(unknown).getByRole("row", { name: /\bHTTP\b/ });
+    expect(within(http).queryByRole("link", { name: /diagnostic/ })).toBeNull();
+    await expectNoAxeViolations(container);
+  });
+
+  it("offers a diagnostic below the requirement, continues one in progress, and takes another after a result (S21.1)", async () => {
+    const user = userEvent.setup();
+    // The person's own Basic SQL is below backend engineer's requirement.
+    renderApp({ name: "my-profile", memory: fullProfile(1), content: packWithBank });
+    await user.click(await screen.findByRole("button", { name: "Choose a folder" }));
+    await screen.findByRole("link", { name: "Profile" }, { timeout: 5000 });
+    const sqlRow = async () => {
+      await user.click(await navLink("Pathways"));
+      await user.click(await screen.findByRole("link", { name: "Backend engineer" }));
+      await user.click(await screen.findByRole("link", { name: "See my gap to this pathway" }));
+      await screen.findByRole("heading", { level: 1, name: "Your gap to Backend engineer" });
+      return within(screen.getByRole("region", { name: /^Below\b/ })).getByRole("row", { name: /SQL/ });
+    };
+
+    await user.click(within(await sqlRow()).getByRole("link", { name: "Check it with a diagnostic" }));
+    await user.click(await screen.findByRole("button", { name: "Start" }));
+    await screen.findByText("Question 1");
+    within(await sqlRow()).getByRole("link", { name: "Continue the diagnostic" });
+
+    // Every answer wrong settles the level at 0, a tested level that is still below the requirement.
+    await user.click(within(await sqlRow()).getByRole("link", { name: "Continue the diagnostic" }));
+    while (screen.queryByRole("region", { name: "The result" }) === null) {
+      await user.click(await screen.findByRole("radio", { name: WRONG }));
+      await user.click(screen.getByRole("button", { name: "Answer" }));
+      await screen.findByText(/Question \d+|The questions, in the order asked/);
+    }
+    within(await sqlRow()).getByRole("link", { name: "Take a diagnostic" });
   });
 });
