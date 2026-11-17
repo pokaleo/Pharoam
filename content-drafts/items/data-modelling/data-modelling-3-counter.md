@@ -6,12 +6,12 @@ level: 3
 format: mcq
 prompt: "A page shows each product's review count, and counting with a join on every load is too slow at scale. What is a reasonable denormalisation?"
 options:
-  - "Drop the foreign key from reviews to products"
-  - "Keep a review_count on products, updated when reviews are added or removed"
+  - "Copy each product's name into every review row"
+  - "Keep a review_count on products, updated with each review change"
+  - "Keep an array of review IDs on each product row"
   - "Store every review as text inside its product's row"
-  - "Remove the index on reviews.product_id"
 answer: 1
-explanation: "A maintained counter trades a little write work for fast reads, keeping one source of truth for the reviews."
+explanation: "A maintained counter adds a little work to each write and turns the read into a single column."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }
 ai:
   task: draft-item@1

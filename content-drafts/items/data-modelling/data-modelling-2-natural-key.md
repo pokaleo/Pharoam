@@ -6,10 +6,10 @@ level: 2
 format: mcq
 prompt: "Should a users table use the email address as its primary key?"
 options:
-  - "Yes: emails are unique, so they make the best primary key"
-  - "Yes, as long as the email column is also indexed"
-  - "No, because primary keys must be numbers"
-  - "Usually not: emails change, so a stable surrogate key with a unique constraint on email is safer"
+  - "Yes: emails are unique, so they make a good natural key"
+  - "Yes, but only if email also has its own index"
+  - "No: primary keys have to be whole numbers"
+  - "No: emails change; use a surrogate key and keep email unique"
 answer: 3
 explanation: "Other tables refer to the primary key, so it should never need to change."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }

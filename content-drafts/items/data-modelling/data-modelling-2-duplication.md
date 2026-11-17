@@ -4,14 +4,14 @@ slug: data-modelling-2-duplication
 skills: [data-modelling]
 level: 2
 format: mcq
-prompt: "Every order row repeats the customer's current name and address. What problem does that cause?"
+prompt: "Each employee row repeats their department's name and budget code. What problem does that cause?"
 options:
-  - "Orders can no longer be joined to customers"
-  - "The database refuses repeated text"
-  - "When a customer's details change, every order row must be updated, or they disagree"
-  - "None: repeating data always makes queries faster"
+  - "Employees can no longer be joined to departments"
+  - "The database rejects text repeated across rows"
+  - "Renaming a department means updating many rows, or they disagree"
+  - "Department names can no longer be indexed"
 answer: 2
-explanation: "Facts stored in more than one place can drift apart; normalising keeps each fact in one place."
+explanation: "A fact stored in many rows can drift apart when it changes, so normalising keeps it in one place."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }
 ai:
   task: draft-item@1
