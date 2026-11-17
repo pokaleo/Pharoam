@@ -6,10 +6,10 @@ level: 3
 format: mcq
 prompt: "In test-driven development, why see a new test fail before writing the code?"
 options:
-  - "Failing tests make the build faster"
-  - "The test runner requires it"
-  - "It raises the coverage figure"
-  - "It shows the test can catch the missing behaviour, and fails for the reason expected"
+  - "It records a coverage baseline before the new code"
+  - "It confirms the function's signature compiles first"
+  - "It keeps the commit history in the order reviewers expect"
+  - "It shows the test can detect the missing behaviour"
 answer: 3
 explanation: "A test that has never failed might pass whatever the code does."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }

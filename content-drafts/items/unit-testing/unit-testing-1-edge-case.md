@@ -9,7 +9,7 @@ options:
   - "A list of exactly three numbers"
   - "An empty list"
   - "The same list, run twice"
-  - "A list typed in a different editor"
+  - "A list of positive whole numbers"
 answer: 1
 explanation: "Edge cases such as an empty list are where simple functions most often go wrong."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }

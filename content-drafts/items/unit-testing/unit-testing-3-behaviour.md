@@ -6,10 +6,10 @@ level: 3
 format: mcq
 prompt: "Which is the least brittle test for a function that sorts orders by date?"
 options:
-  - "One that checks which sort algorithm the function calls internally"
-  - "One that checks the order in which the orders come back"
-  - "One that checks how many times a private helper ran"
-  - "One that compares a snapshot of the function's source code"
+  - "One that mocks the comparison helper and checks it ran for each pair"
+  - "One that checks the dates in the result for a small, fixed list of orders"
+  - "One that compares the full output, every field included, with a stored snapshot"
+  - "One that checks the function calls Array.prototype.sort exactly once"
 answer: 1
 explanation: "Tests of observable behaviour survive refactoring; tests of internals break when the code is improved."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }

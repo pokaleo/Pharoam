@@ -6,10 +6,10 @@ level: 2
 format: mcq
 prompt: "Tests pass when run one at a time but fail when run together. What is the most likely cause?"
 options:
-  - "They share state, such as a global variable or database rows, that one test leaves behind"
-  - "The test runner is too slow"
-  - "There are too many tests in one file"
-  - "The tests' names are too long"
+  - "They share state that one test changes and another relies on"
+  - "The runner caches results from an earlier run"
+  - "The tests use too many mocks"
+  - "The assertions are too strict"
 answer: 0
 explanation: "Independent tests set up their own state and leave nothing behind for others."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }

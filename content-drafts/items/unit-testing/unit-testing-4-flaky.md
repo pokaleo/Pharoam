@@ -6,10 +6,10 @@ level: 4
 format: mcq
 prompt: "Across a large codebase, flaky tests fail a few runs in every hundred. What policy works best?"
 options:
-  - "Retry every failing test until it passes"
-  - "Ignore failures that don't happen twice"
-  - "Turn off CI until they are all fixed"
-  - "Track them, take them out of the blocking run with an owner and a deadline, and fix their cause"
+  - "Retry failing tests up to three times, and treat any pass as a pass"
+  - "Delete any test that has flaked more than once"
+  - "Quarantine them indefinitely, reviewing the list yearly"
+  - "Quarantine them from the blocking run, each with an owner and a fix deadline"
 answer: 3
 explanation: "Quarantining with ownership keeps the main signal trustworthy without hiding the problem."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }

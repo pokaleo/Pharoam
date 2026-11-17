@@ -6,9 +6,9 @@ level: 2
 format: mcq
 prompt: "A function sends email through a mail service. How do you unit test it without sending real email?"
 options:
-  - "Send real emails to a test inbox and check it by hand"
-  - "Skip testing it, as it has side effects"
-  - "Pass it a fake or mock mail service, and check what was sent to that"
+  - "Use the mail provider's sandbox, and check its inbox"
+  - "Wrap the send in try/catch so failures are ignored"
+  - "Pass in a fake mail service, and check what it was asked to send"
   - "Comment out the sending line while testing"
 answer: 2
 explanation: "Replacing the dependency with a fake keeps the test fast and lets it check the interaction."
