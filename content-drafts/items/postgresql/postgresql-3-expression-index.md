@@ -6,11 +6,11 @@ level: 3
 format: mcq
 prompt: "EXPLAIN ANALYZE shows a Seq Scan for WHERE lower(email) = $1 on a 10-million-row table, though email has an index. Why, and what fixes it?"
 options:
-  - "The index is corrupt; REINDEX fixes it"
-  - "Text columns can't use indexes; add a hash column instead"
-  - "Statistics are out of date; ANALYZE alone will make it use the index"
-  - "The index is on email, not lower(email); add an index on the expression lower(email)"
-answer: 3
+  - "The index is corrupt; rebuild it with REINDEX"
+  - "Statistics are stale; run ANALYZE on the table"
+  - "It indexes email, not lower(email); add an expression index"
+  - "lower() blocks indexes; use email ILIKE $1 instead"
+answer: 2
 explanation: "An index is only used for the expression it was built on, so the query needs an expression index."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }
 ai:

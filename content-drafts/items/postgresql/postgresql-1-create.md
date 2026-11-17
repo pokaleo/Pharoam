@@ -4,12 +4,12 @@ slug: postgresql-1-create
 skills: [postgresql]
 level: 1
 format: mcq
-prompt: "Which statement creates a table?"
+prompt: "Which statement defines a new users table with two columns?"
 options:
-  - "NEW TABLE users (id integer, name text);"
-  - "INSERT TABLE users (id integer, name text);"
+  - "INSERT INTO users (id integer, name text);"
+  - "ALTER TABLE users ADD (id integer, name text);"
   - "CREATE TABLE users (id integer, name text);"
-  - "MAKE users WITH (id integer, name text);"
+  - "CREATE users TABLE (id integer, name text);"
 answer: 2
 explanation: "CREATE TABLE defines a new table with its columns and their types."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }
