@@ -7,7 +7,7 @@ format: mcq
 prompt: "What does Docker do?"
 options:
   - "Designs user interfaces"
-  - "Packages an app with everything it needs into a container that runs the same anywhere"
+  - "Packages an app and what it needs into a container"
   - "Stores passwords"
   - "Writes code automatically"
 answer: 1

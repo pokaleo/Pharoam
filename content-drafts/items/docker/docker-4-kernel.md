@@ -4,14 +4,14 @@ slug: docker-4-kernel
 skills: [docker]
 level: 4
 format: mcq
-prompt: "Which Linux kernel features isolate containers and limit their resources?"
+prompt: "A containerised process can't see the host's other processes and can't use more than 512 MB of RAM. Which kernel features provide these?"
 options:
-  - "Namespaces for isolation, and cgroups for resource limits"
-  - "A hypervisor running a virtual machine per container"
-  - "chroot on its own"
-  - "A separate kernel for each container"
+  - "PID namespace; memory cgroup"
+  - "seccomp; ulimit"
+  - "chroot; memory cgroup"
+  - "PID namespace; ulimit"
 answer: 0
-explanation: "Containers share the host kernel; namespaces separate what they see, and cgroups cap what they use."
+explanation: "A PID namespace gives the container its own process tree, and the memory cgroup caps the RAM its processes use together."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }
 ai:
   task: draft-item@1

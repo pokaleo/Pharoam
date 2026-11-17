@@ -4,14 +4,14 @@ slug: docker-3-non-root
 skills: [docker]
 level: 3
 format: mcq
-prompt: "Which change most improves an image's security?"
+prompt: "Your image runs a web app. Which Dockerfile change does most to limit the damage if the app is compromised?"
 options:
-  - "Adding curl and vim for debugging"
-  - "Using the latest tag for the base image"
-  - "Running the app as a non-root user, set with USER"
-  - "Exposing more ports"
+  - "Pass the database password with ENV, not a config file"
+  - "List only the needed ports with EXPOSE"
+  - "Run the app as a non-root user, set with USER"
+  - "Base it on a latest tag so patches arrive sooner"
 answer: 2
-explanation: "If the app is compromised, a non-root user limits what the attacker can do."
+explanation: "A non-root user can't modify system files or use root's privileges, while EXPOSE restricts nothing and ENV values are readable in the image."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }
 ai:
   task: draft-item@1

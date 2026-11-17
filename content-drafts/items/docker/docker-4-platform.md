@@ -6,10 +6,10 @@ level: 4
 format: mcq
 prompt: "Teams across a company build images in different ways. What keeps their images secure and consistent?"
 options:
-  - "Letting each team pick any public image"
-  - "Shared, maintained base images, with scanning and signing enforced in CI and at deployment"
-  - "One large image that every service uses"
-  - "A manual review of each image once a year"
+  - "A Dockerfile style guide that every team agrees to follow"
+  - "Maintained shared base images, with scanning and signature checks enforced automatically"
+  - "Docker Hub official images only, pinned by digest so they never change"
+  - "Each team runs a scanner locally and fixes what it finds"
 answer: 1
 explanation: "A paved road of trusted bases, checked automatically, scales better than case-by-case review."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }
