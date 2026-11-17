@@ -7,10 +7,10 @@ format: mcq
 prompt: "A scanner reports a critical vulnerability in a library deep in your dependency tree. What is the sound first step?"
 options:
   - "Ignore it, as you didn't install that library directly"
-  - "Remove the scanner from CI so builds pass"
-  - "Check whether the vulnerable code is reachable in your use, then upgrade or override the version, in that priority"
-  - "Fork the library and maintain it yourself from now on"
-answer: 2
+  - "Pin your direct dependencies so the tree can't change"
+  - "Wait for the library's maintainers to publish a fix"
+  - "Assess whether the flaw is reachable, then upgrade or override the version"
+answer: 3
 explanation: "Transitive dependencies ship in your app; reachability tells you how urgent the fix is."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }
 ai:

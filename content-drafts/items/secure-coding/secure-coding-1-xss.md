@@ -4,10 +4,10 @@ slug: secure-coding-1-xss
 skills: [secure-coding]
 level: 1
 format: mcq
-prompt: "An attacker's script runs in other people's browsers, through a comment form. What is this called?"
+prompt: "An attacker posts a comment that makes code run in other visitors' browsers. What is this called?"
 options:
   - "SQL injection"
-  - "Phishing"
+  - "Cross-site request forgery (CSRF)"
   - "Cross-site scripting (XSS)"
   - "Brute force"
 answer: 2

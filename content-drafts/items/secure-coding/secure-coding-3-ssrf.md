@@ -7,9 +7,9 @@ format: mcq
 prompt: "An endpoint fetches any URL a user gives it, to build a link preview. What is the main risk?"
 options:
   - "Cross-site request forgery against the user's browser"
-  - "Server-side request forgery: requests to internal services or cloud metadata from inside your network"
+  - "Server-side request forgery (SSRF)"
   - "SQL injection through the URL"
-  - "Slow pages for people who send long URLs"
+  - "An open redirect"
 answer: 1
 explanation: "The server can reach places the attacker can't; allow-list destinations and block internal addresses."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }

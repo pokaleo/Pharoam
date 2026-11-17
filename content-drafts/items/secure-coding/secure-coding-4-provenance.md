@@ -6,10 +6,10 @@ level: 4
 format: mcq
 prompt: "How can an organisation make sure the artefacts it deploys were built from its own reviewed source?"
 options:
-  - "Scanning the artefacts for viruses after deployment"
-  - "Giving every developer the deployment keys"
-  - "Always using the latest version of every dependency"
-  - "Signed build provenance, for example to SLSA, verified before deployment"
+  - "Scanning artefacts for known vulnerabilities before deployment"
+  - "Requiring two reviewers on every pull request"
+  - "Pinning every dependency in a lock file"
+  - "Verifying signed SLSA build provenance before deployment"
 answer: 3
 explanation: "Provenance links an artefact to the source and build that made it, so tampering is detected."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }

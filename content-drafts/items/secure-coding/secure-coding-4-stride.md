@@ -7,9 +7,9 @@ format: mcq
 prompt: "In STRIDE threat modelling, what does the R stand for, and what mitigates it?"
 options:
   - "Repudiation: tamper-evident audit logs of who did what"
-  - "Replay: longer passwords"
-  - "Ransomware: daily backups"
-  - "Rate limiting: a web application firewall"
+  - "Replay: a nonce and timestamp on each request"
+  - "Repudiation: encrypting stored data"
+  - "Reconnaissance: hiding server version banners"
 answer: 0
 explanation: "Repudiation is someone denying an action; trustworthy logs let you show who did it."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }

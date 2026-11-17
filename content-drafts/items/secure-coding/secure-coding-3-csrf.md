@@ -6,10 +6,10 @@ level: 3
 format: mcq
 prompt: "A site uses cookie sessions, and POST /transfer accepts form posts. What stops another site submitting it in a signed-in person's browser?"
 options:
-  - "HTTPS on its own"
-  - "SameSite cookies, together with an anti-CSRF token checked by the server"
-  - "A CAPTCHA on the sign-in page"
-  - "Hiding the form's URL in JavaScript"
+  - "A CORS policy that allows only the site's own origin"
+  - "SameSite cookies, plus an anti-CSRF token the server checks"
+  - "Accepting only POST, never GET, for the transfer"
+  - "Checking the Referer header whenever one is sent"
 answer: 1
 explanation: "The browser sends cookies with cross-site requests unless SameSite stops it; a token proves the form came from the site."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }

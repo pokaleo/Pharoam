@@ -4,12 +4,12 @@ slug: secure-coding-2-output-encoding
 skills: [secure-coding]
 level: 2
 format: mcq
-prompt: "A page shows a username in HTML. What stops a name such as <script>...</script> from running?"
+prompt: "A page shows a username in HTML. What reliably stops a name such as <script>...</script> from running as code?"
 options:
-  - "Refusing usernames longer than 20 characters"
-  - "Storing it base64-encoded in the database"
-  - "Checking that it isn't empty"
-  - "Encoding it for HTML where it is shown, so the browser displays it as text"
+  - "Removing \"<script>\" from the name when it is saved"
+  - "Escaping it for SQL before it is saved"
+  - "Setting HttpOnly on the session cookie"
+  - "HTML-encoding it where it is shown on the page"
 answer: 3
 explanation: "Output encoding for the context where data is used is what stops XSS."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }

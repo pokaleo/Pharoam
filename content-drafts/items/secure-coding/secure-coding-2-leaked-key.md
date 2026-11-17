@@ -6,10 +6,10 @@ level: 2
 format: mcq
 prompt: "An API key was pushed to a public repository, and removed in the next commit. What must happen?"
 options:
-  - "Revoke and replace the key: it is still in the history and may already have been copied"
+  - "Revoke the key and issue a new one"
   - "Nothing: the next commit removed it"
-  - "Make the repository private, and keep using the key"
-  - "Rewrite the history to remove it, and keep using the key"
+  - "Make the repository private"
+  - "Rewrite the history to remove the commit"
 answer: 0
 explanation: "Public repositories are scanned for secrets within minutes; a leaked key must be treated as compromised."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }

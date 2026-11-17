@@ -4,14 +4,14 @@ slug: secure-coding-4-disclosure
 skills: [secure-coding]
 level: 4
 format: mcq
-prompt: "An outside researcher reports a vulnerability in your product. What is the sound response?"
+prompt: "A researcher reports a vulnerability in your open-source library that many products use. What is the sound process?"
 options:
-  - "Ask them to delete their findings and say nothing"
-  - "Publish the details at once so people know"
-  - "Acknowledge quickly, triage and fix it, agree a disclosure date with them, and credit them"
-  - "Ignore it unless they show it being exploited"
-answer: 2
-explanation: "Coordinated disclosure gets the fix to users before the details become public."
+  - "Fix it in a public pull request at once, so users can review the change"
+  - "Fix it privately, then release the fix and a CVE advisory on an agreed date"
+  - "Release the fix quietly in a minor version, with no advisory"
+  - "Publish an advisory now, and fix it in the next scheduled release"
+answer: 1
+explanation: "Coordinated disclosure gets the fix out before details are public, and the advisory tells users to upgrade."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }
 ai:
   task: draft-item@1

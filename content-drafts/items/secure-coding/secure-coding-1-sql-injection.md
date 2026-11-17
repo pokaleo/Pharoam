@@ -6,9 +6,9 @@ level: 1
 format: mcq
 prompt: "Which vulnerability lets an attacker change a database query by what they type into a form?"
 options:
+  - "Command injection"
   - "Cross-site scripting"
-  - "Denial of service"
-  - "Clickjacking"
+  - "Path traversal"
   - "SQL injection"
 answer: 3
 explanation: "In SQL injection, input is treated as part of the query instead of as a value."
