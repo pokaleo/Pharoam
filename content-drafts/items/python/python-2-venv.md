@@ -7,9 +7,9 @@ format: mcq
 prompt: "Why use a virtual environment (venv) for a project?"
 options:
   - "To make the code run faster"
-  - "To hide the code from other users"
-  - "To keep the project's dependencies apart from other projects and the system's Python"
-  - "To run Python without installing it"
+  - "To sandbox the code away from the rest of the disk"
+  - "To keep the project's packages apart from other projects'"
+  - "To bundle the project and Python into one file"
 answer: 2
 explanation: "Each virtual environment has its own installed packages, so projects needing different versions don't clash."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }

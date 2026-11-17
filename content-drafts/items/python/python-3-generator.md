@@ -4,12 +4,12 @@ slug: python-3-generator
 skills: [python]
 level: 3
 format: mcq
-prompt: "Why use a generator to process a very large file line by line?"
+prompt: "A function cleans each line of a huge log file. Why write it with yield rather than returning a list?"
 options:
-  - "It makes each line's processing run in parallel"
-  - "It yields one line at a time, so the whole file is never held in memory"
-  - "It sorts the lines first"
-  - "It caches the file for next time"
+  - "Lines are processed in parallel threads"
+  - "Lines are made only as the caller asks, so memory stays flat"
+  - "The result can be iterated over as many times as needed"
+  - "The file is closed after each line is read"
 answer: 1
 explanation: "A generator produces values lazily, keeping memory use flat however large the file is."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }

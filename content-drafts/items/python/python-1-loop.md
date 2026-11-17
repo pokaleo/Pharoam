@@ -6,8 +6,8 @@ level: 1
 format: mcq
 prompt: "What does this print?\nfor n in [1, 2, 3]:\n    print(n * 2)"
 options:
-  - "1, 2 and 3"
-  - "6"
+  - "1, 2 and 3, each on its own line"
+  - "12"
   - "2, 4 and 6, each on its own line"
   - "[2, 4, 6]"
 answer: 2

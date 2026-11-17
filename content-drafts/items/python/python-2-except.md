@@ -4,7 +4,7 @@ slug: python-2-except
 skills: [python]
 level: 2
 format: mcq
-prompt: "A program reads a number from text that may not be a number. Which handles that safely?"
+prompt: "A program turns text into an int, but the text may not be a number. Which handles that safely?"
 options:
   - "n = int(text) or 0"
   - "try:\n    n = int(text)\nexcept ValueError:\n    n = 0"
