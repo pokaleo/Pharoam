@@ -6,10 +6,10 @@ level: 1
 format: mcq
 prompt: "In https://example.com/search?q=cats, what is q=cats?"
 options:
-  - "The query string: a parameter passed to the server"
-  - "The domain name"
-  - "The protocol"
-  - "A cookie stored by the browser"
+  - "The query string, sent to the server with the request"
+  - "The fragment, which the browser keeps to itself"
+  - "Part of the path, naming a file on the server"
+  - "The request body, sent apart from the URL"
 answer: 0
 explanation: "Everything after the ? is the query string, made of name=value parameters."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }

@@ -9,7 +9,7 @@ options:
   - "Storing files on a computer's disk"
   - "Styling how web pages look"
   - "Compressing images"
-  - "Moving web pages and other data between clients, such as browsers, and servers"
+  - "Moving web pages and data between browsers and servers"
 answer: 3
 explanation: "HTTP is the protocol browsers and apps use to request data from servers and receive their responses."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }
