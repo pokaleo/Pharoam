@@ -33,7 +33,7 @@ import { useTranslation } from "react-i18next";
 import { GapMeaning } from "../pathways/gap-meaning.tsx";
 import { PathwayProvenance } from "../pathways/provenance.tsx";
 import { useSession } from "../profile/session.tsx";
-import { dayName, levelName } from "../skills/labels.ts";
+import { dayName, diagnosticLabel, levelName } from "../skills/labels.ts";
 import { Level } from "../skills/level.tsx";
 import { SourceTag } from "../skills/source-tag.tsx";
 import { Button, buttonClassName } from "../ui/button.tsx";
@@ -338,6 +338,8 @@ function Requirement({
     ),
   ];
   const core = item.importance === "core";
+  // A level that isn't supported by evidence can be tested, where the question bank covers the skill (MVP S21.1).
+  const diagnose = item.group !== "supported" && service.bankCovers(item.skill);
   return (
     <tr className={STACK_ROW}>
       <th scope="row" className={`${TABLE.rowHead} max-sm:col-span-2 max-sm:h-auto max-sm:border-0`}>
@@ -384,17 +386,33 @@ function Requirement({
         )}
       </td>
       <td
-        className={`${TABLE.cell} text-end whitespace-nowrap max-sm:col-span-2 max-sm:h-auto max-sm:border-0 max-sm:p-0 max-sm:text-start max-sm:empty:hidden`}
+        className={`${TABLE.cell} text-end max-sm:col-span-2 max-sm:h-auto max-sm:border-0 max-sm:p-0 max-sm:text-start max-sm:empty:hidden`}
       >
-        {item.group === "unknown" || item.group === "below" ? (
-          <Link
-            to="/skills/record"
-            search={{ skill: item.skill }}
-            className={buttonClassName(core ? "secondary" : "quiet", "sm")}
-          >
-            {item.group === "unknown" ? <Icon of={Plus} size="sm" /> : null}
-            {item.group === "unknown" ? t("gap.sayWhere") : t("skills.record")}
-          </Link>
+        {item.group === "unknown" || item.group === "below" || diagnose ? (
+          <span className="inline-flex flex-wrap justify-end gap-(--space-2) max-sm:justify-start">
+            {item.group === "unknown" || item.group === "below" ? (
+              <Link
+                to="/skills/record"
+                search={{ skill: item.skill }}
+                className={buttonClassName(core ? "secondary" : "quiet", "sm")}
+              >
+                {item.group === "unknown" ? <Icon of={Plus} size="sm" /> : null}
+                {item.group === "unknown" ? t("gap.sayWhere") : t("skills.record")}
+              </Link>
+            ) : null}
+            {diagnose ? (
+              <Link
+                to="/skills/$skill/diagnostic"
+                params={{ skill: item.skill }}
+                className={buttonClassName("quiet", "sm")}
+              >
+                {diagnosticLabel(t, {
+                  inProgress: service.diagnosticInProgress(item.skill) !== undefined,
+                  ...(item.shown !== null && { shown: item.shown.provenance }),
+                })}
+              </Link>
+            ) : null}
+          </span>
         ) : null}
       </td>
     </tr>

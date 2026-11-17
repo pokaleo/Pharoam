@@ -21,6 +21,26 @@ export function levelName(content: ContentPack | undefined, level: number): stri
 }
 
 /**
+ * The words on a link to a skill's question-bank diagnostic.
+ *
+ * @remarks A level the person gave, or a model judged, is checked; with no level, or one a diagnostic already
+ * tested, a diagnostic is taken (MVP S21.1).
+ * @param t - The translation function.
+ * @param state - Whether a diagnostic of the skill is in progress, and where its shown level came from, if it has
+ * one.
+ * @returns "Continue the diagnostic", "Check it with a diagnostic" or "Take a diagnostic".
+ */
+export function diagnosticLabel(
+  t: TFunction,
+  state: { readonly inProgress: boolean; readonly shown?: Provenance },
+): string {
+  if (state.inProgress) return t("skills.skillPage.continue");
+  return state.shown === "self-reported" || state.shown === "ai-judged"
+    ? t("skills.skillPage.check")
+    : t("skills.skillPage.take");
+}
+
+/**
  * The name of a level's source, in the person's language.
  *
  * @param t - The translation function.
