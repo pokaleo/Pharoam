@@ -7,7 +7,7 @@ format: mcq
 prompt: "In Git, what is a commit?"
 options:
   - "A promise to finish some code"
-  - "A saved snapshot of the project's changes, with a message"
+  - "A saved snapshot of the project, with a message"
   - "A deleted file"
   - "A comment on a pull request"
 answer: 1

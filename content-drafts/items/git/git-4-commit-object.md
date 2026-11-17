@@ -4,14 +4,14 @@ slug: git-4-commit-object
 skills: [git]
 level: 4
 format: mcq
-prompt: "What does a Git commit object point to?"
+prompt: "What does a Git commit object store?"
 options:
-  - "The diff from its parent commit"
-  - "Copies of only the files that changed"
-  - "A tree of the project's files, its parent commits, and its author, committer and message"
-  - "The branch it was made on"
+  - "A diff against its parent, with author and message"
+  - "Copies of the changed files, with author and message"
+  - "A pointer to a tree of the whole project, its parents, author and message"
+  - "The name of its branch, with author and message"
 answer: 2
-explanation: "Git stores snapshots, not diffs; branches are just names pointing at commits."
+explanation: "A commit records a full-project tree plus parents and metadata; deltas exist only as packfile compression, and branches are separate refs."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }
 ai:
   task: draft-item@1

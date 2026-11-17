@@ -4,14 +4,14 @@ slug: git-4-trunk
 skills: [git]
 level: 4
 format: mcq
-prompt: "A team releases continuously from main and wants short-lived branches. Which workflow fits?"
+prompt: "A team deploys main several times a day. A feature will take three weeks. How should they keep main releasable?"
 options:
-  - "Trunk-based development: small branches merged often, with unfinished work behind feature flags"
-  - "Git flow, with long-lived develop and release branches"
-  - "One long-lived branch per developer, merged monthly"
-  - "Committing straight to release tags"
+  - "Merge small pieces to main behind a feature flag kept off"
+  - "Build it on a feature branch, rebased daily, merged at the end"
+  - "Cut a release branch now and finish the feature there"
+  - "Pause deploys from main until the feature is finished"
 answer: 0
-explanation: "Merging small changes often keeps main releasable and avoids long-lived divergence."
+explanation: "A feature flag lets unfinished code merge daily without being switched on, so main stays releasable and branches stay short."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }
 ai:
   task: draft-item@1

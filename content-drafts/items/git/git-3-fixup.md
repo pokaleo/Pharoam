@@ -6,12 +6,12 @@ level: 3
 format: mcq
 prompt: "Before opening a PR, you want to fold three \"fix typo\" commits into the commit they fix. What do you use?"
 options:
-  - "git merge --no-ff"
+  - "git merge --squash"
   - "git cherry-pick"
-  - "git rebase -i, marking them as fixup"
-  - "git revert"
+  - "git rebase -i"
+  - "git revert --no-commit"
 answer: 2
-explanation: "An interactive rebase can reorder commits and fold fixes into the commit they belong to."
+explanation: "An interactive rebase lets you mark each typo commit as fixup, folding it into the commit it corrects."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }
 ai:
   task: draft-item@1

@@ -9,7 +9,7 @@ options:
   - "GitHub is another name for Git"
   - "Git only works with GitHub"
   - "GitHub replaces Git with its own system"
-  - "GitHub hosts Git repositories online, with tools for working together"
+  - "GitHub is a website that hosts Git repositories"
 answer: 3
 explanation: "Git runs on your computer; GitHub is one of several services that host repositories."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }

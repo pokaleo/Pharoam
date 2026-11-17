@@ -4,14 +4,14 @@ slug: git-4-purge
 skills: [git]
 level: 4
 format: mcq
-prompt: "A large file and a secret were committed months ago in a shared repository. What does removing them properly involve?"
+prompt: "A secret was committed months ago to a shared repository. You remove it from history with git filter-repo and force-push. What else must you do?"
 options:
-  - "Rewriting history with a tool such as git filter-repo, force-pushing, having everyone re-clone, and rotating the secret"
-  - "Deleting them in a new commit"
-  - "Running git gc"
-  - "Adding them to .gitignore"
-answer: 0
-explanation: "Every clone holds the old commits, so history must be rewritten everywhere, and the secret treated as leaked."
+  - "Nothing; the force-push removes it from every clone"
+  - "Run git gc on your machine so the old objects go"
+  - "Rotate the secret, and have everyone re-clone rather than pull"
+  - "Tag the old history so it can be restored if needed"
+answer: 2
+explanation: "Old clones, forks and host caches still hold the commits, so the secret is leaked and must be rotated, and old clones replaced."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }
 ai:
   task: draft-item@1

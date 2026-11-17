@@ -6,10 +6,10 @@ level: 2
 format: mcq
 prompt: "A merge stops with a conflict in app.py. What do you do?"
 options:
-  - "Edit app.py to resolve the conflict markers, git add it, then complete the merge"
-  - "Delete app.py and commit"
-  - "Run git push --force"
-  - "Start the merge again until there is no conflict"
+  - "Edit app.py to remove the markers, git add it, then git commit"
+  - "Run git commit straight away; Git keeps both versions in the file"
+  - "Run git merge --continue, then fix app.py afterwards"
+  - "Run git checkout app.py to clear the conflict, then commit"
 answer: 0
 explanation: "Git marks both versions in the file; you choose the result, stage it, and finish the merge."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }
