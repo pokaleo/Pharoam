@@ -6,10 +6,10 @@ level: 4
 format: mcq
 prompt: "Refresh tokens may have been stolen from one of your clients. What limits the damage most?"
 options:
-  - "Making access tokens last longer, so fewer refreshes happen"
-  - "Rotating refresh tokens with reuse detection, revoking the whole family when an old one is used again"
-  - "Moving the tokens into the browser's localStorage"
-  - "Asking everyone to change their username"
+  - "Shortening access-token lifetimes, leaving refresh tokens unchanged"
+  - "Rotating refresh tokens, revoking the whole family when a used one returns"
+  - "Encrypting refresh tokens where the client stores them"
+  - "Logging every refresh, and reviewing the logs weekly"
 answer: 1
 explanation: "With rotation, a stolen token that is used again reveals the theft and cuts off both parties."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }

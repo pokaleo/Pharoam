@@ -8,8 +8,8 @@ prompt: "GET /invoices/1234 checks that the person is signed in, but not that th
 options:
   - "None: only signed-in people can reach it"
   - "Cross-site scripting"
-  - "Broken access control: anyone signed in can read any invoice by changing the ID"
-  - "Weak password storage"
+  - "Broken access control (an insecure direct object reference)"
+  - "Cross-site request forgery"
 answer: 2
 explanation: "Being signed in isn't permission; each request must check access to the object asked for."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }

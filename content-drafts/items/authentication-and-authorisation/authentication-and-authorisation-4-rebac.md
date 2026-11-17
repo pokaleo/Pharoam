@@ -4,12 +4,12 @@ slug: authentication-and-authorisation-4-rebac
 skills: [authentication-and-authorisation]
 level: 4
 format: mcq
-prompt: "Permissions now depend on relationships, such as \"editors of a folder may edit every document in it, including in nested folders\". Which model fits best?"
+prompt: "Access now follows sharing and nesting: editors of a folder may edit every document in it, including in nested folders, and folders can be shared with groups. Which model fits best?"
 options:
-  - "A fixed set of roles checked in each endpoint"
+  - "Role-based access control, with fixed roles checked in each endpoint"
   - "Relationship-based access control, as in Google's Zanzibar"
   - "Access control lists copied onto every document"
-  - "One admin flag on each user"
+  - "Attribute-based access control, with policies over user and document attributes"
 answer: 1
 explanation: "Relationship-based models evaluate permissions through the graph of relationships, including inheritance."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }

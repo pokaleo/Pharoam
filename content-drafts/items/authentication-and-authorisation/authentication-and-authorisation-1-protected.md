@@ -11,7 +11,7 @@ options:
   - "They are sent to sign in, or refused"
   - "The server stops"
 answer: 2
-explanation: "The check runs on the server before the page is built, so nothing protected is sent."
+explanation: "The check stops anyone who isn't signed in before the page is shown, sending them to sign in or refusing the request."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }
 ai:
   task: draft-item@1

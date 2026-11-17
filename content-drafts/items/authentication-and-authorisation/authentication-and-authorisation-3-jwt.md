@@ -6,10 +6,10 @@ level: 3
 format: mcq
 prompt: "An API accepts JWT access tokens. Which check is essential?"
 options:
-  - "Verify the signature with the expected algorithm and key, and check the issuer, audience and expiry"
-  - "Decode the payload, and trust its claims if it parses"
-  - "Use whichever algorithm the token's header names, including none"
-  - "Check only that the token hasn't expired"
+  - "Verify the signature with the expected algorithm and key, then check issuer, audience and expiry"
+  - "Verify the signature with the algorithm the token's header names, then check expiry"
+  - "Check issuer, audience and expiry, and trust the signature if the token came over HTTPS"
+  - "Decode the payload, and check its issuer, audience and expiry"
 answer: 0
 explanation: "A JWT is only trustworthy once its signature, issuer and audience are checked against what the API expects."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }

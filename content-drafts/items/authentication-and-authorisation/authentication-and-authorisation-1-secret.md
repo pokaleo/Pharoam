@@ -9,7 +9,7 @@ options:
   - "In the source file, so it's easy to find"
   - "In the README"
   - "In the JavaScript sent to the browser"
-  - "In configuration or a secret store, not in the code you commit"
+  - "In an environment variable or a secret store"
 answer: 3
 explanation: "Secrets in code end up in version control and in builds, where others can read them."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }

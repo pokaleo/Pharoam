@@ -4,14 +4,14 @@ slug: authentication-and-authorisation-4-key-leak
 skills: [authentication-and-authorisation]
 level: 4
 format: mcq
-prompt: "The key that signs your session tokens has leaked. What do you do first?"
+prompt: "The private key that signs your access tokens has leaked. Many services verify tokens against your published JWKS, which they cache. What should you do?"
 options:
-  - "Rotate the key, so tokens signed with the old one stop being accepted, ending existing sessions"
-  - "Wait for existing tokens to expire on their own"
-  - "Ask everyone to change their password, and keep the key"
-  - "Add rate limiting to the sign-in endpoint"
-answer: 0
-explanation: "Anyone with the key can mint valid tokens, so it must stop being trusted at once."
+  - "Publish a new key alongside the old one, and drop the old one once its tokens expire"
+  - "Remove the old key from the JWKS now, sign with a new key, and make services refresh their cached keys"
+  - "Keep the key, and shorten access-token lifetimes to five minutes"
+  - "Keep the key, and revoke every refresh token"
+answer: 1
+explanation: "Anyone with the key can mint valid tokens, so trust in it must end at once; the usual overlap period would keep accepting forged tokens."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }
 ai:
   task: draft-item@1

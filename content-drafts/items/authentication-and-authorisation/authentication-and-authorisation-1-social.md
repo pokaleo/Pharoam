@@ -7,7 +7,7 @@ format: mcq
 prompt: "An app offers \"Sign in with Google\". What does the app get from Google?"
 options:
   - "The person's Google password"
-  - "Confirmation of who the person is, without ever seeing their Google password"
+  - "Confirmation of who the person is"
   - "Full access to the person's email"
   - "Nothing: the app checks the password itself"
 answer: 1
