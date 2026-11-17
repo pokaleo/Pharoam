@@ -26,9 +26,16 @@ async function paste(user: UserEvent): Promise<void> {
   await user.click(await screen.findByRole("button", { name: "Send" }));
 }
 
-// The newest call in the log.
+// The AI calls in the log, newest first; what Pharoam read and wrote is listed beside them.
+function aiCalls(list: HTMLElement): HTMLElement[] {
+  return within(list)
+    .getAllByRole("listitem")
+    .filter((item) => within(item).queryByText("What was sent and what came back") !== null);
+}
+
+// The newest AI call in the log.
 function first(list: HTMLElement): HTMLElement {
-  const [call] = within(list).getAllByRole("listitem");
+  const [call] = aiCalls(list);
   if (call === undefined) throw new Error("No call logged.");
   return call;
 }
@@ -41,7 +48,7 @@ function block(call: HTMLElement, title: string): string {
 async function activity(user: UserEvent): Promise<HTMLElement> {
   await user.click(screen.getByRole("link", { name: "Activity log" }));
   await screen.findByRole("heading", { level: 1, name: "Activity log" });
-  return screen.getByRole("list", { name: "AI calls this session" });
+  return screen.getByRole("list", { name: "Activity this session" });
 }
 
 describe("ActivityPage (MVP S17)", () => {
@@ -65,7 +72,7 @@ describe("ActivityPage (MVP S17)", () => {
     await screen.findByRole("heading", { level: 1, name: "Check what was found" });
 
     const list = await activity(user);
-    const calls = within(list).getAllByRole("listitem");
+    const calls = aiCalls(list);
     expect(calls.map((call) => within(call).getByRole("heading", { level: 3 }).textContent)).toEqual([
       "Reading pasted text",
       "Model test",
@@ -114,7 +121,7 @@ describe("ActivityPage (MVP S17)", () => {
     await paste(user);
     await user.click(await screen.findByRole("button", { name: "Start again" }));
 
-    const calls = within(await activity(user)).getAllByRole("listitem");
+    const calls = aiCalls(await activity(user));
     expect(
       calls.map((call) => within(call).getByText(/^(Accepted|Discarded|Answered)$/).textContent),
     ).toEqual(["Discarded", "Accepted"]);
@@ -132,7 +139,7 @@ describe("ActivityPage (MVP S17)", () => {
     await user.click(screen.getByRole("link", { name: "Evidence" }));
     release();
     await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(within(await activity(user)).getAllByRole("listitem")).toHaveLength(1);
+    expect(aiCalls(await activity(user))).toHaveLength(1);
     within(first(await activity(user))).getByText("Discarded");
 
     // Left with the answer on screen; the hold is over, so this answer comes at once.
@@ -204,5 +211,58 @@ describe("ActivityPage (MVP S17)", () => {
     await user.click(screen.getByRole("link", { name: "Activity log" }));
 
     await screen.findByText("No AI calls yet in this session.");
+  });
+
+  it("lists what Pharoam read and wrote beside its AI calls, newest first, each kind told apart (S22.1, S22.2)", async () => {
+    const user = userEvent.setup();
+    const { container } = await withModel(user, { pasted: { records: [JOB] } });
+    await paste(user);
+    await user.click(await screen.findByRole("button", { name: "Save 1 record" }));
+    await screen.findByText("1 record was saved from your pasted text.");
+
+    const items = within(await activity(user)).getAllByRole("listitem");
+    const texts = items.map((item) => item.textContent);
+    const opened = texts.findIndex((text) => text.includes("Read your profile: 2 records"));
+    const call = texts.findIndex((text) => text.includes("Reading pasted text"));
+    const created = texts.findIndex((text) => text.includes("Saved a new record"));
+    expect(created).toBeGreaterThanOrEqual(0);
+    expect(call).toBeGreaterThan(created);
+    expect(opened).toBeGreaterThan(call);
+    const saved = items[created];
+    if (saved === undefined) throw new Error("No record saved.");
+    within(saved).getByText("Your storage");
+    within(saved).getByText(/^evidence\//);
+    await expectNoAxeViolations(container);
+  });
+
+  it("changes nothing in storage when the log is viewed (S22.2)", async () => {
+    const user = userEvent.setup();
+    const { memory } = await withModel(user);
+    const before = memory.writes();
+
+    await activity(user);
+
+    expect(memory.writes()).toBe(before);
+  });
+
+  it("groups only reads next to each other, names a read that failed, and says when a call started (review findings)", async () => {
+    const user = userEvent.setup();
+    const { memory } = await withModel(user, { pasted: { records: [JOB] } });
+    await user.click(screen.getByRole("button", { name: "Test the model" }));
+    await screen.findByText(/It works/);
+    // Reading again after the call: a separate entry, not part of the opening's.
+    memory.loseAccess();
+    await user.click(screen.getByRole("link", { name: "Evidence" }));
+    await user.click(await screen.findByRole("link", { name: "Payments API" }));
+
+    const items = within(await activity(user)).getAllByRole("listitem");
+    const opening = items.find((item) => item.textContent.includes("Read your profile: 2 records"));
+    expect(opening).toBeDefined();
+    const call = first(await activity(user));
+    within(call).getByText(/started/);
+    const failed = within(await activity(user))
+      .getAllByRole("listitem")
+      .filter((item) => item.textContent.includes("Didn't work"));
+    expect(failed.length).toBeGreaterThan(0);
   });
 });

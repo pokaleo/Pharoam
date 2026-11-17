@@ -7,6 +7,7 @@ import type { CoreService, ContentPack, ReviewItem, SessionRecord } from "@pharo
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useId, useRef, useState, type ReactElement } from "react";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { setAsideReason } from "../ai/problems.ts";
 import { useSession } from "../profile/session.tsx";
@@ -169,7 +170,7 @@ export function ReviewPage({ service }: { readonly service: CoreService }): Reac
 
 // The suggestion's name, as the person reads it: "SQL for Payments API", or "Python: level 3, Proficient".
 function itemTitle(
-  t: ReturnType<typeof useTranslation>["t"],
+  t: TFunction,
   service: CoreService,
   skills: readonly SkillChoice[],
   content: ContentPack | undefined,

@@ -121,6 +121,11 @@ describe("an open profile in browser storage", () => {
     expect((click.mock.contexts[0] as HTMLAnchorElement | undefined)?.download).toMatch(
       /^pharoam-\d{4}-\d{2}-\d{2}\.zip$/,
     );
+
+    // Making the copy read every file, so the Activity log says so (MVP S22.1).
+    await user.click(screen.getByRole("link", { name: "Activity log" }));
+    const log = await screen.findByRole("list", { name: "Activity this session" });
+    within(log).getByText("Read every file for a downloaded copy: 1 file");
   });
 
   it("is calmer when the browser has agreed to keep the files", async () => {

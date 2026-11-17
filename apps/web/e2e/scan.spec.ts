@@ -114,9 +114,14 @@ test.describe("with Anthropic set up", () => {
     expect(python).toContain("task: judge-skill-level@1");
     expect(python).not.toMatch(/confidence/);
 
-    // Every call so far, newest first, each with what was sent and what came back (S17).
+    // Every call so far, newest first, each with what was sent and what came back (S17), beside what Pharoam read
+    // and wrote to storage (S22).
     await app.nav("Activity log").click();
-    const calls = page.getByRole("list", { name: "AI calls this session" }).getByRole("listitem");
+    const log = page.getByRole("list", { name: "Activity this session" }).getByRole("listitem");
+    await expect(
+      log.filter({ hasText: "Saved a change" }).filter({ hasText: "Your storage" }).first(),
+    ).toBeVisible();
+    const calls = log.filter({ hasText: "What was sent and what came back" });
     await expect(calls).toHaveCount(2);
     await expect(calls.nth(0).getByRole("heading", { level: 3 })).toHaveText("Judging a level");
     await expect(calls.nth(1).getByRole("heading", { level: 3 })).toHaveText("Suggesting skills");

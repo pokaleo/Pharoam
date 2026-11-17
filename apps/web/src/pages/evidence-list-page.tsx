@@ -6,6 +6,7 @@
 import type { CoreService } from "@pharoam/core";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useRouterState } from "@tanstack/react-router";
+import type { TFunction } from "i18next";
 import { FileText, Paperclip } from "lucide-react";
 import type { ReactElement } from "react";
 import { useTranslation } from "react-i18next";
@@ -128,7 +129,7 @@ export function EvidenceListPage({ service }: { readonly service: CoreService })
  * @param kind - The kind, as stored.
  * @returns Its name for the kinds the form offers, or the kind as stored for others, such as `degree`.
  */
-export function kindName(t: ReturnType<typeof useTranslation>["t"], kind: string): string {
+export function kindName(t: TFunction, kind: string): string {
   switch (kind) {
     case "project":
     case "job":
