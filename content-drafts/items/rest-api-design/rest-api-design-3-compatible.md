@@ -4,14 +4,14 @@ slug: rest-api-design-3-compatible
 skills: [rest-api-design]
 level: 3
 format: mcq
-prompt: "Which change to a public API's response is backward-compatible for well-written clients?"
+prompt: "Which change to a public API's responses can break existing clients, even though it only adds something?"
 options:
-  - "Renaming a field"
-  - "Adding a new optional field"
-  - "Changing a field from a number to a string"
-  - "Removing a field that clients don't seem to use"
+  - "Adding an optional field"
+  - "Adding a new value to an enum field"
+  - "Adding a new endpoint"
+  - "Adding a response header"
 answer: 1
-explanation: "Clients that ignore unknown fields keep working; renaming, retyping or removing fields breaks them."
+explanation: "Clients that handle a fixed set of values can fail on one they've never seen, so a new enum value needs the care of a breaking change."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }
 ai:
   task: draft-item@1

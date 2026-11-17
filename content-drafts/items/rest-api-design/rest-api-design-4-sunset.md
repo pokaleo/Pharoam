@@ -6,12 +6,12 @@ level: 4
 format: mcq
 prompt: "Many outside teams use a field that must be removed from a public API. What is the soundest approach?"
 options:
-  - "Remove it in the next minor release and note the change in the changelog"
-  - "Mark it deprecated, announce a sunset date, track who still uses it, and remove it only after that date"
-  - "Start returning null in it now, so clients notice and adapt"
-  - "Keep it forever, and never change the API again"
-answer: 1
-explanation: "Deprecation with notice and usage tracking lets clients move before anything breaks."
+  - "Remove it in the next release and note it in the changelog"
+  - "Return null in it from now on, so clients notice"
+  - "Deprecate it, set a date, watch usage, then remove it"
+  - "Move it to /v2 and switch /v1 off the same day"
+answer: 2
+explanation: "Announcing a date, for example with Deprecation and Sunset headers, and watching usage lets clients move before anything breaks."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }
 ai:
   task: draft-item@1

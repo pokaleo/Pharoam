@@ -8,7 +8,7 @@ prompt: "An API replies 401 Unauthorized to your request. What should you check 
 options:
   - "That the URL exists"
   - "That the server has enough disk space"
-  - "That you sent valid credentials, such as an API key or token"
+  - "That your API key or token is valid"
   - "That the request body is small enough"
 answer: 2
 explanation: "401 means the request wasn't authenticated: credentials were missing or not accepted."

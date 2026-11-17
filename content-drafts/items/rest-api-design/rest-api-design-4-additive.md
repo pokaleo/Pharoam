@@ -6,10 +6,10 @@ level: 4
 format: mcq
 prompt: "An organisation evolves one API version with only additive changes, instead of new URL versions such as /v2. What does that rely on most?"
 options:
-  - "Clients ignoring fields they don't know, and existing fields never being removed or changing meaning"
-  - "Every client upgrading at the same time as the server"
-  - "The server keeping a copy of its code for each past release"
-  - "Clients sending their version number in every request"
+  - "Clients ignoring unknown fields, old fields keeping their meaning"
+  - "Clients sending a version header with each request"
+  - "Every client upgrading in step with the server"
+  - "The server keeping a build of each past release"
 answer: 0
 explanation: "Additive evolution works only if old clients tolerate new fields and old fields keep their meaning."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }

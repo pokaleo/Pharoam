@@ -6,10 +6,10 @@ level: 2
 format: mcq
 prompt: "GET /orders could match a million orders. What should the endpoint do?"
 options:
-  - "Return them all and let the client filter"
-  - "Return the first 100 and say nothing about the rest"
-  - "Refuse the request with 413 Payload Too Large"
-  - "Return one page at a time, with a limit and a cursor or offset for the next page"
+  - "Return every order and let the client filter"
+  - "Return the newest 100, without saying more exist"
+  - "Refuse it with 413 Content Too Large"
+  - "Return a page, with a cursor or link to the next"
 answer: 3
 explanation: "Pagination keeps responses small and tells the client how to get the rest."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }

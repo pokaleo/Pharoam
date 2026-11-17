@@ -6,10 +6,10 @@ level: 3
 format: mcq
 prompt: "A client's connection drops after it sends POST /payments, before the reply. How can the API make a retry safe?"
 options:
-  - "Ask clients to wait a minute before retrying"
-  - "Make the endpoint a GET, so retries do no harm"
-  - "Accept an idempotency key, and return the first result when the same key is sent again"
-  - "Refuse a second payment from the same client within an hour"
+  - "Ask clients to wait a minute before they retry"
+  - "Refuse a payment that matches one in the last hour"
+  - "Take an idempotency key and replay the first result"
+  - "Reply 202 Accepted before taking the payment"
 answer: 2
 explanation: "With an idempotency key, a retried request is recognised and not processed twice."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }

@@ -6,12 +6,12 @@ level: 2
 format: mcq
 prompt: "A request's JSON is well-formed, but its email field isn't an email address. Which response suits it best?"
 options:
-  - "500 Internal Server Error"
-  - "404 Not Found"
-  - "400 Bad Request (or 422), with a body naming the field and the problem"
-  - "200 OK, with an error message in the body"
+  - "500 Internal Server Error, with the exception's message"
+  - "404 Not Found, naming the field it couldn't find"
+  - "400 Bad Request, naming the field and the problem"
+  - "200 OK, with an error flag and message in the body"
 answer: 2
-explanation: "It's the client's mistake, so a 4xx code, with a machine-readable error the client can act on."
+explanation: "The client sent invalid data, so a 4xx code with a body naming the field lets it fix the request."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }
 ai:
   task: draft-item@1
