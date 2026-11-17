@@ -1,7 +1,7 @@
 import type { GapItem } from "@pharoam/core";
 import { describe, expect, it } from "vitest";
 import { createI18n } from "../i18n.ts";
-import { gapWriter, overviewWriter } from "./writers.ts";
+import { assessmentWriter, gapWriter, overviewWriter } from "./writers.ts";
 
 const t = createI18n().t;
 const LEVELS = ["Aware", "Beginner", "Working", "Proficient", "Expert"];
@@ -97,5 +97,34 @@ describe("gapWriter (MVP S11.4, S11.7)", () => {
     expect(text).toContain("### Supported");
     expect(text).toContain("Shows Proficient (3), demonstrated in a diagnostic.");
     expect(text).not.toMatch(/verified|Claimed|Below|Nothing in your profile/i);
+  });
+});
+
+describe("assessmentWriter (MVP S19.5)", () => {
+  it("titles the record by the skill, and sums up the result by the rule and each question, with no score", () => {
+    const write = assessmentWriter(
+      t,
+      (level) => ["Aware", "Beginner", "Working", "Proficient", "Expert"][level] ?? "",
+    );
+    const { title, body } = write({
+      skill: "sql",
+      name: "SQL",
+      start: 2,
+      result: 2,
+      rule: "two-right-to-settle@1",
+      date: "2026-11-17",
+      steps: [
+        { item: "sql-2-a", level: 2, answer: 1, correct: true },
+        { item: "sql-3-a", level: 3, answer: 0, correct: false },
+      ],
+    });
+    expect(title).toBe("SQL diagnostic");
+    expect(body).toContain(
+      "Result: Working (2), by the published rule two-right-to-settle@1, over 2 questions.",
+    );
+    expect(body).toContain("Based on this session only. The person's evidence wasn't considered.");
+    expect(body).toContain("- Question 1, sql-2-a at Working (2): right");
+    expect(body).toContain("- Question 2, sql-3-a at Proficient (3): not right");
+    expect(body).not.toMatch(/score|%/i);
   });
 });

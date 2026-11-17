@@ -364,7 +364,8 @@
       "removeFailed": "Pharoam couldn't remove {{name}}. Nothing was changed.",
       "notUnlisted": "{{name}} was deleted from your folder, but this evidence still lists it.",
       "listFailed": "Pharoam couldn't list this evidence's files."
-    }
+    },
+    "diagnosticKind": "Diagnostic"
   },
   "ai": {
     "loadFailed": "Pharoam couldn't load what it needs to reach {{provider}}. Check your connection and try again.",
@@ -684,7 +685,10 @@
       "changedOutside": "This skill's file was changed in your folder since Pharoam read it. Nothing has been overwritten.",
       "askLevel": "Ask AI for its level",
       "askAgain": "Ask AI again",
-      "outOfDate": "The evidence behind your AI level has changed since it was judged. Pharoam never judges it again on its own."
+      "outOfDate": "The evidence behind your AI level has changed since it was judged. Pharoam never judges it again on its own.",
+      "check": "Check it with a diagnostic",
+      "continue": "Continue the diagnostic",
+      "fromDiagnostic": "See the diagnostic"
     },
     "customPage": {
       "title": "Add your own skill",
@@ -850,5 +854,53 @@
     "download": "Download a copy (.zip)",
     "downloaded": "Copy downloaded.",
     "failed": "Pharoam couldn't make the copy. Nothing was changed."
+  },
+  "diagnostic": {
+    "title": "{{skill}} diagnostic",
+    "lead": "Test where you stand in {{skill}} with reviewed questions. The level it gives rests only on your answers.",
+    "how": "How it works",
+    "rules": {
+      "one": "One question at a time, each with one right answer. You see how you did at the end.",
+      "adapt": "A right answer leads to a harder question, a wrong one to an easier one, until your level is settled: at most 12 questions.",
+      "rule": "It's marked by a fixed, published rule: your level is the highest at which you answered two questions right.",
+      "evidence": "Your evidence isn't considered: the level rests only on this session.",
+      "start": "It starts at {{level}}, your level now.",
+      "startNone": "It starts at {{level}}, since you have no level for it yet."
+    },
+    "start": "Start",
+    "notCovered": "The question bank doesn't cover {{skill}} yet.",
+    "question": "Question {{number}}",
+    "answer": "Answer",
+    "leave": "Leave for now",
+    "leaveHint": "Your answers so far are kept. You can carry on from this question later.",
+    "abandon": "Abandon it",
+    "abandonTitle": "Abandon this diagnostic?",
+    "abandonLead": "No level is written. Its record keeps the questions you were asked, so a retake draws others.",
+    "abandonConfirm": "Abandon the diagnostic",
+    "keepGoing": "Keep going",
+    "finishTitle": "Your answers are in",
+    "finishLead": "The result still has to be written to your profile, as its last save didn't finish.",
+    "finish": "Write the result",
+    "resultTitle": "Your {{skill}} result",
+    "resultRegion": "The result",
+    "note": "Based on this session only. Your evidence wasn't considered.",
+    "path": "The questions, in the order asked",
+    "yourAnswer": "Your answer: {{answer}}",
+    "rightAnswer": "The right answer: {{answer}}",
+    "right": "Right",
+    "notRight": "Not right",
+    "back": "Back to {{skill}}",
+    "record": {
+      "title": "{{skill}} diagnostic",
+      "level": "{{name}} ({{level}})",
+      "result": "Result: {{level}}, by the published rule {{rule}}, over {{count}} questions.",
+      "note": "Based on this session only. The person's evidence wasn't considered.",
+      "right": "Question {{number}}, {{item}} at {{level}}: right",
+      "wrong": "Question {{number}}, {{item}} at {{level}}: not right"
+    },
+    "failed": "Pharoam couldn't save that. Nothing was lost: try again.",
+    "changedOutside": "This diagnostic's record was changed in another app, so nothing was overwritten.",
+    "seeRecord": "See the record",
+    "finishing": "Your last answer is in, so this diagnostic can only be finished: write its result."
   }
 }

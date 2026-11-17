@@ -11,6 +11,8 @@ import {
   PAYMENTS_API,
   PHAROAM,
 } from "../__fixtures__/profiles.ts";
+import { packWithBank } from "../__fixtures__/bank.ts";
+import { renderApp } from "../__fixtures__/render-app.tsx";
 import { expectNoAxeViolations } from "../testing/axe.ts";
 
 const SESSION = "sessions/evidence-scan-2026-11-06--00000030.md";
@@ -295,5 +297,32 @@ describe("past scans (review findings)", () => {
     const past = screen.getByRole("region", { name: "Past scans" });
     expect(within(past).getAllByRole("button", { name: "Delete" })).toHaveLength(1);
     expect(within(past).queryByText(/15 November 2026/)).toBeNull();
+  });
+});
+
+describe("checking a level with a diagnostic from Review (MVP S21.1)", () => {
+  it("offers a diagnostic beside recording my own level, for a skill the bank covers", async () => {
+    const user = userEvent.setup();
+    renderApp({ name: "my-profile", memory: folder(), content: packWithBank });
+    await user.click(await screen.findByRole("button", { name: "Choose a folder" }));
+    await screen.findByRole("link", { name: "Profile" }, { timeout: 5000 });
+    await user.click(screen.getByRole("link", { name: /^Review/ }));
+    await screen.findByRole("heading", { level: 1, name: "Review" });
+
+    await user.click(within(item("Python: level 3, Proficient")).getByRole("button", { name: "Adjust" }));
+
+    const check = within(item("Python: level 3, Proficient")).getByRole("link", {
+      name: "Check it with a diagnostic",
+    });
+    expect(check.getAttribute("href")).toBe("/skills/python/diagnostic");
+  });
+
+  it("offers no diagnostic for a skill the bank doesn't cover", async () => {
+    const user = userEvent.setup();
+    await review(user);
+    await user.click(within(item("Python: level 3, Proficient")).getByRole("button", { name: "Adjust" }));
+    expect(
+      within(item("Python: level 3, Proficient")).queryByRole("link", { name: "Check it with a diagnostic" }),
+    ).toBeNull();
   });
 });

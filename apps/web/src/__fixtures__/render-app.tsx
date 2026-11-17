@@ -10,6 +10,7 @@ import { createMemoryHistory } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { render, type RenderResult } from "@testing-library/react";
 import { App } from "../app.tsx";
+import type { ContentPack } from "@pharoam/core";
 import { loadContentPack } from "../content.ts";
 import type { PlaceError, PlaceKind, Places, StoredFile } from "../profile/places.ts";
 
@@ -31,6 +32,8 @@ export interface TestFolder {
   readonly supported?: boolean;
   /** Loads the chosen model provider; by default one that can't be reached, so no test touches the network. */
   readonly providers?: LoadProvider;
+  /** Loads the content pack; the built-in one by default. */
+  readonly content?: () => Promise<ContentPack>;
 }
 
 /** The rendered app, and what the test can inspect. */
@@ -116,7 +119,7 @@ export function renderApp(folder: TestFolder, path = "/"): RenderedApp {
         history={history}
         supported={folder.supported ?? true}
         places={folder.kind === "browser" ? browserPlaces : folderPlaces}
-        content={loadContentPack}
+        content={folder.content ?? loadContentPack}
         providers={folder.providers ?? UNREACHABLE}
       />
     </StrictMode>,

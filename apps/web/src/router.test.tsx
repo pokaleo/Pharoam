@@ -25,6 +25,7 @@ describe("createAppRouter (ADR-0008)", () => {
         "/settings",
         "/skills",
         "/skills/$skill",
+        "/skills/$skill/diagnostic",
         "/skills/custom",
         "/skills/record",
       ].sort(),
@@ -37,6 +38,7 @@ describe("createAppRouter (ADR-0008)", () => {
     expect(match("/skills/record")).toBe("/skills/record");
     expect(match("/evidence/paste")).toBe("/evidence/paste");
     expect(match("/skills/python")).toBe("/skills/$skill");
+    expect(match("/skills/sql/diagnostic")).toBe("/skills/$skill/diagnostic");
     expect(match("/evidence/new")).toBe("/evidence/new");
   });
 });

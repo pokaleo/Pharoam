@@ -127,7 +127,8 @@ export function EvidenceListPage({ service }: { readonly service: CoreService })
  *
  * @param t - The translation function.
  * @param kind - The kind, as stored.
- * @returns Its name for the kinds the form offers, or the kind as stored for others, such as `degree`.
+ * @returns Its name for the kinds the form offers and a diagnostic's record, or the kind as stored for others, such
+ *   as `degree`.
  */
 export function kindName(t: TFunction, kind: string): string {
   switch (kind) {
@@ -137,6 +138,8 @@ export function kindName(t: TFunction, kind: string): string {
     case "certificate":
     case "other":
       return t(`evidence.kinds.${kind}`);
+    case "assessment":
+      return t("evidence.diagnosticKind");
     default:
       return kind;
   }
