@@ -7,9 +7,9 @@ format: mcq
 prompt: "A query on a large orders table filters with WHERE customer_id = ? AND created_at > ?, and its plan shows a full scan. Which index helps it most?"
 options:
   - "A composite index on (customer_id, created_at)"
-  - "An index on the primary key only"
-  - "An index on the order's free-text description"
-  - "No index: more memory fixes a full scan"
+  - "A composite index on (created_at, customer_id)"
+  - "Two separate indexes, on customer_id and on created_at"
+  - "An index on created_at alone"
 answer: 0
 explanation: "Putting the equality column first, then the range column, lets the index find exactly the matching rows."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }

@@ -4,14 +4,14 @@ slug: sql-4-estimates
 skills: [sql]
 level: 4
 format: mcq
-prompt: "A plan shows a nested loop join whose inner side runs an index scan 2 million times, where the planner estimated 10 rows. What should be investigated first?"
+prompt: "A nested loop join expected 10 rows from its outer side but got 2 million, so its inner index scan ran 2 million times. What should be investigated first?"
 options:
-  - "Stale or missing statistics leading the planner to underestimate the outer rows"
-  - "The index being too small to hold the data"
-  - "Too many columns in the SELECT list"
-  - "Whether the server needs restarting"
+  - "The statistics behind the outer side's row estimate"
+  - "Whether work_mem is too small, so the join spills to disk"
+  - "Whether the inner index is bloated and needs rebuilding"
+  - "Whether the query needs more parallel workers"
 answer: 0
-explanation: "A nested loop suits few outer rows; a huge misestimate usually means the statistics no longer describe the data."
+explanation: "The planner picked a nested loop because it expected few outer rows, so a misestimate this large points to statistics that no longer describe the data."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }
 ai:
   task: draft-item@1

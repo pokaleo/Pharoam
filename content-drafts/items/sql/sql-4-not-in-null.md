@@ -7,7 +7,7 @@ format: mcq
 prompt: "SELECT * FROM a WHERE id NOT IN (SELECT a_id FROM b); returns no rows, although many rows of a have no match in b. What is the most likely cause?"
 options:
   - "NOT IN only works on indexed columns"
-  - "b.a_id contains a NULL, so every NOT IN comparison is unknown, not true"
+  - "b.a_id contains at least one NULL"
   - "The subquery runs once per row and times out silently"
   - "NOT IN compares text case-sensitively"
 answer: 1
