@@ -6,6 +6,7 @@
 import type { ContentPack, HistoryItem, Provenance } from "@pharoam/core";
 import { FilePen, Pencil, Undo2 } from "lucide-react";
 import type { ReactElement, ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { Tag } from "../ui/tag.tsx";
 import { dayName, levelName } from "./labels.ts";
@@ -103,6 +104,15 @@ export function ObservationLine({
       {item.status === "superseded" ? <Tag icon={Pencil}>{t("skills.skillPage.superseded")}</Tag> : null}
       {item.status === "retracted" ? <Tag icon={Undo2}>{t("skills.skillPage.retracted")}</Tag> : null}
       <OutsideMark item={item} />
+      {"assessment" in observation ? (
+        <Link
+          to="/evidence/$id"
+          params={{ id: observation.assessment }}
+          className="text-meta text-channel underline"
+        >
+          {t("skills.skillPage.fromDiagnostic")}
+        </Link>
+      ) : null}
     </p>
   );
 }

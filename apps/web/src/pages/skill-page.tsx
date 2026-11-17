@@ -109,6 +109,19 @@ function SkillDetail({
                 {t(outOfDate ? "skills.skillPage.askAgain" : "skills.skillPage.askLevel")}
               </Link>
             ) : null}
+            {service.bankCovers(skill) ? (
+              <Link
+                to="/skills/$skill/diagnostic"
+                params={{ skill }}
+                className={buttonClassName("secondary")}
+              >
+                {t(
+                  service.diagnosticInProgress(skill) === undefined
+                    ? "skills.skillPage.check"
+                    : "skills.skillPage.continue",
+                )}
+              </Link>
+            ) : null}
             <Link to="/skills/record" search={{ skill }} className={buttonClassName("primary")}>
               {t("skills.record")}
             </Link>

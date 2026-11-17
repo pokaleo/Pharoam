@@ -803,6 +803,14 @@ export interface CoreService {
    */
   readonly bankCovers: (skill: string) => boolean;
   /**
+   * The level a new diagnostic of a skill would start at: its shown level, or level 2 when there is none, or the
+   * nearest level the question bank has items for (MVP S19.1).
+   *
+   * @param skill - The skill's slug.
+   * @returns The level, or `undefined` when the bank doesn't cover the skill.
+   */
+  readonly diagnosticStart: (skill: string) => number | undefined;
+  /**
    * Starts a question-bank diagnostic of a skill, or resumes the one in progress (MVP S19.1, S19.6).
    *
    * @remarks It starts at the skill's shown level, or level 2 when there is none, or the nearest level the bank has
@@ -873,8 +881,14 @@ export interface DiagnosticView {
   readonly start: number;
   /** How many questions have been answered. */
   readonly asked: number;
-  /** The question posed now; none once the last answer is in and the result still has to be written. */
+  /** The question posed now; none while the result is being written, or when a new question has to be posed. */
   readonly item?: McqItem;
+  /**
+   * Whether the last answer is in and the result still has to be written, with
+   * {@link CoreService.finishDiagnostic}. With neither this nor a question, the one posed has left the question
+   * bank, and {@link CoreService.startDiagnostic} poses another.
+   */
+  readonly finishing: boolean;
 }
 
 /** What a diagnostic gave when it ended (MVP S19.4, S19.5). */
@@ -1336,6 +1350,7 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
       start: session.diagnostic.start,
       asked: session.record.steps.length,
       ...(item !== undefined && { item }),
+      finishing: session.record.assessment !== undefined,
     };
   }
 
@@ -1345,6 +1360,17 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
     if (current !== undefined) return appendEntry(current, entry);
     const top = { schema: "skill-record/1", id: nextId(), created: at, ai: null, skill, entries: [entry] };
     return createRecord(createRecordFile(top, ""));
+  }
+
+  // The level a new diagnostic starts at: the shown level, or 2; or the nearest level the bank has items for, the
+  // lower when two are as near.
+  function diagnosticStart(skill: string): number | undefined {
+    const levels = [...new Set(bankFor(skill).map((item) => item.level))];
+    if (levels.length === 0) return undefined;
+    const record = skillRecord(skill)?.record;
+    const wanted =
+      (record?.schema === "skill-record/1" ? shownObservation(record.entries) : undefined)?.level ?? 2;
+    return levels.toSorted((a, b) => Math.abs(a - wanted) - Math.abs(b - wanted) || a - b)[0];
   }
 
   // Begins a new diagnostic of a skill at a level, posing its first question; only its session is written.
@@ -1369,7 +1395,14 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
     };
     const created = await createRecord(createRecordFile(top, ""));
     if (!created.ok) return created;
-    return ok({ location: created.value.location, skill, start, asked: 0, item: first.item });
+    return ok({
+      location: created.value.location,
+      skill,
+      start,
+      asked: 0,
+      item: first.item,
+      finishing: false,
+    });
   }
 
   // Resumes a diagnostic as its session holds it, posing another question when the one posed has left the bank.
@@ -2233,6 +2266,8 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
 
     bankCovers: (skill) => bankFor(skill).length > 0,
 
+    diagnosticStart,
+
     diagnosticInProgress: (skill) => {
       const session = runningSession(skill);
       return session === undefined ? undefined : diagnosticView(session.location);
@@ -2245,14 +2280,7 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
         const running = runningSession(skill);
         if (running !== undefined)
           return oneAtATime(running.location, () => resumeDiagnostic(running.location));
-        const record = skillRecord(skill)?.record;
-        const shown = record?.schema === "skill-record/1" ? shownObservation(record.entries) : undefined;
-        // The shown level, or 2; or the nearest level the bank has items for, the lower when two are as near.
-        const wanted = shown?.level ?? 2;
-        const levels = [...new Set(items.map((item) => item.level))];
-        const start =
-          levels.toSorted((a, b) => Math.abs(a - wanted) - Math.abs(b - wanted) || a - b)[0] ?? wanted;
-        return beginDiagnostic(skill, start);
+        return beginDiagnostic(skill, diagnosticStart(skill) ?? 2);
       }),
 
     answerDiagnostic: (location, slug, answer, writer) =>

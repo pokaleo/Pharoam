@@ -386,3 +386,28 @@ describe("diagnostics under pressure (review findings)", () => {
     expect(again.ok && again.value.item?.slug).not.toBe(first);
   });
 });
+
+describe("what the screens need to know (review findings)", () => {
+  it("says where a diagnostic would start: the shown level, or the nearest the bank covers", async () => {
+    const { service } = await profile({}, [0, 1, 2, 3]);
+    expect(service.diagnosticStart("sql")).toBe(2);
+    await service.recordLevel({ skill: "sql", level: 4 });
+    expect(service.diagnosticStart("sql")).toBe(3);
+    expect(service.diagnosticStart("docker")).toBeUndefined();
+  });
+
+  it("says whether a diagnostic waits for an answer or for its result to be written", async () => {
+    const { service, storage } = await profile();
+    await service.recordLevel({ skill: "sql", level: 2 });
+    const started = await service.startDiagnostic("sql");
+    if (!started.ok) throw new Error(started.error.kind);
+    expect(started.value.finishing).toBe(false);
+    for (const right of [true, false, true]) await answer(service, started.value.location, right);
+    const sql = service.records().find((r) => r.record.schema === "skill-record/1");
+    await storage.putOutside(sql?.location ?? "", `${storage.text(sql?.location ?? "") ?? ""}\n`);
+    await answer(service, started.value.location, false);
+
+    expect(service.diagnosticInProgress("sql")).toMatchObject({ finishing: true });
+    expect(service.diagnosticInProgress("sql")?.item).toBeUndefined();
+  });
+});

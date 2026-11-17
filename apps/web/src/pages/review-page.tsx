@@ -315,40 +315,52 @@ function SuggestionCard({
       ) : null}
       {replaced && !stale ? <Notice tone="attention" title={t("review.replaced")} /> : null}
       {adjusting && suggestion.kind === "skill-level" ? (
-        <fieldset className="grid gap-(--space-2)">
-          <legend className="font-semibold">{t("review.adjustLegend")}</legend>
-          {([0, 1, 2, 3, 4] as const).map((n) => (
-            <label key={n} className="flex items-center gap-(--space-2)">
-              <input
-                type="radio"
-                name={`${titleId}-level`}
-                checked={level === n}
-                onChange={() => {
-                  setLevel(n);
+        <div className="grid gap-(--space-2)">
+          <fieldset className="grid gap-(--space-2)">
+            <legend className="font-semibold">{t("review.adjustLegend")}</legend>
+            {([0, 1, 2, 3, 4] as const).map((n) => (
+              <label key={n} className="flex items-center gap-(--space-2)">
+                <input
+                  type="radio"
+                  name={`${titleId}-level`}
+                  checked={level === n}
+                  onChange={() => {
+                    setLevel(n);
+                  }}
+                />
+                {`${String(n)} ${levelName(content, n)}`}
+              </label>
+            ))}
+            <div className="flex flex-wrap gap-(--space-2)">
+              <Button
+                variant="primary"
+                disabled={busy || level === undefined}
+                onClick={() => {
+                  if (level !== undefined) onAdjust(level);
                 }}
-              />
-              {`${String(n)} ${levelName(content, n)}`}
-            </label>
-          ))}
-          <div className="flex flex-wrap gap-(--space-2)">
-            <Button
-              variant="primary"
-              disabled={busy || level === undefined}
-              onClick={() => {
-                if (level !== undefined) onAdjust(level);
-              }}
+              >
+                {t("review.recordMine")}
+              </Button>
+              <Button
+                onClick={() => {
+                  setAdjusting(false);
+                }}
+              >
+                {t("review.cancel")}
+              </Button>
+            </div>
+          </fieldset>
+          {/* Or check it: a diagnostic gives a tested level instead of another claim (MVP S21.1). */}
+          {service.bankCovers(suggestion.skill) ? (
+            <Link
+              to="/skills/$skill/diagnostic"
+              params={{ skill: suggestion.skill }}
+              className="text-meta text-channel underline"
             >
-              {t("review.recordMine")}
-            </Button>
-            <Button
-              onClick={() => {
-                setAdjusting(false);
-              }}
-            >
-              {t("review.cancel")}
-            </Button>
-          </div>
-        </fieldset>
+              {t("skills.skillPage.check")}
+            </Link>
+          ) : null}
+        </div>
       ) : (
         <div className="flex flex-wrap gap-(--space-2)">
           <Button

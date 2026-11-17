@@ -5,7 +5,16 @@
  * translation files. Dates and lists follow the translation file's `app.locale`, such as `en-GB` for "3 Oct 2026".
  * @packageDocumentation
  */
-import type { GapFacts, GapGroup, GapItem, GapWriter, OverviewFacts, OverviewWriter } from "@pharoam/core";
+import type {
+  AssessmentFacts,
+  AssessmentWriter,
+  GapFacts,
+  GapGroup,
+  GapItem,
+  GapWriter,
+  OverviewFacts,
+  OverviewWriter,
+} from "@pharoam/core";
 import type { TFunction } from "i18next";
 
 const GROUPS: readonly GapGroup[] = ["supported", "claimed", "below", "unknown"];
@@ -79,5 +88,46 @@ export function gapWriter(t: TFunction, levelName: (level: number) => string): G
       t("gapSummary.note"),
       ...sections,
     ].join("\n");
+  };
+}
+
+/**
+ * Creates the writer for a question-bank diagnostic's assessment record: its title and readable summary (MVP S19.5).
+ *
+ * @remarks The summary gives the result by the published rule and each question asked, right or not, so the record
+ * reads well outside Pharoam; it is never a score (Charter R1), and says the person's evidence wasn't considered
+ * (PRD E2).
+ * @param t - The translation function.
+ * @param levelName - The name of a level 0–4, from the content pack's level scale.
+ * @returns A writer that turns the diagnostic into a title and Markdown.
+ */
+export function assessmentWriter(t: TFunction, levelName: (level: number) => string): AssessmentWriter {
+  const level = (value: number): string =>
+    t("diagnostic.record.level", { name: levelName(value), level: value });
+  return (facts: AssessmentFacts) => {
+    const steps = facts.steps.map((step, index) =>
+      t(step.correct ? "diagnostic.record.right" : "diagnostic.record.wrong", {
+        number: index + 1,
+        item: step.item,
+        level: level(step.level),
+      }),
+    );
+    return {
+      title: t("diagnostic.record.title", { skill: facts.name }),
+      body: [
+        `## ${t("diagnostic.record.title", { skill: facts.name })}`,
+        "",
+        t("diagnostic.record.result", {
+          level: level(facts.result),
+          rule: facts.rule,
+          count: facts.steps.length,
+        }),
+        "",
+        t("diagnostic.record.note"),
+        "",
+        ...steps.map((line) => `- ${line}`),
+        "",
+      ].join("\n"),
+    };
   };
 }
