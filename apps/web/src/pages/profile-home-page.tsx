@@ -75,7 +75,7 @@ export function ProfileHomePage({
 function KeepACopy(): ReactElement {
   const { t } = useTranslation();
   const titleId = useId();
-  const { services } = useSession();
+  const { services, logStorage } = useSession();
   const persisted = useQuery({
     queryKey: ["persisted"],
     queryFn: async () => (await services.places.persisted?.()) ?? false,
@@ -83,6 +83,14 @@ function KeepACopy(): ReactElement {
   const download = useMutation({
     mutationFn: async () => {
       const copy = await services.places.copy?.();
+      // Every file is read for the copy, round the connector, so it is logged here (MVP S22.1).
+      logStorage({
+        action: "copied",
+        location: "",
+        at: new Date().toISOString(),
+        ok: copy?.ok === true,
+        ...(copy?.ok === true && { count: copy.value.length }),
+      });
       if (copy?.ok !== true) return false;
       downloadCopy(copy.value, new Date(), document);
       return true;

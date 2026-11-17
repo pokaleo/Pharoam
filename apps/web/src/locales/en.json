@@ -531,10 +531,10 @@
   },
   "activity": {
     "title": "Activity log",
-    "lead": "Every AI call made with this profile in this session, newest first: what was sent, to which model, and what came back.",
+    "lead": "Every AI call made with this profile in this session, and every read and write of your storage, newest first: what was sent, to which model, what came back, and what Pharoam read or saved.",
     "memory": "It's kept in memory only. Closing the profile or reloading the page clears it, and nothing here is written to your storage.",
     "none": "No AI calls yet in this session.",
-    "list": "AI calls this session",
+    "list": "Activity this session",
     "tasks": {
       "check-model": "Model test",
       "normalise-evidence": "Reading pasted text",
@@ -543,7 +543,7 @@
       "explain-gap": "Explaining a gap",
       "other": "An AI task"
     },
-    "meta": "{{model}} · {{time}} · {{task}}",
+    "meta": "{{model}} · started {{time}} · {{task}}",
     "outcomes": {
       "answered": "Answered",
       "rejected": "Rejected by Pharoam's checks",
@@ -559,7 +559,31 @@
     "received": "What came back",
     "error": "No answer: {{reason}}.",
     "shape": "The answer's shape asked for",
-    "nothing": "Nothing came back."
+    "nothing": "Nothing came back.",
+    "storage": {
+      "kind": "Your storage",
+      "opened_one": "Read your profile: {{count}} record",
+      "opened_other": "Read your profile: {{count}} records",
+      "reads_one": "Read {{count}} record",
+      "reads_other": "Read {{count}} records",
+      "copied_one": "Read every file for a downloaded copy: {{count}} file",
+      "copied_other": "Read every file for a downloaded copy: {{count}} files",
+      "which": "Which records",
+      "failed": "Didn't work",
+      "actions": {
+        "listed": "Listed your records",
+        "read": "Read a record",
+        "prepared": "Prepared your storage for a new profile",
+        "created": "Saved a new record",
+        "changed": "Saved a change",
+        "deleted": "Deleted a record",
+        "files-listed": "Listed a record's files",
+        "file-read": "Read a file",
+        "file-added": "Kept a new file",
+        "file-deleted": "Deleted a file",
+        "copied": "Read every file for a downloaded copy"
+      }
+    }
   },
   "skills": {
     "title": "Skills",

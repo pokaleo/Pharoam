@@ -165,6 +165,57 @@ describe("SessionProvider", () => {
   });
 });
 
+describe("the session's storage log (MVP S22)", () => {
+  it("logs what opening read once the profile is open, interleaved with calls in one count", async () => {
+    const controls = renderSession();
+    await connect(controls, createMemoryConnector({ "pharoam.md": PHAROAM }));
+
+    const opened = controls().storage.map(({ event }) => [event.action, event.location]);
+    expect(opened).toEqual([
+      ["listed", ""],
+      ["read", "pharoam.md"],
+    ]);
+    const ids = controls().storage.map(({ id }) => id);
+    let call = 0;
+    act(() => {
+      call = controls().logCall({
+        task: "check-model@1",
+        model: "anthropic/claude-test",
+        at: "2026-11-16T10:00:00Z",
+        sent: { system: "", prompt: "", output: { name: "check-model", schema: {} } },
+        outcome: "answered",
+        received: { answer: { ready: true } },
+      });
+    });
+    expect(call).toBe(Math.max(...ids) + 1);
+  });
+
+  it("logs nothing from an opening that failed", async () => {
+    const controls = renderSession();
+    const memory = createMemoryConnector({ "pharoam.md": PHAROAM });
+    memory.loseAccess();
+    await connect(controls, memory);
+    expect(controls().storage).toEqual([]);
+  });
+
+  it("never logs a write that finishes after the profile was closed (S17.3)", async () => {
+    const controls = renderSession();
+    const memory = createMemoryConnector({ "pharoam.md": PHAROAM });
+    await connect(controls, memory);
+    const session = controls().session;
+    if (session.status !== "open") throw new Error("Not open.");
+    await act(async () => {
+      await controls().disconnect();
+    });
+
+    await act(async () => {
+      await session.service.updateProfile({ headline: "Later" });
+    });
+
+    expect(controls().storage).toEqual([]);
+  });
+});
+
 describe("useSession", () => {
   it("is a bug outside SessionProvider", () => {
     function Outside() {

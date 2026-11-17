@@ -27,6 +27,7 @@ import {
   type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { observedStorage, type StorageEvent } from "./observed-storage.ts";
 import type { Places, ProfilePlace } from "./places.ts";
 import { gapWriter, overviewWriter } from "./writers.ts";
 import type { LoadProvider, ModelSetup } from "../ai/providers.ts";
@@ -69,6 +70,14 @@ export interface LoggedCall {
   readonly decision?: "accepted" | "discarded";
 }
 
+/** One read or write of the person's storage in this session, as the activity log shows it (MVP S22). */
+export interface LoggedStorage {
+  /** Tells events apart in this session; calls and events share one count, in the order they ended. */
+  readonly id: number;
+  /** What was done, where, when, and whether it worked. */
+  readonly event: StorageEvent;
+}
+
 /** The session and what changes it. */
 export interface SessionControls {
   /** Where the person is with their profile. */
@@ -100,9 +109,20 @@ export interface SessionControls {
   readonly logCall: (call: CallRecord) => number;
   /** Records whether the person accepted or discarded what a call answered (MVP S17.1). */
   readonly decideCall: (id: number, decision: "accepted" | "discarded") => void;
+  /**
+   * What Pharoam read from and wrote to the open profile's storage, oldest first, from opening it on (MVP S22.1).
+   *
+   * @remarks Kept in memory only, like the AI calls, and forgotten with the profile (S17.3, S22.2).
+   */
+  readonly storage: readonly LoggedStorage[];
+  /** Logs a read of storage that goes round the connector, such as every file read for a downloaded copy (S22.1). */
+  readonly logStorage: (event: StorageEvent) => void;
 }
 
 const SessionContext = createContext<SessionControls | undefined>(undefined);
+
+// The most storage events kept: the newest, so a long session can't grow the log without end.
+const MAX_STORAGE_EVENTS = 1000;
 
 /**
  * Holds the session for the screens inside it.
@@ -123,10 +143,11 @@ export function SessionProvider({
   const [model, setModel] = useState<ModelSetup | undefined>(undefined);
   // The AI calls made with the open profile, kept with the service they belong to, so a call that ends after the
   // profile closed is never logged against the next one (MVP S17.3).
-  const [log, setLog] = useState<{ readonly owner: unknown; readonly calls: readonly LoggedCall[] }>({
-    owner: undefined,
-    calls: [],
-  });
+  const [log, setLog] = useState<{
+    readonly owner: unknown;
+    readonly calls: readonly LoggedCall[];
+    readonly storage: readonly LoggedStorage[];
+  }>({ owner: undefined, calls: [], storage: [] });
   const nextCall = useRef(0);
 
   const controls = useMemo<SessionControls>(() => {
@@ -138,8 +159,21 @@ export function SessionProvider({
       services,
       connect: async (place) => {
         const content = await services.content();
+        // What opening reads is held until the profile is open, then logged with it; later events go straight
+        // to the log, and only while this profile is the one open (MVP S22.1).
+        const opening: LoggedStorage[] = [];
+        let report = (event: StorageEvent): void => {
+          opening.push({ id: ++nextCall.current, event });
+        };
+        const storage = observedStorage(
+          place.storage,
+          (event) => {
+            report(event);
+          },
+          () => new Date(),
+        );
         const service = createCoreService({
-          storage: place.storage,
+          storage,
           ids: { now: Date.now, fillRandom },
           content,
           ...writers(t, content),
@@ -148,7 +182,15 @@ export function SessionProvider({
         if (!opened.ok) return err(opened.error);
         closeService(session);
         setModel(undefined);
-        setLog({ owner: service, calls: [] });
+        setLog({ owner: service, calls: [], storage: opening });
+        report = (event) => {
+          const id = ++nextCall.current;
+          setLog((current) =>
+            current.owner === service
+              ? { ...current, storage: [...current.storage, { id, event }].slice(-MAX_STORAGE_EVENTS) }
+              : current,
+          );
+        };
         setSession(sessionFor(place.name, service));
         return ok(undefined);
       },
@@ -171,7 +213,7 @@ export function SessionProvider({
         // Forgotten before the start page shows, which would otherwise still find the folder and offer it again.
         await services.places.forget();
         setModel(undefined);
-        setLog({ owner: undefined, calls: [] });
+        setLog({ owner: undefined, calls: [], storage: [] });
         setSession({ status: "closed" });
       },
       model,
@@ -180,11 +222,21 @@ export function SessionProvider({
         setModel(undefined);
       },
       calls: log.calls,
+      storage: log.storage,
+      logStorage: (event) => {
+        const id = ++nextCall.current;
+        const owner = session.status === "open" ? session.service : undefined;
+        setLog((current) =>
+          current.owner === owner
+            ? { ...current, storage: [...current.storage, { id, event }].slice(-MAX_STORAGE_EVENTS) }
+            : current,
+        );
+      },
       logCall: (call) => {
         const id = ++nextCall.current;
         const owner = session.status === "open" ? session.service : undefined;
         setLog((current) =>
-          current.owner === owner ? { owner, calls: [...current.calls, { id, call }] } : current,
+          current.owner === owner ? { ...current, calls: [...current.calls, { id, call }] } : current,
         );
         return id;
       },

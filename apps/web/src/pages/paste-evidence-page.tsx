@@ -21,6 +21,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useId, useRef, useState, type ReactElement } from "react";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { taskProblem } from "../ai/problems.ts";
 import type { ModelSetup } from "../ai/providers.ts";
@@ -332,7 +333,7 @@ function draftOf(
   key: number,
   form: EvidenceForm,
   ai: AiProvenance,
-  t: ReturnType<typeof useTranslation>["t"],
+  t: TFunction,
   earlier: readonly Draft[],
 ): Draft {
   const file = service.draftPastedEvidence(form, {
