@@ -7,7 +7,7 @@ format: mcq
 prompt: "What are eBPF tools, such as bpftrace, used for in production?"
 options:
   - "Replacing the kernel without rebooting"
-  - "Tracing kernel and application events safely, with little overhead"
+  - "Tracing kernel and application events on a live system"
   - "Compiling programs faster"
   - "Encrypting network traffic"
 answer: 1

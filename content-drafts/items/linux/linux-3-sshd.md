@@ -9,7 +9,7 @@ options:
   - "Turn off password and root sign-in, allowing keys only"
   - "Move SSH to port 2222 and change nothing else"
   - "Allow root sign-in with a long password"
-  - "Turn off the firewall so keys work"
+  - "Install fail2ban, keeping password sign-in on"
 answer: 0
 explanation: "Key-only access without root removes password guessing, the most common attack."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }

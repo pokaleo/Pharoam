@@ -11,7 +11,7 @@ options:
   - "chmod u+x deploy.sh"
   - "chmod o-x deploy.sh"
 answer: 2
-explanation: "u+x adds execute permission for the owner; 644 gives read and write only."
+explanation: "u+x adds execute for the owner, whereas 644 gives the owner read and write and everyone else read, with no execute."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }
 ai:
   task: draft-item@1

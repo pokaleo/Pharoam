@@ -4,14 +4,14 @@ slug: linux-4-page-cache
 skills: [linux]
 level: 4
 format: mcq
-prompt: "free shows almost no free memory on a busy file server, yet nothing swaps or slows down. Why?"
+prompt: "To \"free memory\", an engineer runs echo 3 > /proc/sys/vm/drop_caches nightly on a busy file server. What is the effect?"
 options:
-  - "The kernel is leaking memory"
-  - "free counts swap as used memory"
-  - "The kernel uses spare memory as page cache, and gives it back when programs need it"
-  - "The disks are full"
-answer: 2
-explanation: "Unused memory is wasted memory; the \"available\" column is the one that matters."
+  - "Reads go to disk until the cache warms again, slowing the server"
+  - "Memory leaked by programs is returned to the system"
+  - "Dirty pages are written to disk, protecting data from a crash"
+  - "The server stops swapping because programs get more memory"
+answer: 0
+explanation: "drop_caches discards only clean cache that the kernel would reclaim anyway, so it just forces later reads back to disk."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }
 ai:
   task: draft-item@1

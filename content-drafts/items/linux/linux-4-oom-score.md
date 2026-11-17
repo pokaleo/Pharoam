@@ -4,14 +4,14 @@ slug: linux-4-oom-score
 skills: [linux]
 level: 4
 format: mcq
-prompt: "What decides which process the kernel's out-of-memory killer ends?"
+prompt: "By default, which process does the kernel's out-of-memory killer end?"
 options:
-  - "Whichever process started most recently"
-  - "The process with the lowest PID"
-  - "Each process's oom_score, based mainly on its memory use and adjusted by oom_score_adj"
-  - "A random choice"
-answer: 2
-explanation: "The kernel picks the process whose death frees the most memory, weighted by oom_score_adj."
+  - "The process that most recently asked for memory"
+  - "The process that has used the most CPU time"
+  - "The process with the highest nice value"
+  - "The process with the highest oom_score, based on its memory and oom_score_adj"
+answer: 3
+explanation: "Since Linux 2.6.36 the score is mostly resident memory, swap and page tables, shifted by oom_score_adj; CPU time and nice no longer count."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }
 ai:
   task: draft-item@1

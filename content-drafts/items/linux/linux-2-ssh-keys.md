@@ -4,14 +4,14 @@ slug: linux-2-ssh-keys
 skills: [linux]
 level: 2
 format: mcq
-prompt: "What is the safer way to sign in to a server with SSH?"
+prompt: "Which file on the server lists the public keys allowed to sign in as a user?"
 options:
-  - "A password, typed into the command itself"
-  - "The server's private key, copied to your laptop"
-  - "Telnet instead of SSH"
-  - "A key pair: the private key stays on your machine, the public key goes on the server"
-answer: 3
-explanation: "Keys can't be guessed like passwords, and the private key never leaves your machine."
+  - "~/.ssh/authorized_keys"
+  - "~/.ssh/known_hosts"
+  - "~/.ssh/id_ed25519"
+  - "/etc/ssh/ssh_config"
+answer: 0
+explanation: "sshd checks the user's authorized_keys, whereas known_hosts records servers you've connected to."
 origin: { source: Pharoam content, licence: CC-BY-SA-4.0 }
 ai:
   task: draft-item@1
