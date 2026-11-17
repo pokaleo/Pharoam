@@ -237,6 +237,16 @@ v0.2 is done when:
 5. **every story's acceptance criteria pass** as automated tests, and **axe accessibility checks pass** on every new screen. Core tests use a fake provider; the end-to-end journeys answer the provider's real address with canned replies, so they cover the adapter, the security policy and the key handling;
 6. `pnpm check` and CI are green.
 
+**Outcome, 17 November 2026:** v0.2 is closed so that v0.3 can carry on, as v0.1 was (§4). Every phase, 9 to 16, is merged and live. **Criteria 1–3 were not checked with a real model**, so nothing here claims they hold:
+1. Not yet checked: the founder hasn't yet turned their own CV into evidence or decided a scan of it with a real model.
+2. Not yet checked: the hand-run check's inputs for every v0.2 task are written ([the inputs](hand-run-check.md)), but haven't been run against a real model.
+3. Partly met: spike S1 confirmed which providers a browser can call, and the content security policy allows only those, checked by a test. The two replies the spike couldn't see wait for the first call with a real key: Settings' "Show models" with Anthropic, and "Test the model" with OpenAI.
+4. Met: the S13 journey checks that no AI code loads until a model is tested.
+5. Met: every story has its tests, with axe on every new screen.
+6. Met: `pnpm check` and CI are green.
+
+Criteria 1–3 are run before v0.3 is released, and their results recorded in its release PR (§9).
+
 ### Quality bar for every v0.2 story
 
 Everything in the v0.1 quality bar (§5), and:
@@ -345,7 +355,8 @@ v0.3 is done when:
 4. a question-bank diagnostic runs with no model set up, loading no AI code and making no request beyond loading itself;
 5. a diagnostic paused mid-way is resumed after a reload from its session record alone, in Chromium, WebKit and Firefox;
 6. **every story's acceptance criteria pass** as automated tests, and **axe accessibility checks pass** on every new screen;
-7. `pnpm check` and CI are green.
+7. `pnpm check` and CI are green;
+8. v0.2's criteria 1–3, left unchecked when it closed, have been run against a real model and their results recorded (§8).
 
 ### Quality bar for every v0.3 story
 

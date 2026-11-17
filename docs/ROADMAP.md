@@ -9,6 +9,8 @@
 
 ## Where things stand
 
+*17 November 2026.* **v0.2 is closed, and v0.3 is under way** (§5). Every phase of AI assistance is live: a model of the person's choice, attachments, pasted text turned into evidence, the evidence scan with its review, the Activity log, and the explanation of a gap. v0.2 closed without its real-model checks, as v0.1 closed without its trial; MVP §8 records that criteria 1–3 are run before v0.3 releases. In v0.3, spike S2 and phases 17–21 are done: the plan, the question bank's format, the diagnostic engine and its screens, and storage reads and writes in the Activity log. The first skills' items are in review; once SQL's ship, v0.3a is live.
+
 *3 November 2026.* **v0.1 is closed, and v0.2 is next** (§4). The founder trial (phase 8) was skipped so that AI assistance could start sooner; MVP §4 records which exit criteria that leaves unchecked.
 
 *29 October 2026.* Phases 1–7 are done: the core, the folder connector, the content, every story's behaviour, the design system and the web app, with end-to-end tests in Chromium, WebKit and Firefox. **The app is live at [pokaleo.github.io/Pharoam](https://pokaleo.github.io/Pharoam/)**, deployed from `main`. Chromium browsers keep the profile in a folder; Safari and Firefox keep it in the browser's own storage, with a downloadable copy ([ADR-0020](adr/0020-browser-storage-where-no-folder.md)). Every screen now follows the design system's components and samples: the sidebar with places for later areas, levels as named steps, source labels, gap groups, tables that stack on a phone, and the selected skill beside the skills overview. Next is phase 8, the founder trial.
