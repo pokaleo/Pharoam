@@ -49,6 +49,9 @@ export function DiagnosticPage({
   return <Diagnostic service={service} skill={skill} content={content.data} />;
 }
 
+// A question bank's prompts and options can hold code, whose line breaks and indentation must survive.
+const KEEP_LINES = "whitespace-pre-wrap";
+
 /** Where the person is in the diagnostic. */
 type Step =
   | { readonly step: "intro" }
@@ -352,7 +355,7 @@ function Question({
           {t("diagnostic.question", { number: view.asked + 1 })}
         </p>
         <fieldset className="grid gap-(--space-2)">
-          <legend className="mb-(--space-2) text-body font-semibold">{item.prompt}</legend>
+          <legend className={`mb-(--space-2) text-body font-semibold ${KEEP_LINES}`}>{item.prompt}</legend>
           {item.options.map((option, index) => (
             <label key={String(index)} className="flex items-start gap-(--space-2)">
               <input
@@ -364,7 +367,7 @@ function Question({
                   setChosen(index);
                 }}
               />
-              <span>{option}</span>
+              <span className={KEEP_LINES}>{option}</span>
             </label>
           ))}
         </fieldset>
@@ -481,13 +484,17 @@ function PathStep({
   const option = (index: number): string => item?.options[index] ?? String(index);
   return (
     <li className="grid gap-1 rounded-lg border border-line bg-surface p-(--pad)">
-      <p className="font-semibold">{item?.prompt ?? step.item}</p>
-      <p className="text-ink-2">{t("diagnostic.yourAnswer", { answer: option(step.answer) })}</p>
+      <p className={`font-semibold ${KEEP_LINES}`}>{item?.prompt ?? step.item}</p>
+      <p className={`text-ink-2 ${KEEP_LINES}`}>
+        {t("diagnostic.yourAnswer", { answer: option(step.answer) })}
+      </p>
       <p data-marking className="font-semibold">
         {t(step.correct ? "diagnostic.right" : "diagnostic.notRight")}
       </p>
       {step.correct || item === undefined ? null : (
-        <p className="text-ink-2">{t("diagnostic.rightAnswer", { answer: option(item.answer) })}</p>
+        <p className={`text-ink-2 ${KEEP_LINES}`}>
+          {t("diagnostic.rightAnswer", { answer: option(item.answer) })}
+        </p>
       )}
       {item === undefined ? null : <p className="text-ink-2">{item.explanation}</p>}
     </li>

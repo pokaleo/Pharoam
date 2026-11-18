@@ -182,4 +182,25 @@ describe("taking a question-bank diagnostic (MVP S19, S21.1)", () => {
 
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Abandon it" }));
   });
+
+  it("keeps the line breaks and indentation of a question's code, while asking and in the path (S19.2, S19.4)", async () => {
+    const user = userEvent.setup();
+    await onSkill(user);
+    await user.click(screen.getByRole("link", { name: "Check it with a diagnostic" }));
+    await user.click(await screen.findByRole("button", { name: "Start" }));
+    await screen.findByText("Question 1");
+
+    // The browser collapses line breaks and runs of spaces unless told to keep them; the test DOM applies no CSS.
+    const kept = (element: Element | null | undefined): boolean =>
+      element?.classList.contains("whitespace-pre-wrap") ?? false;
+    const question = screen.getByRole("group", { name: /SQL question . at level 2\?/ });
+    expect(kept(question.querySelector("legend"))).toBe(true);
+    expect(kept(screen.getByText(RIGHT))).toBe(true);
+    for (const right of [true, false, true, false]) await answer(user, right);
+
+    const path = await screen.findByRole("list", { name: "The questions, in the order asked" });
+    const first = within(path).getAllByRole("listitem")[0];
+    expect(kept(within(first ?? path).getByText(/SQL question . at level 2\?/))).toBe(true);
+    expect(kept(within(first ?? path).getByText(new RegExp(`^Your answer: ${RIGHT}`)))).toBe(true);
+  });
 });
