@@ -174,13 +174,60 @@ Each evidence item is **one `.md` file**. Evidence records what the person did; 
 - **Extra fields per kind:** for example a module's course code, credits and grade; a certificate's issuer, credential ID and expiry; a repository's URL and the person's role.
 - **`assessment` evidence** is the full record of one diagnostic, in the top block for exact proof:
   - `diagnostic`: `type` (`question-bank` or `ai-led`), the `skill`, and the `start` level;
-  - `steps`, the adaptive path in order: each `item` (its bank slug, or the full text of an AI-written item), its `level`, the `answer`, and whether it was `correct` (with the marking's reasons, for an AI-led diagnostic);
-  - the `result` level and, for a question bank, the `rule` that produced it, such as `two-right-to-settle@1`;
+  - `steps`, the adaptive path in order: each `item` (its bank slug), its `level`, the `answer`, and whether it was `correct`. An AI-led diagnostic's steps hold each item in full instead, as the next bullet says;
+  - the `result` level and the published `rule` that produced it, such as `two-right-to-settle@1`, which an AI-led diagnostic applies to its markings too (ADR-0019);
   - `date`, the day it ended, in UTC;
   - `integrity`, the record's fingerprint (§4).
-  - for an AI-led diagnostic: the evidence and earlier results it considered, the explanation (PRD E5) and the `ai` block.
+  - for an AI-led diagnostic, all of the above is required, and `result` must be the level `two-right-to-settle@1` gives from the steps' markings; besides:
+    - every question is the model's choice, so each step has `chosen`, the `ai` block of the `write-diagnostic-item` call that chose or wrote it, and `why`, what the model said it probes;
+    - each step's `source`: `bank` for an item reused from the bank, named by its `item` slug (each asked at most once), or `written` for one the model wrote, which has no slug;
+    - each step's `format`, its `prompt` in full, and its `options` (multiple choice, only ever from the bank) or `rubric` (open or practical);
+    - the `answer`: the index of the option chosen, marked by the bank's key with no AI call, so with no `reasons` or `marked`; or the person's text, never blank, marked by the model with its `reasons` and `marked`, the `ai` block of that call;
+    - `considered`: each evidence record sent with `sent`, a fingerprint of what was sent about it, in the order of its references (`E1` first), as a scan keeps (§10); and the IDs of the claim observations and earlier results sent;
+    - the `explanation` (PRD E5): `showed`, `comparison`, up to three possible `reasons` and a `next_step`, with no level or score;
+    - the record's `ai` block, naming the call that wrote the explanation.
+
+    A question-bank diagnostic's record has no `considered` or `explanation`, and neither kind holds the other's steps.
 
   The body shows a readable summary.
+
+  ```yaml
+  schema: evidence/1
+  kind: assessment
+  ai: { task: explain-diagnostic@1, model: anthropic/claude-sonnet-5-5, at: 2026-11-23T10:09:00Z }
+  title: SQL diagnostic
+  date: 2026-11-23
+  diagnostic: { type: ai-led, skill: sql, start: 2 }
+  steps:
+    - { source: bank, item: sql-2-a, format: mcq, level: 2, prompt: Which join keeps unmatched rows?,
+        options: [INNER JOIN, LEFT JOIN], answer: 1, correct: true,
+        chosen: { task: write-diagnostic-item@1, model: anthropic/claude-sonnet-5-5, at: 2026-11-23T10:00:30Z },
+        why: Probes joins, which the evidence names but doesn't show. }
+    - source: written
+      format: open
+      level: 3
+      prompt: Rank each customer's orders by date.
+      rubric: Uses ROW_NUMBER() or RANK() partitioned by customer and ordered by date.
+      chosen: { task: write-diagnostic-item@1, model: anthropic/claude-sonnet-5-5, at: 2026-11-23T10:01:00Z }
+      why: The reporting work claims window functions; nothing shows them.
+      answer: SELECT ROW_NUMBER() OVER (ORDER BY date) FROM orders
+      correct: false
+      reasons: Orders by date but doesn't partition by customer.
+      marked: { task: mark-diagnostic-answer@1, model: anthropic/claude-sonnet-5-5, at: 2026-11-23T10:03:00Z }
+    - { source: bank, item: sql-2-b, … , answer: 2, correct: true, … }
+  result: 2
+  rule: two-right-to-settle@1
+  considered:
+    evidence: [{ evidence: 0192f3a1-…, sent: sha256:9f2c… }]
+    claims: [0192f3a1-…]
+    earlier: []
+  integrity: sha256-c1:4b1d…
+  explanation:
+    showed: Joins are solid; window functions weren't.
+    comparison: Lower than the level 4 you claimed.
+    reasons: [The reporting work may have used a tool that wrote the queries.]
+    next_step: Practise window functions with a ranking task.
+  ```
 
 ## 8. Folder layout (file connectors)
 
@@ -299,6 +346,29 @@ Profile records reference skills by **Pharoam inventory slug only** (for example
   steps:
     - { item: sql-2-a, level: 2, answer: 3, correct: true }
   next: sql-3-b
+  ```
+- **An AI-led diagnostic's session** (`schema: session/1`, `workflow: ai-led-diagnostic@1`) is kept in `sessions/` the same way. Its `diagnostic` also names the `model` chosen at the start, which every later call uses, after a reload too (MVP S23.1). Its `steps` hold each question in full, as its `assessment` evidence will (§7). `posed` holds the question posed now in full, since one the model wrote is in no pack, and `answer` holds an open or practical answer given and not yet marked, so a reload loses neither (MVP S23.5); a multiple-choice answer is marked at once. `considered` lists what it sent, as §7 describes. `explanation`, once given, holds the explanation with its own `ai` block until the result is written; the evidence then puts that block in the record's `ai`.
+
+  So that it always resumes from one clear state, it is always one of these: a question posed, with an answer waiting or not; nothing posed, before a question is chosen; explained, with nothing posed; then `assessment` chosen; then `completed`. It has no `next`. A question-bank session has none of `posed`, `answer`, `considered`, `explanation` or a `model`, and neither kind holds the other's steps.
+
+  ```yaml
+  schema: session/1
+  workflow: ai-led-diagnostic@1
+  status: in-progress
+  diagnostic: { skill: sql, start: 2, rule: two-right-to-settle@1, model: anthropic/claude-sonnet-5-5 }
+  considered: { evidence: [{ evidence: 0192f3a1-…, sent: sha256:9f2c… }], claims: [], earlier: [] }
+  steps:
+    - { source: bank, item: sql-2-a, format: mcq, level: 2, prompt: Which join keeps unmatched rows?,
+        options: [INNER JOIN, LEFT JOIN], answer: 1, correct: true, chosen: { … }, why: Probes joins. }
+  posed:
+    source: written
+    format: practical
+    level: 3
+    prompt: Write a query ranking each customer's orders by date.
+    rubric: Partitions by customer and orders by date.
+    chosen: { task: write-diagnostic-item@1, model: anthropic/claude-sonnet-5-5, at: 2026-11-23T10:01:00Z }
+    why: The reporting work claims window functions; nothing shows them.
+  answer: SELECT RANK() OVER (PARTITION BY customer ORDER BY date) FROM orders
   ```
 - **A readable log of what has happened so far**: for a diagnostic, the items asked, the answers given and the marking so far, plus what the next step is.
 - Pharoam rebuilds its working state (for example a LangGraph checkpoint) from this log. Any engine checkpoint is kept only in the local cache.

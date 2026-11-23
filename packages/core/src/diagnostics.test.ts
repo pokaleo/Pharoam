@@ -387,6 +387,59 @@ describe("diagnostics under pressure (review findings)", () => {
   });
 });
 
+describe("items an AI-led diagnostic asked (MVP S19.7, S23.2)", () => {
+  const AI =
+    "{ task: write-diagnostic-item@1, model: anthropic/claude-sonnet-5-5, at: 2026-11-14T10:00:00Z }";
+  const bankStep = (slug: string) =>
+    `  - { source: bank, item: ${slug}, format: mcq, level: 2, prompt: Which is it?, options: [a, b, c], chosen: ${AI}, why: Probes joins., answer: 1, correct: true }`;
+  const EVIDENCE = [
+    "---",
+    "schema: evidence/1",
+    "id: 0192f3a1-0000-7000-8000-000000000091",
+    "created: 2026-11-14T10:00:00Z",
+    "ai: { task: explain-diagnostic@1, model: anthropic/claude-sonnet-5-5, at: 2026-11-14T10:05:00Z }",
+    "kind: assessment",
+    "title: SQL diagnostic",
+    "date: 2026-11-14",
+    "skills: [sql]",
+    "diagnostic: { type: ai-led, skill: sql, start: 2 }",
+    "steps:",
+    bankStep("sql-2-a"),
+    "result: 0",
+    "rule: two-right-to-settle@1",
+    "considered: { evidence: [], claims: [], earlier: [] }",
+    "explanation: { showed: Joins., comparison: As claimed., reasons: [], next_step: Practise. }",
+    `integrity: sha256-c1:${"a".repeat(64)}`,
+    "---",
+    "",
+  ].join("\n");
+  const ABANDONED = [
+    "---",
+    "schema: session/1",
+    "id: 0192f3a1-0000-7000-8000-000000000092",
+    "created: 2026-11-14T11:00:00Z",
+    "workflow: ai-led-diagnostic@1",
+    "status: abandoned",
+    "diagnostic: { skill: sql, start: 2, rule: two-right-to-settle@1, model: anthropic/claude-sonnet-5-5 }",
+    "steps:",
+    bankStep("sql-2-b"),
+    "---",
+    "",
+  ].join("\n");
+
+  it("counts bank items asked in AI-led diagnostics, finished or abandoned, as seen, so a retake draws others", async () => {
+    const { service } = await profile({
+      "evidence/sql-diagnostic.md": EVIDENCE,
+      "sessions/ai-led-diagnostic.md": ABANDONED,
+    });
+    expect(service.needsAttention()).toEqual([]);
+
+    const started = await service.startDiagnostic("sql");
+
+    expect(started.ok && started.value.item?.slug).toBe("sql-2-c");
+  });
+});
+
 describe("what the screens need to know (review findings)", () => {
   it("says where a diagnostic would start: the shown level, or the nearest the bank covers", async () => {
     const { service } = await profile({}, [0, 1, 2, 3]);

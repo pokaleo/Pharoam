@@ -570,21 +570,188 @@
           "required": ["type", "skill", "start"]
         },
         "steps": {
-          "default": [],
           "type": "array",
           "items": {
-            "type": "object",
-            "properties": {
-              "item": { "type": "string", "minLength": 1 },
-              "level": { "type": "integer", "minimum": 0, "maximum": 4 },
-              "answer": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
-              "correct": { "type": "boolean" }
-            },
-            "required": ["item", "level", "answer", "correct"]
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "level": { "type": "integer", "minimum": 0, "maximum": 4 },
+                      "prompt": { "type": ["string", "number"] },
+                      "chosen": {
+                        "type": "object",
+                        "properties": {
+                          "task": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*@[1-9]\\d*$" },
+                          "model": { "type": "string", "minLength": 1 },
+                          "at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                          },
+                          "confirmed_by_user": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                          }
+                        },
+                        "required": ["task", "model", "at"]
+                      },
+                      "why": { "type": ["string", "number"] },
+                      "source": { "type": "string", "const": "bank" },
+                      "item": { "type": "string", "minLength": 1 },
+                      "format": { "type": "string", "const": "mcq" },
+                      "options": {
+                        "minItems": 2,
+                        "type": "array",
+                        "items": { "type": ["string", "number"] }
+                      },
+                      "rubric": { "not": {} },
+                      "reasons": { "not": {} },
+                      "marked": { "not": {} },
+                      "answer": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+                      "correct": { "type": "boolean" }
+                    },
+                    "required": [
+                      "level",
+                      "prompt",
+                      "chosen",
+                      "why",
+                      "source",
+                      "item",
+                      "format",
+                      "options",
+                      "answer",
+                      "correct"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "level": { "type": "integer", "minimum": 0, "maximum": 4 },
+                      "prompt": { "type": ["string", "number"] },
+                      "chosen": {
+                        "type": "object",
+                        "properties": {
+                          "task": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*@[1-9]\\d*$" },
+                          "model": { "type": "string", "minLength": 1 },
+                          "at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                          },
+                          "confirmed_by_user": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                          }
+                        },
+                        "required": ["task", "model", "at"]
+                      },
+                      "why": { "type": ["string", "number"] },
+                      "source": { "type": "string", "enum": ["bank", "written"] },
+                      "item": { "type": "string", "minLength": 1 },
+                      "format": { "type": "string", "enum": ["open", "practical"] },
+                      "rubric": { "type": ["string", "number"] },
+                      "options": { "not": {} },
+                      "answer": { "type": ["string", "number"] },
+                      "correct": { "type": "boolean" },
+                      "reasons": { "type": ["string", "number"] },
+                      "marked": {
+                        "type": "object",
+                        "properties": {
+                          "task": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*@[1-9]\\d*$" },
+                          "model": { "type": "string", "minLength": 1 },
+                          "at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                          },
+                          "confirmed_by_user": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                          }
+                        },
+                        "required": ["task", "model", "at"]
+                      }
+                    },
+                    "required": [
+                      "level",
+                      "prompt",
+                      "chosen",
+                      "why",
+                      "source",
+                      "format",
+                      "rubric",
+                      "answer",
+                      "correct",
+                      "reasons",
+                      "marked"
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "item": { "type": "string", "minLength": 1 },
+                  "level": { "type": "integer", "minimum": 0, "maximum": 4 },
+                  "answer": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+                  "correct": { "type": "boolean" },
+                  "format": { "not": {} }
+                },
+                "required": ["item", "level", "answer", "correct"]
+              }
+            ]
           }
         },
         "result": { "type": "integer", "minimum": 0, "maximum": 4 },
         "rule": { "type": "string", "minLength": 1 },
+        "considered": {
+          "type": "object",
+          "properties": {
+            "evidence": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "evidence": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                  },
+                  "sent": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+                },
+                "required": ["evidence", "sent"]
+              }
+            },
+            "claims": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+              }
+            },
+            "earlier": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+              }
+            }
+          }
+        },
+        "explanation": {
+          "type": "object",
+          "properties": {
+            "showed": { "type": ["string", "number"] },
+            "comparison": { "type": ["string", "number"] },
+            "reasons": { "maxItems": 3, "type": "array", "items": { "type": ["string", "number"] } },
+            "next_step": { "type": ["string", "number"] }
+          },
+          "required": ["showed", "comparison", "next_step"]
+        },
         "integrity": { "type": "string", "pattern": "^sha256-[a-z0-9]+:[0-9a-f]{64}$" },
         "signature": { "type": "null" }
       },

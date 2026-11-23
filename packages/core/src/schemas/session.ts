@@ -9,20 +9,18 @@
  * @packageDocumentation
  */
 import { z } from "zod";
-import { DiagnosticStep } from "./evidence.ts";
+import { AiLedItem, AnyDiagnosticStep, Considered, DiagnosticExplanation, checkSteps } from "./evidence.ts";
 import {
   AiProvenance,
   ENVELOPE_FIELDS,
   InventorySkillSlugField,
   LevelField,
   ProfileRecordIdField,
+  SentFingerprint,
   SkillSlugField,
   TextField,
   TimestampField,
 } from "./fields.ts";
-
-/** A fingerprint of exactly what a scan sent about one evidence record: `sha256:` and 64 hex digits. */
-export const SentFingerprint = z.string().regex(/^sha256:[0-9a-f]{64}$/);
 
 /**
  * What the person decided: accepted, discarded, or adjusted by recording their own level instead (PRD D2).
@@ -99,14 +97,30 @@ export const SessionRecord = z
     suggestions: z.array(Suggestion).default([]),
     already: z.array(AlreadySo).default([]),
     set_aside: z.array(SetAside).default([]),
-    /** A diagnostic's: the skill it tests, the level it started at, and the published rule (MVP S19.6). */
+    /**
+     * A diagnostic's: the skill it tests, the level it started at and the published rule (MVP S19.6), and for an
+     * AI-led one the model chosen at the start, which every later call uses, after a reload too (S23.1, S23.5).
+     */
     diagnostic: z
-      .object({ skill: InventorySkillSlugField, start: LevelField, rule: z.string().min(1) })
+      .object({
+        skill: InventorySkillSlugField,
+        start: LevelField,
+        rule: z.string().min(1),
+        model: z.string().min(1).optional(),
+      })
       .optional(),
     /** A diagnostic's questions asked and answered so far, in order. */
-    steps: z.array(DiagnosticStep).default([]),
-    /** A diagnostic's question posed now, by item slug, so the person sees the same one on coming back. */
+    steps: z.array(AnyDiagnosticStep).default([]),
+    /** A question-bank diagnostic's question posed now, by item slug, so the person sees the same one on coming back. */
     next: z.string().min(1).optional(),
+    /** An AI-led diagnostic's question posed now, in full, since one the model wrote is in no pack (MVP S23.5). */
+    posed: AiLedItem.optional(),
+    /** An AI-led diagnostic's answer to the question posed, given and not yet marked, so a reload doesn't lose it. */
+    answer: TextField.optional(),
+    /** An AI-led diagnostic's: the evidence, claims and earlier results it sent. */
+    considered: Considered.optional(),
+    /** An AI-led diagnostic's explanation, once given, with the call that wrote it, until its result is written. */
+    explanation: DiagnosticExplanation.extend({ ai: AiProvenance }).optional(),
     /**
      * A finished diagnostic's assessment evidence, by the ID chosen before it is written, so finishing again after
      * a failed write never writes the result twice.
@@ -122,13 +136,73 @@ export const SessionRecord = z
         path: ["scan"],
         message: "A scan's session names what it scanned for.",
       });
-    if (name === "question-bank" && session.diagnostic === undefined)
+    const diagnostic = name === "question-bank" || name === "ai-led-diagnostic";
+    if (diagnostic && session.diagnostic === undefined)
       ctx.addIssue({
         code: "custom",
         path: ["diagnostic"],
         message: "A diagnostic's session names its skill.",
       });
+    if (diagnostic) checkSteps(name === "ai-led-diagnostic", session.steps, ctx);
+    if (name === "question-bank") checkQuestionBank(session, ctx);
+    if (name === "ai-led-diagnostic") checkAiLed(session, ctx);
   });
 
 /** A `session` record as Pharoam reads it. */
 export type SessionRecord = z.output<typeof SessionRecord>;
+
+// What the diagnostic checks read of a session.
+interface DiagnosticSession {
+  readonly status: string;
+  readonly diagnostic?: { readonly model?: string | undefined } | undefined;
+  readonly steps: readonly { readonly item?: string | undefined }[];
+  readonly next?: string | undefined;
+  readonly posed?: { readonly format: string; readonly item?: string | undefined } | undefined;
+  readonly answer?: string | undefined;
+  readonly considered?: unknown;
+  readonly explanation?: unknown;
+  readonly assessment?: string | undefined;
+}
+
+const AI_LED_ONLY = ["posed", "answer", "considered", "explanation"] as const;
+
+// A question-bank session holds none of an AI-led one's fields.
+function checkQuestionBank(session: DiagnosticSession, ctx: z.RefinementCtx): void {
+  for (const field of AI_LED_ONLY)
+    if (session[field] !== undefined)
+      ctx.addIssue({
+        code: "custom",
+        path: [field],
+        message: "Only an AI-led diagnostic's session has this.",
+      });
+  if (session.diagnostic?.model !== undefined)
+    ctx.addIssue({
+      code: "custom",
+      path: ["diagnostic", "model"],
+      message: "A question-bank diagnostic uses no model.",
+    });
+}
+
+// An AI-led session is always in one state it can resume from (MVP S23.5): a question posed, maybe with an answer
+// waiting for the model's marking; or nothing posed, before a question is chosen or once it is explained; then its
+// result's ID chosen, and completed once that is written.
+function checkAiLed(session: DiagnosticSession, ctx: z.RefinementCtx): void {
+  const issue = (path: (string | number)[], message: string) => {
+    ctx.addIssue({ code: "custom", path, message });
+  };
+  if (session.diagnostic !== undefined && session.diagnostic.model === undefined)
+    issue(["diagnostic", "model"], "An AI-led diagnostic names the model chosen at its start.");
+  if (session.next !== undefined)
+    issue(["next"], "An AI-led diagnostic holds the question posed in full, in `posed`.");
+  const { posed } = session;
+  if (session.answer !== undefined && (posed === undefined || posed.format === "mcq"))
+    issue(["answer"], "Only an open question or practical task's answer waits to be marked.");
+  if (posed?.item !== undefined && session.steps.some((step) => step.item === posed.item))
+    issue(["posed", "item"], "This item was already asked.");
+  if (session.explanation !== undefined && posed !== undefined)
+    issue(["explanation"], "A diagnostic is explained once nothing is posed.");
+  if (session.assessment !== undefined && session.explanation === undefined)
+    issue(["assessment"], "An AI-led result is written once it is explained.");
+  if (session.status === "completed" && session.assessment === undefined)
+    issue(["status"], "A completed AI-led diagnostic has written its result.");
+}
