@@ -9,6 +9,8 @@
 
 ## Where things stand
 
+*23 November 2026.* **v0.3b's work has started while v0.3a's items are in review** (§5): phase 22 is under way, beginning with the AI-led diagnostic's three tasks. v0.3a still goes live first.
+
 *17 November 2026.* **v0.2 is closed, and v0.3 is under way** (§5). Every phase of AI assistance is live: a model of the person's choice, attachments, pasted text turned into evidence, the evidence scan with its review, the Activity log, and the explanation of a gap. v0.2 closed without its real-model checks, as v0.1 closed without its trial; MVP §8 records that criteria 1–3 are run before v0.3 releases. In v0.3, spike S2 and phases 17–21 are done: the plan, the question bank's format, the diagnostic engine and its screens, and storage reads and writes in the Activity log. The first skills' items are in review; once SQL's ship, v0.3a is live.
 
 *3 November 2026.* **v0.1 is closed, and v0.2 is next** (§4). The founder trial (phase 8) was skipped so that AI assistance could start sooner; MVP §4 records which exit criteria that leaves unchecked.
@@ -79,7 +81,7 @@ Phase 12 can run alongside 10 and 11. Phase 16 needs only the foundations, so it
 
 ## 5. v0.3 phases
 
-What v0.3 contains, its exit criteria and its stories (S19–S24) are in MVP §9. It ships in two halves: v0.3a, the question-bank diagnostic with no AI, goes live before v0.3b, the AI-led diagnostic, starts. Spike S2 is done ([findings](research/spike-s2-langgraph-readable-log.md)): the AI-led diagnostic pauses with `NodeInterrupt` and resumes from the session record through `updateState`; the question-bank diagnostic needs no LangGraph at all.
+What v0.3 contains, its exit criteria and its stories (S19–S24) are in MVP §9. It ships in two halves: v0.3a, the question-bank diagnostic with no AI, goes live before v0.3b, the AI-led diagnostic, does. Phase 22 needs only phase 21, so v0.3b's work started while the bank's items were in review; v0.3b releases only after phase 24's real-model checks, which come after v0.3a is live. Spike S2 is done ([findings](research/spike-s2-langgraph-readable-log.md)): the AI-led diagnostic pauses with `NodeInterrupt` and resumes from the session record through `updateState`; the question-bank diagnostic needs no LangGraph at all.
 
 ```
 17 Stories signed off ──▶ 18 Question bank ──▶ 19 Diagnostic engine ──▶ 20 Diagnostic screens ──▶ 21 Reads and writes in the log ──▶ v0.3a live
@@ -94,8 +96,8 @@ What v0.3 contains, its exit criteria and its stories (S19–S24) are in MVP §9
 | **19. Diagnostic engine** (S19 core) | The question-bank diagnostic as a plain state machine in `packages/core`: the published rule, item choice, the session record written after each answer and resumed from alone, the `assessment` evidence and `demonstrated` observation at the end; `assessment` evidence fingerprinted (data model §4) | 18 | Core tests cover the rule, resuming, retakes and the records written |
 | **20. Diagnostic screens** (S19, S21) | Starting a diagnostic from the skill page, the gap view and Review's adjust; the question screen; the result with its path; resuming and abandoning; next steps after a level; journeys in Chromium, WebKit and Firefox with axe | 19 | Every S19 and S21 criterion passes; the S19.8 journey shows no AI code loads. **Screens done** (17 November 2026), tested with a test bank: the skill page, the gap view and Review's Adjust start a diagnostic. The journeys in Chromium, WebKit and Firefox follow when the SQL items merge, and v0.3a goes live with them |
 | **21. Reads and writes in the log** (S22) | Storage events from the core service, listed in the Activity log beside AI calls | 19 | **Done** (17 November 2026): every read and write of storage is in the Activity log beside AI calls. Built before phase 20 while the first items were reviewed, so **v0.3a goes live with phase 20** |
-| **22. AI-led diagnostic core** (S23 core) | LangGraph added to the AI code, loaded only with it; tasks `write-diagnostic-item@1`, `mark-diagnostic-answer@1` and `explain-diagnostic@1`; the graph with `NodeInterrupt` pauses and `updateState` resumes; the `ai-correlated` result and its record | 21 | Core tests with a fake provider cover the graph, resuming, the tasks' checks and the records written |
-| **23. AI-led screens** (S21, S23) | What will be sent before each call; the question screen for open answers and practical tasks; the explained result; the Activity log's calls; journeys with canned replies | 22 | Every S23 criterion passes |
+| **22. AI-led diagnostic core** (S23 core) | LangGraph added to the AI code, loaded only with it; tasks `write-diagnostic-item@1`, `mark-diagnostic-answer@1` and `explain-diagnostic@1`; the graph with `NodeInterrupt` pauses and `updateState` resumes; the `ai-correlated` result and its record | 21 | Core tests with a fake provider cover the graph, resuming, the tasks' checks and the records written. **Under way** (23 November 2026): the three tasks are registered and tested; the graph and its records are next |
+| **23. AI-led screens** (S21, S23) | What will be sent before each call; the question screen for open answers and practical tasks; the explained result; the Activity log's calls, with the three tasks' labels and disclaimers; journeys with canned replies | 22 | Every S23 criterion passes |
 | **24. Hand-run check and release** (S24) | The tasks' inputs in the hand-run check; the founder's own diagnostics; the release PR | 23 | MVP §9's exit criteria are recorded |
 
 Phase 18 is mostly content and can run alongside 19 once the schema is in. Phase 21 can run alongside 20, and ran before it while the first items were reviewed.

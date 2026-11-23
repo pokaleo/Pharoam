@@ -175,7 +175,7 @@ Each evidence item is **one `.md` file**. Evidence records what the person did; 
 - **`assessment` evidence** is the full record of one diagnostic, in the top block for exact proof:
   - `diagnostic`: `type` (`question-bank` or `ai-led`), the `skill`, and the `start` level;
   - `steps`, the adaptive path in order: each `item` (its bank slug, or the full text of an AI-written item), its `level`, the `answer`, and whether it was `correct` (with the marking's reasons, for an AI-led diagnostic);
-  - the `result` level and, for a question bank, the `rule` that produced it, such as `two-right-to-settle@1`;
+  - the `result` level and the published `rule` that produced it, such as `two-right-to-settle@1`, which an AI-led diagnostic applies to its markings too (ADR-0019);
   - `date`, the day it ended, in UTC;
   - `integrity`, the record's fingerprint (§4).
   - for an AI-led diagnostic: the evidence and earlier results it considered, the explanation (PRD E5) and the `ai` block.

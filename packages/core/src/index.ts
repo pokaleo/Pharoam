@@ -89,9 +89,12 @@ export {
   type ProviderError,
 } from "./ai/provider.ts";
 export { checkModel } from "./ai/tasks/check-model.ts";
+export { explainDiagnostic } from "./ai/tasks/explain-diagnostic.ts";
 export { explainGap } from "./ai/tasks/explain-gap.ts";
 export { judgeSkillLevel } from "./ai/tasks/judge-skill-level.ts";
+export { markDiagnosticAnswer } from "./ai/tasks/mark-diagnostic-answer.ts";
 export { suggestSkillLinks } from "./ai/tasks/suggest-skill-links.ts";
+export { writeDiagnosticItem } from "./ai/tasks/write-diagnostic-item.ts";
 export { evidenceText, sentFingerprint } from "./evidence-text.ts";
 export {
   MAX_QUESTIONS,
