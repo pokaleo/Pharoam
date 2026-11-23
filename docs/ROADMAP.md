@@ -9,7 +9,13 @@
 
 ## Where things stand
 
-*23 November 2026.* **v0.3b's work has started while v0.3a's items are in review** (§5): phase 22 is under way, beginning with the AI-led diagnostic's three tasks. v0.3a still goes live first.
+*23 November 2026.* **v0.3b's work has started while v0.3a's items are in review** (§5): phase 22, the AI-led diagnostic's core, is built and in review, and phase 23, its screens, is next. v0.3a still goes live first.
+
+**Waiting on the founder.** No agent can do these:
+- **Review the question bank's items**, PRs #137–#152, SQL (#137) first. v0.3a goes live once SQL's items merge, and v0.3b releases after it.
+- **Run v0.2's real-model checks** (MVP §8, criteria 1–3), which v0.3's exit criterion 8 requires before v0.3 releases.
+- **Decide on a lint rule allowing only `@langchain/langgraph/web`**, so LangGraph's client for its hosted server stays out of reach. It changes an enforcement file, so it needs the founder's approval.
+- **Look at the LangSmith gateway in `@langchain/core`** before v0.3b ships. The built app's shared LangChain chunk holds the gateway's address and setting names; tracing is replaced and the browser has no environment variables, so they look inert, but how the gateway is used hasn't been checked.
 
 *17 November 2026.* **v0.2 is closed, and v0.3 is under way** (§5). Every phase of AI assistance is live: a model of the person's choice, attachments, pasted text turned into evidence, the evidence scan with its review, the Activity log, and the explanation of a gap. v0.2 closed without its real-model checks, as v0.1 closed without its trial; MVP §8 records that criteria 1–3 are run before v0.3 releases. In v0.3, spike S2 and phases 17–21 are done: the plan, the question bank's format, the diagnostic engine and its screens, and storage reads and writes in the Activity log. The first skills' items are in review; once SQL's ship, v0.3a is live.
 
