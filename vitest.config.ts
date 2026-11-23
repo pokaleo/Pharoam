@@ -1,3 +1,5 @@
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { defineConfig } from "vitest/config";
 
 const EXCLUDE = ["**/node_modules/**", "**/__fixtures__/**"];
@@ -36,6 +38,9 @@ export default defineConfig({
     // Only with `--coverage` (`pnpm test:coverage`), so a single test file can still run on its own (ENGINEERING §4).
     coverage: {
       provider: "v8",
+      // Each run writes its report to its own folder. Two agents' Stop hooks can run `pnpm check` at once, and
+      // Vitest refuses a second run on a report folder another run is using. The OS temp folder clears old reports.
+      reportsDirectory: join(tmpdir(), "pharoam-coverage", String(process.pid)),
       include: ["packages/core/src/**/*.ts"],
       exclude: ["**/*.test.ts", "**/__fixtures__/**"],
       thresholds: { lines: 90, functions: 90, branches: 90, statements: 90 },
