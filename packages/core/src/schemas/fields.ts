@@ -77,6 +77,13 @@ export const PinnedPathwayField = z
   .string()
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*@[0-9A-Za-z][0-9A-Za-z.+-]*:[a-z0-9]+(?:-[a-z0-9]+)*$/);
 
+/**
+ * A fingerprint of exactly what an AI call sent about one evidence record: `sha256:` and 64 hex digits.
+ *
+ * @remarks Kept with what the call suggested or found, so a later change to that evidence shows (MVP S16.10, S23.3).
+ */
+export const SentFingerprint = z.string().regex(/^sha256:[0-9a-f]{64}$/);
+
 /** An integrity fingerprint: `sha256-` and the rule name, then 64 lowercase hex digits (data model §4). */
 export const IntegrityField = z.string().regex(/^sha256-[a-z0-9]+:[0-9a-f]{64}$/);
 

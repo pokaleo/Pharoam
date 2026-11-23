@@ -106,8 +106,10 @@ describe("the AI-led diagnostic's shared material (MVP S23)", () => {
   });
 
   it("takes an answered question only with a prompt, a known format and a level on the scale", () => {
-    const question = { format: "open", level: 2, prompt: "Why?", answer: "", correct: false };
+    const question = { format: "open", level: 2, prompt: "Why?", answer: "Because.", correct: false };
     expect(AnsweredQuestion.safeParse(question).success).toBe(true);
+    // A blank answer is never sent: the record keeps no blank answer either (MVP S23.4).
+    expect(AnsweredQuestion.safeParse({ ...question, answer: " " }).success).toBe(false);
     expect(AnsweredQuestion.safeParse({ ...question, prompt: " " }).success).toBe(false);
     expect(AnsweredQuestion.safeParse({ ...question, format: "essay" }).success).toBe(false);
     expect(AnsweredQuestion.safeParse({ ...question, level: 5 }).success).toBe(false);

@@ -97,12 +97,16 @@ export { suggestSkillLinks } from "./ai/tasks/suggest-skill-links.ts";
 export { writeDiagnosticItem } from "./ai/tasks/write-diagnostic-item.ts";
 export { evidenceText, sentFingerprint } from "./evidence-text.ts";
 export {
+  AI_LED_WORKFLOW,
   MAX_QUESTIONS,
   QUESTION_BANK_RULE,
   QUESTION_BANK_WORKFLOW,
   diagnosticResult,
+  nextLevel,
   nextQuestion,
   type DiagnosticStep,
+  type Marking,
+  type NextLevel,
   type NextQuestion,
 } from "./diagnostic.ts";
 export { type ExplainedGap, type GapExplanationCall, type GapNote } from "./notes.ts";
@@ -188,7 +192,14 @@ export {
   type ObservationStatus,
 } from "./skill-history.ts";
 export { skillView, type SkillFilter, type SkillViewItem } from "./skill-view.ts";
-export { AiSkillLink, EvidenceRecord } from "./schemas/evidence.ts";
+export {
+  AiLedItem,
+  AiLedStep,
+  AiSkillLink,
+  Considered,
+  DiagnosticExplanation,
+  EvidenceRecord,
+} from "./schemas/evidence.ts";
 export { AiProvenance, ConfirmedAiProvenance, Provenance } from "./schemas/fields.ts";
 export { GapRecord, GapRequirement } from "./schemas/gap.ts";
 export { NoteRecord } from "./schemas/note.ts";

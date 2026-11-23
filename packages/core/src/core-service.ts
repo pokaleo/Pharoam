@@ -32,6 +32,7 @@ import {
 import { gapItems, type GapItem, type GapWriter } from "./gaps.ts";
 import { createProfileRecordIdGenerator, type IdSource } from "./ids.ts";
 import {
+  AI_LED_WORKFLOW,
   QUESTION_BANK_RULE,
   QUESTION_BANK_WORKFLOW,
   diagnosticResult,
@@ -84,7 +85,7 @@ import {
 import { skillView, type SkillFilter, type SkillViewItem } from "./skill-view.ts";
 import { parseProfileRecord, type ProfileRecord, type ProfileRecordError } from "./schemas/profile-record.ts";
 import type { McqItem } from "./schemas/assessment-item.ts";
-import type { EvidenceRecord } from "./schemas/evidence.ts";
+import type { AiLedStep, EvidenceRecord } from "./schemas/evidence.ts";
 import type { SuggestionInput } from "./schemas/session.ts";
 import type { Observation } from "./schemas/skill-record.ts";
 import type { SkillEntry } from "./schemas/skill.ts";
@@ -1291,13 +1292,17 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
           record.kind === "assessment" &&
           record.diagnostic?.skill === skill
         )
-          return record.steps.map((step) => step.item);
-        const session = diagnosticSession(one.location);
-        if (session?.record.status === "abandoned" && session.diagnostic.skill === skill)
-          return [
-            ...session.record.steps.map((step) => step.item),
-            ...(session.record.next === undefined ? [] : [session.record.next]),
-          ];
+          return record.steps.flatMap((step) => (step.item === undefined ? [] : [step.item]));
+        // An abandoned session of either kind: the bank items it asked, and the one it had posed.
+        if (
+          record.schema === "session/1" &&
+          record.status === "abandoned" &&
+          record.diagnostic?.skill === skill &&
+          (record.workflow === QUESTION_BANK_WORKFLOW || record.workflow === AI_LED_WORKFLOW)
+        )
+          return [...record.steps.map((step) => step.item), record.next, record.posed?.item].filter(
+            (slug) => slug !== undefined,
+          );
         return [];
       }),
     );
@@ -1336,7 +1341,12 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
     return found?.record.schema === "session/1" &&
       found.record.workflow === QUESTION_BANK_WORKFLOW &&
       found.record.diagnostic !== undefined
-      ? { loaded: found, record: found.record, diagnostic: found.record.diagnostic }
+      ? {
+          loaded: found,
+          record: found.record,
+          diagnostic: found.record.diagnostic,
+          steps: bankSteps(found.record.steps),
+        }
       : undefined;
   }
 
@@ -1348,7 +1358,7 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
       location,
       skill: session.diagnostic.skill,
       start: session.diagnostic.start,
-      asked: session.record.steps.length,
+      asked: session.steps.length,
       ...(item !== undefined && { item }),
       finishing: session.record.assessment !== undefined,
     };
@@ -1413,14 +1423,7 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
       return err({ kind: "not-in-progress", location });
     if (view.item !== undefined || session.record.assessment !== undefined) return ok(view);
     const { skill, start } = session.diagnostic;
-    const next = nextQuestion(
-      content.items,
-      skill,
-      start,
-      session.record.steps,
-      seenItems(skill),
-      randomUnit,
-    );
+    const next = nextQuestion(content.items, skill, start, session.steps, seenItems(skill), randomUnit);
     const now = timestamp(ids.now());
     const fields =
       next.kind === "ask"
@@ -1448,7 +1451,7 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
     if (!Number.isInteger(answer) || answer < 0 || answer >= item.options.length)
       return err({ kind: "not-an-option", answer });
     const steps = [
-      ...session.record.steps,
+      ...session.steps,
       { item: slug, level: item.level, answer, correct: answer === item.answer },
     ];
     const next = nextQuestion(content.items, skill, start, steps, seenItems(skill), randomUnit);
@@ -1477,7 +1480,7 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
     if (session?.record.status !== "in-progress" || evidenceId === undefined)
       return err({ kind: "not-in-progress", location });
     const { skill, start, rule } = session.diagnostic;
-    const { steps } = session.record;
+    const { steps } = session;
     const result = diagnosticResult(steps);
     const now = timestamp(ids.now());
     if (byId(evidenceId) === undefined) {
@@ -2423,4 +2426,9 @@ function pathwaySlug(pinned: string): string {
 // A time as Pharoam writes it, to the second, such as `2026-10-24T14:02:11Z`.
 function timestamp(milliseconds: number): string {
   return new Date(milliseconds).toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+
+// A question-bank session's steps. Its schema keeps out AI-led steps, so none is dropped; this only narrows the type.
+function bankSteps(steps: readonly (DiagnosticStep | AiLedStep)[]): DiagnosticStep[] {
+  return steps.filter((step): step is DiagnosticStep => !("format" in step));
 }

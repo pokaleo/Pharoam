@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { MAX_QUESTIONS, diagnosticResult, nextQuestion, type DiagnosticStep } from "./diagnostic.ts";
+import {
+  AI_LED_WORKFLOW,
+  MAX_QUESTIONS,
+  diagnosticResult,
+  nextLevel,
+  nextQuestion,
+  type DiagnosticStep,
+} from "./diagnostic.ts";
 import type { McqItem } from "./schemas/assessment-item.ts";
 
 // Three items per level for SQL, and one for Python; the right answer is always option 1.
@@ -168,5 +175,58 @@ describe("the rule's edges (review findings)", () => {
       const chosen = nextQuestion(BANK, "sql", 2, [], new Set(), () => odd);
       expect(chosen.kind).toBe("ask");
     }
+  });
+});
+
+describe("the same rule applied to an AI-led diagnostic's markings (MVP S23.2, S23.3)", () => {
+  // Plays the rule on markings alone: an AI-led question has no bank slug or option index.
+  function levels(start: number, answers: readonly boolean[]) {
+    const marked: { level: number; correct: boolean }[] = [];
+    for (const correct of answers) {
+      const next = nextLevel(start, marked);
+      if (next.kind === "end") return { marked, next };
+      marked.push({ level: next.level, correct });
+    }
+    return { marked, next: nextLevel(start, marked) };
+  }
+
+  it("names the workflow an AI-led diagnostic's session records", () => {
+    expect(AI_LED_WORKFLOW).toBe("ai-led-diagnostic@1");
+  });
+
+  it("asks the first question at the start, then a level up after a right marking and down after a wrong one", () => {
+    expect(nextLevel(3, [])).toEqual({ kind: "ask", level: 3 });
+    expect(levels(2, [true, false, false]).marked.map((one) => one.level)).toEqual([2, 3, 2]);
+  });
+
+  it("ends once the level is settled, with the highest level marked right twice", () => {
+    const { marked, next } = levels(2, [true, false, true, false, true]);
+    expect(marked).toHaveLength(4);
+    expect(next).toEqual({ kind: "end", result: 2 });
+    expect(levels(0, [false, false]).next).toEqual({ kind: "end", result: 0 });
+    expect(levels(4, [true, true]).next).toEqual({ kind: "end", result: 4 });
+  });
+
+  it("never asks more than 12 questions", () => {
+    // A path the rule takes that hasn't settled after 12 markings: only the cap ends it.
+    const answers = Array.from("RWWRRWRRRRWWR", (mark) => mark === "R");
+    const { marked, next } = levels(0, answers);
+    expect(marked.map((one) => one.level)).toEqual([0, 1, 0, 0, 1, 2, 1, 2, 3, 4, 4, 3]);
+    expect(marked).toHaveLength(MAX_QUESTIONS);
+    expect(next).toEqual({ kind: "end", result: 1 });
+  });
+
+  it("gives the same level from markings as from the bank's steps", () => {
+    const marked = [
+      { level: 2, correct: true },
+      { level: 3, correct: false },
+      { level: 2, correct: true },
+    ];
+    expect(diagnosticResult(marked)).toBe(2);
+  });
+
+  it("asks within the scale whatever the start", () => {
+    expect(nextLevel(4, [{ level: 4, correct: true }])).toEqual({ kind: "ask", level: 4 });
+    expect(nextLevel(0, [{ level: 0, correct: false }])).toEqual({ kind: "ask", level: 0 });
   });
 });

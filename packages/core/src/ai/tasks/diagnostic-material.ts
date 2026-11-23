@@ -58,7 +58,7 @@ export const AnsweredQuestion = z.object({
   /** The question or task, as the person saw it. */
   prompt: z.string().regex(/\S/),
   /** The person's answer: the option chosen, or what they wrote. */
-  answer: z.string(),
+  answer: z.string().regex(/\S/),
   correct: z.boolean(),
   /** Why it was marked so, for an answer the model marked. */
   reasons: z.string().optional(),
