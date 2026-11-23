@@ -7,7 +7,16 @@
  * is never silently overwritten (AD10, MVP S12).
  * @packageDocumentation
  */
-import type { ModelProvider } from "./ai/provider.ts";
+// Types only: the graph, and LangGraph with it, is loaded with `import()` when an AI-led diagnostic runs.
+import type {
+  AiLedContext,
+  AiLedPause,
+  AiLedProgress,
+  AiLedTurn,
+  AiLedTurnError,
+  HeldExplanation,
+} from "./ai/ai-led-diagnostic.ts";
+import { modelName, type ModelProvider } from "./ai/provider.ts";
 import { runTask, type CallRecord, type TaskError } from "./ai/run-task.ts";
 import { prepareCall } from "./ai/task.ts";
 import { explainGap } from "./ai/tasks/explain-gap.ts";
@@ -21,7 +30,7 @@ import {
   type InvalidEvidenceError,
 } from "./evidence-form.ts";
 import { customSkillSlug } from "./custom-skills.ts";
-import { sentFingerprint } from "./evidence-text.ts";
+import { evidenceText, sentFingerprint } from "./evidence-text.ts";
 import {
   ORIGINAL_INPUT,
   isSameEvidence,
@@ -85,7 +94,7 @@ import {
 import { skillView, type SkillFilter, type SkillViewItem } from "./skill-view.ts";
 import { parseProfileRecord, type ProfileRecord, type ProfileRecordError } from "./schemas/profile-record.ts";
 import type { McqItem } from "./schemas/assessment-item.ts";
-import type { AiLedStep, EvidenceRecord } from "./schemas/evidence.ts";
+import type { AiLedItem, AiLedStep, Considered, EvidenceRecord } from "./schemas/evidence.ts";
 import type { SuggestionInput } from "./schemas/session.ts";
 import type { Observation } from "./schemas/skill-record.ts";
 import type { SkillEntry } from "./schemas/skill.ts";
@@ -870,7 +879,149 @@ export interface CoreService {
    * @returns Nothing, or why it couldn't be abandoned.
    */
   readonly abandonDiagnostic: (location: string) => Promise<Result<undefined, DiagnosticError>>;
+  /**
+   * Starts an AI-led diagnostic of a skill with a model, or resumes the one in progress (MVP S23.1, S23.2).
+   *
+   * @remarks It starts at the skill's shown level, or level 2 when there is none, and names the model chosen, which
+   * every later call uses. It notes the evidence linked to the skill (with a fingerprint of what will be sent about
+   * each), the person's latest claims and earlier question-bank results: what its calls will send. Only its session
+   * record is written, and nothing is sent: each call is shown first, in {@link CoreService.aiDiagnosticTurn}.
+   * @param skill - The skill's slug, in Pharoam's vocabulary.
+   * @param provider - The provider of the model chosen.
+   * @param model - The provider's own ID for the model.
+   * @returns The diagnostic, or why it can't start.
+   */
+  readonly startAiDiagnostic: (
+    skill: string,
+    provider: ModelProvider,
+    model: string,
+  ) => Promise<Result<AiDiagnosticView, AiDiagnosticError>>;
+  /** The AI-led diagnostic of a skill in progress, if there is one, as its session record holds it. Writes nothing. */
+  readonly aiDiagnosticInProgress: (skill: string) => AiDiagnosticView | undefined;
+  /**
+   * Takes one turn of an AI-led diagnostic: an answer, an approval of the call shown, or neither, to see where it
+   * is; then saves its progress to the session record (MVP S23.1–S23.5).
+   *
+   * @remarks The diagnostic is rebuilt from its session record each turn, so a turn after a reload goes on exactly
+   * where it was. Its graph, and LangGraph with it, is loaded only here, so nothing else downloads it. A call runs
+   * only when the turn approves exactly what was shown for it, to the model chosen at the start; each call made is
+   * told to `onCall` for the activity log. When the evidence it considered has changed since it started, it stops
+   * rather than send something else. Once explained, its result is written as assessment evidence and an
+   * `ai-correlated` observation, with no acceptance step (S23.4). Turns of one diagnostic are taken one at a time,
+   * and abandoning waits for a turn in progress, so nothing is saved after it is abandoned.
+   * @param location - The session record's location.
+   * @param turn - What the person did.
+   * @param provider - The provider of the model chosen at the start.
+   * @param options - The clock, the activity log, and the assessment record's readable title and summary.
+   * @returns Where it paused, with the result once written; or why the turn wasn't taken.
+   * @throws Error when a record Pharoam builds can't be fingerprinted, which is a bug.
+   */
+  readonly aiDiagnosticTurn: (
+    location: string,
+    turn: AiLedTurn,
+    provider: ModelProvider,
+    options: AiDiagnosticOptions,
+  ) => Promise<Result<AiDiagnosticTurnResult, AiDiagnosticError>>;
 }
+
+/** An AI-led diagnostic as the app shows it (MVP S23). */
+export interface AiDiagnosticView {
+  /** Where its session record is stored. */
+  readonly location: string;
+  /** The skill it tests. */
+  readonly skill: string;
+  /** The level it started at. */
+  readonly start: number;
+  /** The provider and model chosen at the start, such as `anthropic/claude-sonnet-5-5`. */
+  readonly model: string;
+  /** How many questions have been answered and marked. */
+  readonly asked: number;
+  /** The question posed now, in full. */
+  readonly posed?: AiLedItem;
+  /** An answer to the question posed, waiting for the model's marking. */
+  readonly answer?: string;
+  /** Whether it has been explained and its result is being written. */
+  readonly finishing: boolean;
+}
+
+/**
+ * What a turn's caller supplies besides the turn.
+ *
+ * @remarks Calls are timed by the service's own clock, as the records they lead to are, so an `ai` block is never
+ * timed after the record holding it.
+ */
+export interface AiDiagnosticOptions {
+  /** Told of each call made, answered or not: required, as every call is in the activity log (MVP S17.1, S23.4). */
+  readonly onCall: (call: CallRecord) => void;
+  /** The assessment record's readable title and summary, used once the diagnostic is explained. */
+  readonly writer: AiAssessmentWriter;
+}
+
+/** An AI-led diagnostic after a turn. */
+export interface AiDiagnosticTurnResult {
+  /** The diagnostic as its session record now holds it. */
+  readonly view: AiDiagnosticView;
+  /** Where it paused, and why. */
+  readonly pause: AiLedPause;
+  /** A question dropped unmarked because its bank item changed since it was posed. */
+  readonly dropped?: AiLedItem;
+  /** The result, once explained and written. */
+  readonly outcome?: AiDiagnosticOutcome;
+}
+
+/** What an AI-led diagnostic gave when it ended (MVP S23.3, S23.4). */
+export interface AiDiagnosticOutcome {
+  /** The level the published rule gave from the markings. */
+  readonly result: number;
+  /** Each question asked, in full, with the answer and its marking. */
+  readonly steps: readonly AiLedStep[];
+  /** The explanation, with the call that wrote it. */
+  readonly explanation: HeldExplanation;
+  /** The assessment evidence written. */
+  readonly evidence: LoadedRecord;
+}
+
+/** What an AI-led diagnostic's assessment record reports, for its readable title and summary. */
+export interface AiAssessmentFacts {
+  /** The skill's slug. */
+  readonly skill: string;
+  /** The skill's name. */
+  readonly name: string;
+  /** The level it started at. */
+  readonly start: number;
+  /** The level the published rule gave. */
+  readonly result: number;
+  /** Each question asked, in full, with the answer and its marking. */
+  readonly steps: readonly AiLedStep[];
+  /** The published rule's name. */
+  readonly rule: string;
+  /** The explanation, with the call that wrote it, for its label and disclaimer (hard rule 6). */
+  readonly explanation: HeldExplanation;
+  /** The day it ended, as `YYYY-MM-DD`. */
+  readonly date: string;
+}
+
+/**
+ * Writes an AI-led assessment record's title and Markdown summary in the person's language, from the app's
+ * translation files, with the AI label and disclaimer (hard rules 6, 12).
+ */
+export type AiAssessmentWriter = (facts: AiAssessmentFacts) => {
+  readonly title: string;
+  readonly body: string;
+};
+
+/**
+ * Why an AI-led diagnostic couldn't go on: why a question-bank one couldn't; the turn's answer wasn't taken; the
+ * provider and model aren't the ones chosen at the start; or the evidence, claims or earlier results it considered
+ * have changed or gone since it started, so its calls would send something else.
+ */
+export type AiDiagnosticError =
+  | DiagnosticError
+  | AiLedTurnError
+  | { readonly kind: "other-model"; readonly model: string }
+  | { readonly kind: "material-changed"; readonly location: string }
+  /** The diagnostic's code couldn't be loaded, as when offline or after the app was updated; try again later. */
+  | { readonly kind: "unavailable" };
 
 /** A question-bank diagnostic as the app shows it (MVP S19). */
 export interface DiagnosticView {
@@ -1534,6 +1685,323 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
     const evidence = byId(evidenceId);
     if (evidence === undefined) throw new Error("The assessment record written isn't loaded.");
     return ok({ result, steps, evidence });
+  }
+
+  // An AI-led diagnostic's session record, if the location holds one, with its model and AI-led steps.
+  function aiSession(location: string) {
+    const found = loaded.find((one) => one.location === location);
+    if (found?.record.schema !== "session/1" || found.record.workflow !== AI_LED_WORKFLOW) return undefined;
+    const { diagnostic } = found.record;
+    // The session's schema requires the model for this workflow; this only narrows the type.
+    if (diagnostic?.model === undefined) return undefined;
+    return {
+      loaded: found,
+      record: found.record,
+      diagnostic: { ...diagnostic, model: diagnostic.model },
+      considered: found.record.considered ?? { evidence: [], claims: [], earlier: [] },
+      steps: found.record.steps.filter((step): step is AiLedStep => "format" in step),
+    };
+  }
+
+  function aiView(location: string): AiDiagnosticView | undefined {
+    const session = aiSession(location);
+    if (session === undefined) return undefined;
+    const { record, diagnostic } = session;
+    return {
+      location,
+      skill: diagnostic.skill,
+      start: diagnostic.start,
+      model: diagnostic.model,
+      asked: session.steps.length,
+      ...(record.posed !== undefined && { posed: record.posed }),
+      ...(record.answer !== undefined && { answer: record.answer }),
+      finishing: record.assessment !== undefined,
+    };
+  }
+
+  // The newest AI-led diagnostic of a skill in progress.
+  function runningAiSession(skill: string): LoadedRecord | undefined {
+    return loaded
+      .filter((one) => {
+        const found = aiSession(one.location);
+        return found?.record.status === "in-progress" && found.diagnostic.skill === skill;
+      })
+      .toSorted((a, b) => (a.record.id < b.record.id ? -1 : a.record.id > b.record.id ? 1 : 0))
+      .at(-1);
+  }
+
+  // Whether a skill is in Pharoam's vocabulary and not retired, so a diagnostic can test it.
+  const activeSkill = (skill: string): boolean =>
+    content.skills.some((one) => one.slug === skill && one.status === "active");
+
+  // The observations of a skill that count now, so a retracted or replaced claim is never sent as the person's.
+  function countingClaims(skill: string): readonly Observation[] {
+    const record = skillRecord(skill)?.record;
+    return record?.schema === "skill-record/1" ? countingObservations(record.entries) : [];
+  }
+
+  // An earlier question-bank result an AI-led diagnostic can send: one with its level and the day it ended.
+  const earlierResult = (record: ProfileRecord, skill: string) =>
+    record.schema === "evidence/1" &&
+    record.kind === "assessment" &&
+    record.diagnostic?.type === "question-bank" &&
+    record.diagnostic.skill === skill &&
+    record.result !== undefined &&
+    record.date?.length === 10
+      ? { level: record.result, date: record.date, created: record.created, id: record.id }
+      : undefined;
+
+  // What an AI-led diagnostic of a skill will send (MVP S23.1): each linked evidence record with a fingerprint of
+  // its text, the latest claim from each source that counts, and earlier question-bank results.
+  function aiConsidered(skill: string) {
+    // Latest by when it was made, as the shown level is chosen, not by where it sits in the file (data model §6).
+    const claims = (["self-reported", "ai-judged"] as const).flatMap((source) => {
+      const latest = countingClaims(skill)
+        .filter((one) => one.provenance === source)
+        .reduce<Observation | undefined>(
+          (last, one) =>
+            last === undefined || Date.parse(one.observed_at) >= Date.parse(last.observed_at) ? one : last,
+          undefined,
+        );
+      return latest === undefined ? [] : [latest.id];
+    });
+    const earlier = loaded
+      .flatMap(({ record: one }) => {
+        const result = earlierResult(one, skill);
+        return result === undefined ? [] : [result];
+      })
+      .toSorted((a, b) => Date.parse(a.created) - Date.parse(b.created))
+      .map((one) => one.id);
+    const evidence = linkedEvidence(skill).map(({ record: one, body }) => ({
+      evidence: one.id,
+      sent: sentFingerprint(evidenceText(one, body)),
+    }));
+    return { evidence, claims, earlier };
+  }
+
+  // The material an AI-led diagnostic's calls send, rebuilt from what it noted at the start; or nothing when any of
+  // it has changed or gone since, so a call never sends something other than what the diagnostic considered.
+  function aiMaterial(skill: string, considered: Considered): AiLedContext["material"] | undefined {
+    const evidence: { ref: string; text: string }[] = [];
+    for (const [index, one] of considered.evidence.entries()) {
+      const now = evidenceNow(one.evidence);
+      // Still linked to the skill, as the person may have unlinked it since; and still saying the same.
+      if (!now?.record.skills.some((linked) => linked === skill)) return undefined;
+      const text = evidenceText(now.record, now.body);
+      if (sentFingerprint(text) !== one.sent) return undefined;
+      evidence.push({ ref: `E${String(index + 1)}`, text });
+    }
+    const counting = countingClaims(skill);
+    const claims: AiLedContext["material"]["claims"][number][] = [];
+    for (const id of considered.claims) {
+      const entry = counting.find((one) => one.id === id);
+      if (entry === undefined) return undefined;
+      if (entry.provenance !== "self-reported" && entry.provenance !== "ai-judged") return undefined;
+      claims.push({
+        level: entry.level,
+        provenance: entry.provenance,
+        since: entry.observed_at.slice(0, 10),
+      });
+    }
+    const earlier: AiLedContext["material"]["earlier"][number][] = [];
+    for (const id of considered.earlier) {
+      const found = byId(id);
+      const result = found === undefined ? undefined : earlierResult(found.record, skill);
+      if (result === undefined) return undefined;
+      earlier.push({ level: result.level, date: result.date });
+    }
+    return { evidence, claims, earlier };
+  }
+
+  // Begins an AI-led diagnostic of a skill with a model: only its session is written, and nothing is sent.
+  async function beginAiDiagnostic(
+    skill: string,
+    provider: ModelProvider,
+    model: string,
+  ): Promise<Result<AiDiagnosticView, AiDiagnosticError>> {
+    const record = skillRecord(skill)?.record;
+    const start =
+      (record?.schema === "skill-record/1" ? shownObservation(record.entries) : undefined)?.level ?? 2;
+    const now = timestamp(ids.now());
+    const top = {
+      schema: "session/1",
+      id: nextId(),
+      created: now,
+      updated: now,
+      ai: null,
+      workflow: AI_LED_WORKFLOW,
+      status: "in-progress",
+      diagnostic: { skill, start, rule: QUESTION_BANK_RULE, model: modelName(provider, model) },
+      considered: aiConsidered(skill),
+      steps: [],
+    };
+    const created = await createRecord(createRecordFile(top, ""));
+    if (!created.ok) return created;
+    const view = aiView(created.value.location);
+    if (view === undefined) throw new Error("The diagnostic just started isn't loaded.");
+    return ok(view);
+  }
+
+  // Takes one turn of an AI-led diagnostic, saves its progress, and writes its result once explained.
+  async function aiTurn(
+    location: string,
+    turn: AiLedTurn,
+    provider: ModelProvider,
+    options: AiDiagnosticOptions,
+  ): Promise<Result<AiDiagnosticTurnResult, AiDiagnosticError>> {
+    const session = aiSession(location);
+    if (session?.record.status !== "in-progress") return err({ kind: "not-in-progress", location });
+    const { record, diagnostic } = session;
+    // Writing a result already explained calls no model, so it needs none: a person who has since changed their
+    // provider can still finish it.
+    if (record.assessment !== undefined) return finishAiTurn(location, options.writer);
+    const prefix = `${provider.id}/`;
+    if (!diagnostic.model.startsWith(prefix)) return err({ kind: "other-model", model: diagnostic.model });
+    if (!activeSkill(diagnostic.skill)) return err({ kind: "not-covered", skill: diagnostic.skill });
+    const description = skillInfo(diagnostic.skill);
+    const material = aiMaterial(diagnostic.skill, session.considered);
+    if (description === undefined || material === undefined)
+      return err({ kind: "material-changed", location });
+    const progress: AiLedProgress = {
+      start: diagnostic.start,
+      steps: session.steps,
+      ...(record.posed !== undefined && { posed: record.posed }),
+      ...(record.answer !== undefined && { answer: record.answer }),
+      ...(record.explanation !== undefined && { explanation: record.explanation }),
+    };
+    let graph: typeof import("./ai/ai-led-diagnostic.ts");
+    try {
+      graph = await import("./ai/ai-led-diagnostic.ts");
+    } catch {
+      // Fetched only now, so it can fail as any download can: offline, or gone after the app was updated.
+      return err({ kind: "unavailable" });
+    }
+    const advanced = await graph.advanceAiLed(progress, turn, {
+      provider,
+      model: diagnostic.model.slice(prefix.length),
+      now: () => new Date(ids.now()),
+      slug: diagnostic.skill,
+      skill: description,
+      scale: content.levels.levels,
+      bank: content.items,
+      material,
+    });
+    if (!advanced.ok) return advanced;
+    for (const call of advanced.value.calls) options.onCall(call);
+    // Changed in storage while the calls ran, as when the person kept another version: never write over it.
+    if (loaded.find((one) => one.location === location) !== session.loaded)
+      return err({ kind: "conflict", location });
+    const { progress: next, pause, dropped } = advanced.value;
+    const explained = pause.kind === "explained";
+    if (explained || JSON.stringify(next) !== JSON.stringify(progress)) {
+      const fields = {
+        steps: next.steps,
+        posed: next.posed,
+        answer: next.answer,
+        explanation: next.explanation,
+        updated: timestamp(ids.now()),
+        // The result's ID is chosen before it is written, so writing again after a failure never writes it twice.
+        ...(explained && { assessment: nextId() }),
+      };
+      const saved = await updateRecord(location, withTopFields(session.loaded.file, fields));
+      if (!saved.ok) return saved;
+    }
+    if (explained) return finishAiTurn(location, options.writer, dropped);
+    const view = aiView(location);
+    if (view === undefined) throw new Error("The diagnostic just saved isn't loaded.");
+    return ok({ view, pause, ...(dropped !== undefined && { dropped }) });
+  }
+
+  // Writes an explained AI-led diagnostic's result and reports it as the turn's end.
+  async function finishAiTurn(
+    location: string,
+    writer: AiAssessmentWriter,
+    dropped?: AiLedItem,
+  ): Promise<Result<AiDiagnosticTurnResult, AiDiagnosticError>> {
+    const finished = await finishAiDiagnostic(location, writer);
+    if (!finished.ok) return finished;
+    const view = aiView(location);
+    if (view === undefined) throw new Error("The diagnostic just finished isn't loaded.");
+    return ok({
+      view,
+      pause: { kind: "explained", result: finished.value.result },
+      outcome: finished.value,
+      ...(dropped !== undefined && { dropped }),
+    });
+  }
+
+  // Writes an explained AI-led diagnostic's assessment evidence and `ai-correlated` observation, then completes its
+  // session (MVP S23.4). Safe to call again after a failed write, as the question bank's finishing is.
+  async function finishAiDiagnostic(
+    location: string,
+    writer: AiAssessmentWriter,
+  ): Promise<Result<AiDiagnosticOutcome, AiDiagnosticError>> {
+    const session = aiSession(location);
+    const evidenceId = session?.record.assessment;
+    const explanation = session?.record.explanation;
+    if (session?.record.status !== "in-progress" || evidenceId === undefined || explanation === undefined)
+      return err({ kind: "not-in-progress", location });
+    const { skill, start, rule } = session.diagnostic;
+    const { steps } = session;
+    const result = diagnosticResult(steps);
+    const { ai, ...said } = explanation;
+    const now = timestamp(ids.now());
+    if (byId(evidenceId) === undefined) {
+      const name = content.skills.find((one) => one.slug === skill)?.name ?? skill;
+      const date = now.slice(0, 10);
+      const { title, body } = writer({ skill, name, start, result, steps, rule, explanation, date });
+      const top = {
+        schema: "evidence/1",
+        id: evidenceId,
+        created: now,
+        // The explanation is the record's AI output, so its call is the record's `ai` block (hard rule 6).
+        ai,
+        kind: "assessment",
+        title,
+        date,
+        skills: [skill],
+        diagnostic: { type: "ai-led", skill, start },
+        steps,
+        result,
+        rule,
+        considered: session.considered,
+        explanation: said,
+      };
+      const text = body.endsWith("\n") ? body : `${body}\n`;
+      const sealed = recordFingerprint(top, text);
+      // A diagnostic's record holds only plain text, numbers and booleans, which always have a fingerprint.
+      if (!sealed.ok) throw new Error("An assessment record couldn't be fingerprinted.");
+      const created = await createRecord(createRecordFile({ ...top, integrity: sealed.value }, text));
+      if (!created.ok) return created;
+    }
+    const record = skillRecord(skill)?.record;
+    const linked =
+      record?.schema === "skill-record/1" &&
+      record.entries.some((entry) => "assessment" in entry && entry.assessment === evidenceId);
+    if (!linked) {
+      const sealed = sealEntry({
+        id: nextId(),
+        level: result,
+        provenance: "ai-correlated",
+        observed_at: now,
+        assessment: evidenceId,
+        explanation: `${said.showed}\n\n${said.comparison}`,
+        ai,
+      });
+      // An observation holds only IDs, a level, a time and text, which always have a fingerprint.
+      if (!sealed.ok) throw new Error("An observation couldn't be fingerprinted.");
+      const appended = await appendObservation(skill, sealed.value, now);
+      if (!appended.ok) return appended;
+    }
+    const current = aiSession(location)?.loaded ?? session.loaded;
+    const completed = await updateRecord(
+      current.location,
+      withTopFields(current.file, { status: "completed", updated: now }),
+    );
+    if (!completed.ok) return completed;
+    const evidence = byId(evidenceId);
+    if (evidence === undefined) throw new Error("The assessment record written isn't loaded.");
+    return ok({ result, steps, explanation, evidence });
   }
 
   // An evidence record as it is now, for a scan to read or compare with what it read.
@@ -2291,9 +2759,39 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
 
     finishDiagnostic: (location, writer) => oneAtATime(location, () => finishDiagnostic(location, writer)),
 
+    startAiDiagnostic: (skill, provider, model) =>
+      oneAtATime(`start-ai:${skill}`, async (): Promise<Result<AiDiagnosticView, AiDiagnosticError>> => {
+        // Only a skill in Pharoam's vocabulary: its record and the result are an inventory skill's (MVP S23).
+        if (!activeSkill(skill)) return err({ kind: "not-covered", skill });
+        const running = runningAiSession(skill);
+        if (running === undefined) return beginAiDiagnostic(skill, provider, model);
+        // After any turn of it in progress, so the view is never of a session about to end.
+        return oneAtATime(
+          running.location,
+          async (): Promise<Result<AiDiagnosticView, AiDiagnosticError>> => {
+            const view = aiView(running.location);
+            if (view === undefined || aiSession(running.location)?.record.status !== "in-progress")
+              return beginAiDiagnostic(skill, provider, model);
+            // One in progress goes on with the model it started with, never silently another (S23.1).
+            return view.model === modelName(provider, model)
+              ? ok(view)
+              : err({ kind: "other-model", model: view.model });
+          },
+        );
+      }),
+
+    aiDiagnosticInProgress: (skill) => {
+      const running = runningAiSession(skill);
+      return running === undefined ? undefined : aiView(running.location);
+    },
+
+    aiDiagnosticTurn: (location, turn, provider, options) =>
+      oneAtATime(location, () => aiTurn(location, turn, provider, options)),
+
     abandonDiagnostic: (location) =>
       oneAtATime(location, async (): Promise<Result<undefined, DiagnosticError>> => {
-        const session = diagnosticSession(location);
+        // Either kind of diagnostic; one turn of an AI-led one finishes first, so nothing is saved after this.
+        const session = diagnosticSession(location) ?? aiSession(location);
         if (session?.record.status !== "in-progress") return err({ kind: "not-in-progress", location });
         if (session.record.assessment !== undefined) return err({ kind: "finishing", location });
         // The question posed stays in the record, so a retake counts it as seen (S19.7).

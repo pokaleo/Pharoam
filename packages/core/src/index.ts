@@ -40,6 +40,13 @@ export {
   type AttentionItem,
   type CoreService,
   type CoreServiceOptions,
+  type AiAssessmentFacts,
+  type AiAssessmentWriter,
+  type AiDiagnosticError,
+  type AiDiagnosticOptions,
+  type AiDiagnosticOutcome,
+  type AiDiagnosticTurnResult,
+  type AiDiagnosticView,
   type AssessmentFacts,
   type AssessmentWriter,
   type DiagnosticError,
@@ -79,6 +86,14 @@ export {
   type UnreadableError,
   type WriteError,
 } from "./core-service.ts";
+// Types only: a value from here would put LangGraph in the app's main download (ADR-0012).
+export type {
+  AiLedPause,
+  AiLedTurn,
+  AiLedTurnError,
+  Approval,
+  HeldExplanation,
+} from "./ai/ai-led-diagnostic.ts";
 export { isCustomSkill } from "./custom-skills.ts";
 export {
   modelName,
