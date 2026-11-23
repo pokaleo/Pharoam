@@ -9,10 +9,21 @@ export default defineConfig({
     passWithNoTests: true,
     projects: [
       {
+        // LangChain's tracing package is replaced here too, as in the built app, so a tracing setting in the shell
+        // sends nothing from a test (hard rule 7). LangChain's packages are inlined so the replacement reaches them.
+        resolve: {
+          alias: [
+            {
+              find: /^langsmith(?:\/.*)?$/,
+              replacement: join(import.meta.dirname, "apps/web/src/ai/langsmith-stand-in.ts"),
+            },
+          ],
+        },
         test: {
           name: "node",
           include: ["packages/*/src/**/*.test.ts", "tooling/**/*.test.ts"],
           exclude: EXCLUDE,
+          server: { deps: { inline: [/@langchain\//] } },
         },
       },
       // The web app's tests run in a browser-like DOM, with the app's own Vite config (aliases, plugins).
