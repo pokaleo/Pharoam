@@ -12,6 +12,7 @@ import {
   PHAROAM,
 } from "../__fixtures__/profiles.ts";
 import { packWithBank } from "../__fixtures__/bank.ts";
+import { scanModel, setUpModel } from "../__fixtures__/models.ts";
 import { renderApp } from "../__fixtures__/render-app.tsx";
 import { expectNoAxeViolations } from "../testing/axe.ts";
 
@@ -315,6 +316,25 @@ describe("checking a level with a diagnostic from Review (MVP S21.1)", () => {
       name: "Check it with a diagnostic",
     });
     expect(check.getAttribute("href")).toBe("/skills/python/diagnostic");
+    // Without a model, no AI-led diagnostic is offered.
+    expect(screen.queryByRole("link", { name: /AI-led diagnostic/ })).toBeNull();
+  });
+
+  it("offers an AI-led diagnostic too, once a model is set up", async () => {
+    const user = userEvent.setup();
+    renderApp({ name: "my-profile", memory: folder(), content: packWithBank, providers: scanModel().load });
+    await user.click(await screen.findByRole("button", { name: "Choose a folder" }));
+    await screen.findByRole("link", { name: "Profile" }, { timeout: 5000 });
+    await setUpModel(user);
+    await user.click(screen.getByRole("link", { name: /^Review/ }));
+    await screen.findByRole("heading", { level: 1, name: "Review" });
+
+    await user.click(within(item("Python: level 3, Proficient")).getByRole("button", { name: "Adjust" }));
+
+    const check = within(item("Python: level 3, Proficient")).getByRole("link", {
+      name: "Check it with an AI-led diagnostic",
+    });
+    expect(check.getAttribute("href")).toBe("/skills/python/ai-diagnostic");
   });
 
   it("offers no diagnostic for a skill the bank doesn't cover", async () => {

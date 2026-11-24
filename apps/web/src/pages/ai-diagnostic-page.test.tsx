@@ -15,7 +15,8 @@ import { fileContaining, fullProfile, navLink } from "../__fixtures__/profiles.t
 import { renderApp } from "../__fixtures__/render-app.tsx";
 import { expectNoAxeViolations } from "../testing/axe.ts";
 
-const AI_LED = "Take an AI-led diagnostic";
+// The test profiles rate SQL themselves, so the link offers to check that level.
+const AI_LED = "Check it with an AI-led diagnostic";
 
 // Opens the profile with the test model and bank, sets the model up unless told not to, and goes to SQL's page.
 async function onSkill(
@@ -175,6 +176,11 @@ describe("taking an AI-led diagnostic (MVP S21.1, S23)", () => {
     expect(record).toContain("result: 4");
     expect(record).toContain("explain-diagnostic@1");
     await expectNoAxeViolations(container);
+
+    // It can be run again, as a new diagnostic (S21.3).
+    await user.click(screen.getByRole("button", { name: "Run it again" }));
+    await screen.findByRole("button", { name: "Start" });
+    screen.getByText(/It starts at Expert/);
 
     await user.click(screen.getByRole("link", { name: "Activity log" }));
     await screen.findAllByRole("heading", { name: "Choosing a diagnostic question" });

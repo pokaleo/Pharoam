@@ -11,7 +11,7 @@ import { useEffect, useId, useRef, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { useSession } from "../profile/session.tsx";
 import { AiMark } from "../ui/ai-mark.tsx";
-import { dayName, diagnosticLabel, levelName } from "../skills/labels.ts";
+import { aiDiagnosticLabel, dayName, diagnosticLabel, levelName } from "../skills/labels.ts";
 import { LevelChoice } from "../skills/level-choice.tsx";
 import { Level } from "../skills/level.tsx";
 import { SourceTag } from "../skills/source-tag.tsx";
@@ -69,7 +69,7 @@ function SkillDetail({
   const item = service.skillView(content.skills).find((view) => view.skill === skill);
   const entry = content.skills.find((s) => s.slug === skill);
   // An AI-led diagnostic tests a skill in Pharoam's vocabulary, with a model set up (MVP S21.1, S23).
-  const aiLed = model !== undefined && entry?.status === "active";
+  const aiLed = model !== undefined && service.aiDiagnosticCovers(skill);
   const history = service.skillHistory(skill);
   const record =
     item === undefined ? undefined : service.records().find((r) => r.location === item.location)?.record;
@@ -130,9 +130,10 @@ function SkillDetail({
                 params={{ skill }}
                 className={buttonClassName("secondary")}
               >
-                {service.aiDiagnosticInProgress(skill) === undefined
-                  ? t("skills.skillPage.aiTake")
-                  : t("skills.skillPage.aiContinue")}
+                {aiDiagnosticLabel(t, {
+                  inProgress: service.aiDiagnosticInProgress(skill) !== undefined,
+                  ...(item?.shown !== undefined && { shown: item.shown.provenance }),
+                })}
               </Link>
             ) : null}
             <Link to="/skills/record" search={{ skill }} className={buttonClassName("primary")}>

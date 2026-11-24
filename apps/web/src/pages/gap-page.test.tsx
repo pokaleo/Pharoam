@@ -18,6 +18,7 @@ import {
   navLink,
 } from "../__fixtures__/profiles.ts";
 import { packWithBank, WRONG } from "../__fixtures__/bank.ts";
+import { scanModel, setUpModel } from "../__fixtures__/models.ts";
 import { renderApp } from "../__fixtures__/render-app.tsx";
 import { expectNoAxeViolations } from "../testing/axe.ts";
 
@@ -179,6 +180,36 @@ describe("GapPage (MVP S11)", () => {
     within(python).getByRole("link", { name: "Say where you stand" });
     const http = within(unknown).getByRole("row", { name: /\bHTTP\b/ });
     expect(within(http).queryByRole("link", { name: /diagnostic/ })).toBeNull();
+    // Without a model, no AI-led diagnostic is offered.
+    expect(screen.queryByRole("link", { name: /AI-led diagnostic/ })).toBeNull();
+    await expectNoAxeViolations(container);
+  });
+
+  it("offers an AI-led diagnostic, once a model is set up, for each skill whose level isn't supported (S21.1)", async () => {
+    const user = userEvent.setup();
+    const { container } = renderApp({
+      name: "my-profile",
+      memory: fullProfile(3),
+      content: packWithBank,
+      providers: scanModel().load,
+    });
+    await user.click(await screen.findByRole("button", { name: "Choose a folder" }));
+    await screen.findByRole("link", { name: "Profile" }, { timeout: 5000 });
+    await setUpModel(user);
+    await user.click(await navLink("Pathways"));
+    await user.click(await screen.findByRole("link", { name: "Backend engineer" }));
+    await user.click(await screen.findByRole("link", { name: "See my gap to this pathway" }));
+    await screen.findByRole("heading", { level: 1, name: "Your gap to Backend engineer" });
+
+    const sql = within(screen.getByRole("region", { name: /^Claimed\b/ })).getByRole("row", { name: /SQL/ });
+    expect(
+      within(sql).getByRole("link", { name: "Check it with an AI-led diagnostic" }).getAttribute("href"),
+    ).toBe("/skills/sql/ai-diagnostic");
+    // An AI-led diagnostic needs no question bank: HTTP, which the bank doesn't cover, can take one.
+    const unknown = screen.getByRole("region", { name: /^Unknown\b/ });
+    const http = within(unknown).getByRole("row", { name: /\bHTTP\b/ });
+    within(http).getByRole("link", { name: "Take an AI-led diagnostic" });
+    expect(within(http).queryByRole("link", { name: "Take a diagnostic" })).toBeNull();
     await expectNoAxeViolations(container);
   });
 

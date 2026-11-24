@@ -897,6 +897,30 @@ export interface CoreService {
     provider: ModelProvider,
     model: string,
   ) => Promise<Result<AiDiagnosticView, AiDiagnosticError>>;
+  /**
+   * The level a new AI-led diagnostic of a skill would start at: its shown level, or level 2 when there is none
+   * (MVP S23.2). Unlike the question bank's, it needs no items at that level, as the model can write a question.
+   *
+   * @param skill - The skill's slug.
+   * @returns The level.
+   */
+  readonly aiDiagnosticStart: (skill: string) => number;
+  /**
+   * Whether an AI-led diagnostic can test a skill: one in Pharoam's vocabulary, not retired, with or without a
+   * question bank, as the model can write questions (MVP S21.1, S23).
+   *
+   * @param skill - The skill's slug.
+   * @returns `true` when it can.
+   */
+  readonly aiDiagnosticCovers: (skill: string) => boolean;
+  /**
+   * A skill's shown level, worked out from its entries by the fixed order, even when the record's generated summary
+   * is missing or out of date (data model §6).
+   *
+   * @param skill - The skill's slug.
+   * @returns The level, or `undefined` when nothing counts.
+   */
+  readonly shownLevel: (skill: string) => number | undefined;
   /** The AI-led diagnostic of a skill in progress, if there is one, as its session record holds it. Writes nothing. */
   readonly aiDiagnosticInProgress: (skill: string) => AiDiagnosticView | undefined;
   /**
@@ -1860,15 +1884,16 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
     };
   }
 
+  // Where a new AI-led diagnostic of a skill starts: its shown level, worked out from its entries, or level 2.
+  const aiDiagnosticStart = (skill: string): number => shownLevel(skill) ?? 2;
+
   // Begins an AI-led diagnostic of a skill with a model: only its session is written, and nothing is sent.
   async function beginAiDiagnostic(
     skill: string,
     provider: ModelProvider,
     model: string,
   ): Promise<Result<AiDiagnosticView, AiDiagnosticError>> {
-    const record = skillRecord(skill)?.record;
-    const start =
-      (record?.schema === "skill-record/1" ? shownObservation(record.entries) : undefined)?.level ?? 2;
+    const start = aiDiagnosticStart(skill);
     const now = timestamp(ids.now());
     const top = {
       schema: "session/1",
@@ -2837,6 +2862,12 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
           },
         );
       }),
+
+    aiDiagnosticStart,
+
+    aiDiagnosticCovers: activeSkill,
+
+    shownLevel,
 
     aiDiagnosticInProgress: (skill) => {
       const running = runningAiSession(skill);

@@ -680,3 +680,42 @@ describe("an AI-led diagnostic changed outside Pharoam during a turn (hard rule 
     expect(storage.text(location)).toBe(theirs);
   });
 });
+
+describe("where an AI-led diagnostic would start (MVP S23.2)", () => {
+  it("says the shown level, worked out from the skill's entries, or level 2 when there is none", async () => {
+    const { service } = await profile();
+    expect(service.aiDiagnosticStart("sql")).toBe(2);
+    await service.recordLevel({ skill: "sql", level: 4 });
+    expect(service.aiDiagnosticStart("sql")).toBe(4);
+  });
+});
+
+describe("which skills an AI-led diagnostic covers, and the level shown (MVP S21.1)", () => {
+  it("covers active skills in Pharoam's vocabulary, with or without a question bank, and no custom skill", async () => {
+    const { service } = await profile();
+    expect(service.aiDiagnosticCovers("sql")).toBe(true);
+    expect(service.aiDiagnosticCovers("docker")).toBe(true);
+    expect(service.aiDiagnosticCovers("custom-kdb-q")).toBe(false);
+    const retired = await open(createMemoryConnector({}), pack({ retired: true }));
+    expect(retired.aiDiagnosticCovers("sql")).toBe(false);
+  });
+
+  it("gives the shown level from the skill's entries, even when its summary is missing", async () => {
+    const entry =
+      "  - { id: 0192f3a1-0000-7000-8000-000000000082, level: 3, provenance: self-reported, observed_at: 2026-11-20T10:00:00Z }";
+    const record = [
+      "---",
+      "schema: skill-record/1",
+      "id: 0192f3a1-0000-7000-8000-000000000080",
+      "created: 2026-11-01T10:00:00Z",
+      "skill: sql",
+      "entries:",
+      entry,
+      "---",
+      "",
+    ].join("\n");
+    const { service } = await profile({ "skills/sql.md": record });
+    expect(service.shownLevel("sql")).toBe(3);
+    expect(service.shownLevel("docker")).toBeUndefined();
+  });
+});

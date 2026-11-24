@@ -244,6 +244,10 @@ function AiDiagnostic({
             onAbandon={() => {
               abandon(step.location);
             }}
+            onAgain={() => {
+              setProblem(undefined);
+              setStep({ step: "intro" });
+            }}
           />
         ) : null}
         {/* One status region, always there, so each change to it is announced. */}
@@ -279,8 +283,10 @@ function Intro({
 }): ReactElement {
   const { t } = useTranslation();
   const titleId = useId();
-  const shown = service.skillView(content.skills).find((one) => one.skill === skill)?.shown;
-  const start = running?.start ?? shown?.level ?? 2;
+  // The shown level, from the skill's entries as the core works it out, so the wording matches where it starts.
+  const shown = service.shownLevel(skill);
+  // Where it starts as the core works it out, from the skill's entries, so the intro and the diagnostic agree.
+  const start = running?.start ?? service.aiDiagnosticStart(skill);
   const level = t("diagnostic.record.level", { name: levelName(content, start), level: start });
   return (
     <>
@@ -362,6 +368,7 @@ function Paused({
   attempt,
   onTurn,
   onAbandon,
+  onAgain,
 }: {
   readonly pause: AiLedPause;
   readonly result: AiDiagnosticTurnResult;
@@ -374,10 +381,12 @@ function Paused({
   readonly attempt: number;
   readonly onTurn: (turn: AiLedTurn) => void;
   readonly onAbandon: () => void;
+  /** Starts over with a new diagnostic, once this one has its result (MVP S21.3). */
+  readonly onAgain: () => void;
 }): ReactElement {
   const { t } = useTranslation();
   if (pause.kind === "explained")
-    return <Result result={result} content={content} skill={skill} name={name} />;
+    return <Result result={result} content={content} skill={skill} name={name} onAgain={onAgain} />;
   const leaving = <Leaving skill={skill} busy={busy} onAbandon={onAbandon} />;
   // A question dropped because its bank item changed: the person's answer to it wasn't counted (MVP S23.2).
   const dropped =
@@ -642,11 +651,13 @@ function Result({
   content,
   skill,
   name,
+  onAgain,
 }: {
   readonly result: AiDiagnosticTurnResult;
   readonly content: ContentPack;
   readonly skill: string;
   readonly name: string;
+  readonly onAgain: () => void;
 }): ReactElement {
   const { t } = useTranslation();
   const resultId = useId();
@@ -746,6 +757,9 @@ function Result({
         >
           {t("aiDiagnostic.seeRecord")}
         </Link>
+        <Button variant="quiet" onClick={onAgain}>
+          {t("aiDiagnostic.again")}
+        </Button>
       </div>
     </>
   );

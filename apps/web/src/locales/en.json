@@ -695,7 +695,10 @@
       "fromDiagnostic": "See the diagnostic",
       "take": "Take a diagnostic",
       "aiTake": "Take an AI-led diagnostic",
-      "aiContinue": "Continue the AI-led diagnostic"
+      "aiContinue": "Continue the AI-led diagnostic",
+      "aiCheck": "Check it with an AI-led diagnostic",
+      "aiMoreAccurate": "Get a more accurate result with AI",
+      "aiAgain": "Run the AI-led diagnostic again"
     },
     "customPage": {
       "title": "Add your own skill",
@@ -908,7 +911,16 @@
     "failed": "Pharoam couldn't save that. Nothing was lost: try again.",
     "changedOutside": "This diagnostic's record was changed in another app, so nothing was overwritten.",
     "seeRecord": "See the record",
-    "finishing": "Your last answer is in, so this diagnostic can only be finished: write its result."
+    "finishing": "Your last answer is in, so this diagnostic can only be finished: write its result.",
+    "moreAccurate": {
+      "title": "Get a more accurate result with AI",
+      "lead": "An AI-led diagnostic goes further than reviewed questions:",
+      "questions": "questions about your own evidence, chosen for where it is thin or doesn't match your levels",
+      "answers": "open answers and practical tasks, not only multiple choice",
+      "explained": "a result explained against your levels and evidence, with a next step",
+      "noModel": "An AI-led diagnostic needs a model.",
+      "setUp": "Set one up in Settings"
+    }
   },
   "aiDiagnostic": {
     "title": "{{skill}} AI-led diagnostic",
@@ -1020,6 +1032,7 @@
     "consideredEvidence": "Your evidence: {{title}}",
     "consideredClaim": "Your level: {{level}}, {{source}}, since {{since}}",
     "consideredEarlier": "An earlier result: {{level}}, {{date}}",
-    "consideredNothing": "No evidence, levels or earlier results: only your answers."
+    "consideredNothing": "No evidence, levels or earlier results: only your answers.",
+    "again": "Run it again"
   }
 }

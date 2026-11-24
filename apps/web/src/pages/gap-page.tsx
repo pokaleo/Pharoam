@@ -33,9 +33,10 @@ import { useTranslation } from "react-i18next";
 import { GapMeaning } from "../pathways/gap-meaning.tsx";
 import { PathwayProvenance } from "../pathways/provenance.tsx";
 import { useSession } from "../profile/session.tsx";
-import { dayName, diagnosticLabel, levelName } from "../skills/labels.ts";
+import { aiDiagnosticLabel, dayName, diagnosticLabel, levelName } from "../skills/labels.ts";
 import { Level } from "../skills/level.tsx";
 import { SourceTag } from "../skills/source-tag.tsx";
+import { AiMark } from "../ui/ai-mark.tsx";
 import { Button, buttonClassName } from "../ui/button.tsx";
 import { ChangedOutsideNotice } from "../ui/changed-outside.tsx";
 import { Icon } from "../ui/icon.tsx";
@@ -338,8 +339,11 @@ function Requirement({
     ),
   ];
   const core = item.importance === "core";
-  // A level that isn't supported by evidence can be tested, where the question bank covers the skill (MVP S21.1).
+  const { model } = useSession();
+  // A level that isn't supported by evidence can be tested, where the question bank covers the skill (MVP S21.1);
+  // with a model set up, by an AI-led diagnostic too, for any skill in Pharoam's vocabulary (S23).
   const diagnose = item.group !== "supported" && service.bankCovers(item.skill);
+  const aiLed = model !== undefined && item.group !== "supported" && service.aiDiagnosticCovers(item.skill);
   return (
     <tr className={STACK_ROW}>
       <th scope="row" className={`${TABLE.rowHead} max-sm:col-span-2 max-sm:h-auto max-sm:border-0`}>
@@ -388,7 +392,7 @@ function Requirement({
       <td
         className={`${TABLE.cell} text-end max-sm:col-span-2 max-sm:h-auto max-sm:border-0 max-sm:p-0 max-sm:text-start max-sm:empty:hidden`}
       >
-        {item.group === "unknown" || item.group === "below" || diagnose ? (
+        {item.group === "unknown" || item.group === "below" || diagnose || aiLed ? (
           <span className="inline-flex flex-wrap justify-end gap-(--space-2) max-sm:justify-start">
             {item.group === "unknown" || item.group === "below" ? (
               <Link
@@ -408,6 +412,19 @@ function Requirement({
               >
                 {diagnosticLabel(t, {
                   inProgress: service.diagnosticInProgress(item.skill) !== undefined,
+                  ...(item.shown !== null && { shown: item.shown.provenance }),
+                })}
+              </Link>
+            ) : null}
+            {aiLed ? (
+              <Link
+                to="/skills/$skill/ai-diagnostic"
+                params={{ skill: item.skill }}
+                className={buttonClassName("quiet", "sm")}
+              >
+                <AiMark />
+                {aiDiagnosticLabel(t, {
+                  inProgress: service.aiDiagnosticInProgress(item.skill) !== undefined,
                   ...(item.shown !== null && { shown: item.shown.provenance }),
                 })}
               </Link>

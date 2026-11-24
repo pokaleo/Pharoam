@@ -22,6 +22,7 @@ import { assessmentWriter } from "../profile/writers.ts";
 import { levelName } from "../skills/labels.ts";
 import { Level } from "../skills/level.tsx";
 import { SourceTag } from "../skills/source-tag.tsx";
+import { AiMark } from "../ui/ai-mark.tsx";
 import { Button, buttonClassName } from "../ui/button.tsx";
 import { Notice } from "../ui/notice.tsx";
 import { PageTitle } from "../ui/page-title.tsx";
@@ -286,7 +287,8 @@ function Intro({
 }): ReactElement {
   const { t } = useTranslation();
   const titleId = useId();
-  const shown = service.skillView(content.skills).find((one) => one.skill === skill)?.shown;
+  // The shown level, from the skill's entries as the core works it out, so the wording matches where it starts.
+  const shown = service.shownLevel(skill);
   const start = service.diagnosticStart(skill) ?? 2;
   const level = t("diagnostic.record.level", { name: levelName(content, start), level: start });
   return (
@@ -466,7 +468,46 @@ function Result({
           {t("diagnostic.seeRecord")}
         </Link>
       </div>
+      <MoreAccurate skill={skill} />
     </>
+  );
+}
+
+// After a question-bank result, what an AI-led diagnostic adds, with a way to it, or that it needs a model (S21.2).
+function MoreAccurate({ skill }: { readonly skill: string }): ReactElement {
+  const { t } = useTranslation();
+  const { model } = useSession();
+  const titleId = useId();
+  return (
+    <section
+      aria-labelledby={titleId}
+      className="grid gap-(--space-2) rounded-lg border border-dashed border-ai-edge bg-surface p-(--pad)"
+    >
+      <h2 id={titleId} className="flex items-center gap-(--space-1) font-semibold">
+        <AiMark />
+        {t("diagnostic.moreAccurate.title")}
+      </h2>
+      <p className="text-ink-2">{t("diagnostic.moreAccurate.lead")}</p>
+      <ul className="grid list-disc gap-(--space-1) ps-5 text-ink-2">
+        <li>{t("diagnostic.moreAccurate.questions")}</li>
+        <li>{t("diagnostic.moreAccurate.answers")}</li>
+        <li>{t("diagnostic.moreAccurate.explained")}</li>
+      </ul>
+      {model === undefined ? (
+        <p className="text-ink-2">
+          {t("diagnostic.moreAccurate.noModel")}{" "}
+          <Link to="/settings" className="text-channel underline">
+            {t("diagnostic.moreAccurate.setUp")}
+          </Link>
+        </p>
+      ) : (
+        <div>
+          <Link to="/skills/$skill/ai-diagnostic" params={{ skill }} className={buttonClassName("secondary")}>
+            {t("skills.skillPage.aiMoreAccurate")}
+          </Link>
+        </div>
+      )}
+    </section>
   );
 }
 
