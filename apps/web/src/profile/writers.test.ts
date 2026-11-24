@@ -1,7 +1,7 @@
-import type { GapItem } from "@pharoam/core";
+import type { AiAssessmentFacts, GapItem } from "@pharoam/core";
 import { describe, expect, it } from "vitest";
 import { createI18n } from "../i18n.ts";
-import { assessmentWriter, gapWriter, overviewWriter } from "./writers.ts";
+import { aiAssessmentWriter, assessmentWriter, gapWriter, overviewWriter } from "./writers.ts";
 
 const t = createI18n().t;
 const LEVELS = ["Aware", "Beginner", "Working", "Proficient", "Expert"];
@@ -126,5 +126,102 @@ describe("assessmentWriter (MVP S19.5)", () => {
     expect(body).toContain("- Question 1, sql-2-a at Working (2): right");
     expect(body).toContain("- Question 2, sql-3-a at Proficient (3): not right");
     expect(body).not.toMatch(/score|%/i);
+  });
+});
+
+describe("aiAssessmentWriter (MVP S23.4)", () => {
+  const AI = (task: string) => ({ task, model: "anthropic/claude-test", at: "2026-11-23T10:00:00Z" });
+  const FACTS: AiAssessmentFacts = {
+    skill: "sql",
+    name: "SQL",
+    start: 2,
+    result: 2,
+    rule: "two-right-to-settle@1",
+    date: "2026-11-23",
+    considered: {
+      evidence: [{ id: "0192f3a1-0000-7000-8000-000000000001", title: "Payments reporting" }],
+      claims: [{ level: 4, provenance: "self-reported", since: "2026-10-24" }],
+      earlier: [{ level: 2, date: "2026-11-15" }],
+    },
+    explanation: {
+      showed: "# Joins are solid.",
+      comparison: "As you claimed.",
+      reasons: ["Daily reporting work."],
+      next_step: "Try a window function.",
+      ai: AI("explain-diagnostic@1"),
+    },
+    steps: [
+      {
+        source: "bank",
+        item: "sql-2-a",
+        format: "mcq",
+        level: 2,
+        prompt: "Which join keeps unmatched rows?",
+        options: ["INNER JOIN", "LEFT JOIN"],
+        chosen: AI("write-diagnostic-item@1"),
+        why: "Probes joins.",
+        answer: 1,
+        correct: true,
+      },
+      {
+        source: "written",
+        format: "open",
+        level: 3,
+        prompt: "Rank each customer's orders.",
+        rubric: "Partitions by customer.",
+        chosen: AI("write-diagnostic-item@1"),
+        why: "Probes window functions.",
+        answer: "ORDER BY date\n## Not a heading",
+        correct: false,
+        reasons: "Doesn't partition.",
+        marked: AI("mark-diagnostic-answer@1"),
+      },
+    ],
+  };
+
+  it("writes the result by the rule, the labelled explanation and every question in full, with its marking", () => {
+    const { title, body } = aiAssessmentWriter(t, levelName)(FACTS);
+
+    expect(title).toBe("SQL AI-led diagnostic");
+    expect(body).toContain(
+      "Result: Working (2), by the published rule two-right-to-settle@1, over 2 questions.",
+    );
+    expect(body).toContain("by AI (anthropic/claude-test), which can be wrong.");
+    expect(body).toContain("Try a window function.");
+    expect(body).toContain("Which join keeps unmatched rows?");
+    expect(body).toContain("Answer: LEFT JOIN");
+    expect(body).toContain("Question 2, at Proficient (3), Written by the model: not right");
+    expect(body).toContain("Marked so because: Doesn't partition.");
+  });
+
+  it("says what it considered, and where each question came from (S23.3)", () => {
+    const { body } = aiAssessmentWriter(t, levelName)(FACTS);
+
+    expect(body).toContain("Payments reporting");
+    expect(body).toContain("Expert (4), Self-reported, since 2026-10-24");
+    expect(body).toContain("Working (2), question-bank diagnostic, 2026-11-15");
+    expect(body).toContain("From Pharoam's reviewed questions");
+    expect(body).toContain("Written by the model");
+  });
+
+  it("keeps underlines and code fences in the model's text or an answer from changing the record's structure", () => {
+    const [bank, written] = FACTS.steps;
+    if (bank === undefined || written?.format !== "open") throw new Error("The facts have changed.");
+    const facts: AiAssessmentFacts = {
+      ...FACTS,
+      explanation: { ...FACTS.explanation, comparison: "Lower than claimed\n===" },
+      steps: [bank, { ...written, answer: "```sql\nSELECT 1\n---" }],
+    };
+    const { body } = aiAssessmentWriter(t, levelName)(facts);
+
+    expect(body).not.toMatch(/^\s*={3}\s*$/m);
+    expect(body).not.toMatch(/^\s*-{3}\s*$/m);
+    expect(body).not.toMatch(/^\s*```/m);
+  });
+
+  it("keeps the model's text and the person's answers from adding headings of their own", () => {
+    const { body } = aiAssessmentWriter(t, levelName)(FACTS);
+    expect(body).not.toMatch(/^#+ Joins are solid/m);
+    expect(body).not.toMatch(/^#+ Not a heading/m);
   });
 });

@@ -26,6 +26,7 @@ describe("createAppRouter (ADR-0008)", () => {
         "/skills",
         "/skills/$skill",
         "/skills/$skill/diagnostic",
+        "/skills/$skill/ai-diagnostic",
         "/skills/custom",
         "/skills/record",
       ].sort(),

@@ -4,6 +4,7 @@ import { userEvent, type UserEvent } from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { packWithBank, packWithBankAt, RIGHT, WRONG } from "../__fixtures__/bank.ts";
 import { fileContaining, fullProfile, navLink } from "../__fixtures__/profiles.ts";
+import { scanModel, setUpModel } from "../__fixtures__/models.ts";
 import { renderApp } from "../__fixtures__/render-app.tsx";
 import { expectNoAxeViolations } from "../testing/axe.ts";
 
@@ -202,5 +203,39 @@ describe("taking a question-bank diagnostic (MVP S19, S21.1)", () => {
     const first = within(path).getAllByRole("listitem")[0];
     expect(kept(within(first ?? path).getByText(/SQL question . at level 2\?/))).toBe(true);
     expect(kept(within(first ?? path).getByText(new RegExp(`^Your answer: ${RIGHT}`)))).toBe(true);
+  });
+});
+
+describe("after a question-bank result (MVP S21.2)", () => {
+  async function toResult(user: UserEvent, withModel: boolean) {
+    const test = scanModel();
+    renderApp({ name: "my-profile", memory: fullProfile(4), content: packWithBank, providers: test.load });
+    await user.click(await screen.findByRole("button", { name: "Choose a folder" }));
+    await screen.findByRole("link", { name: "Profile" }, { timeout: 5000 });
+    if (withModel) await setUpModel(user);
+    await user.click(await navLink("Skills"));
+    await user.click(await screen.findByRole("link", { name: "SQL" }));
+    await user.click(await screen.findByRole("link", { name: "Check it with a diagnostic" }));
+    await user.click(await screen.findByRole("button", { name: "Start" }));
+    await answer(user, true);
+    await answer(user, true);
+    await screen.findByRole("heading", { level: 1, name: "Your SQL result" });
+  }
+
+  it("offers a more accurate result with AI, saying why, once a model is set up", async () => {
+    const user = userEvent.setup();
+    await toResult(user, true);
+
+    const offer = screen.getByRole("link", { name: "Get a more accurate result with AI" });
+    expect(offer.getAttribute("href")).toBe("/skills/sql/ai-diagnostic");
+    screen.getByText(/questions about your own evidence/i);
+  });
+
+  it("says a model is needed for it when none is set up", async () => {
+    const user = userEvent.setup();
+    await toResult(user, false);
+
+    expect(screen.queryByRole("link", { name: "Get a more accurate result with AI" })).toBeNull();
+    screen.getByText(/needs a model/i);
   });
 });

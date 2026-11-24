@@ -47,6 +47,7 @@ export {
   type AiDiagnosticOutcome,
   type AiDiagnosticTurnResult,
   type AiDiagnosticView,
+  type ConsideredView,
   type AssessmentFacts,
   type AssessmentWriter,
   type DiagnosticError,

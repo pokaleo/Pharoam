@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { loadContentPack } from "../content.ts";
 import { createI18n } from "../i18n.ts";
-import { dayName, diagnosticLabel, levelName, sourceName } from "./labels.ts";
+import { aiDiagnosticLabel, dayName, diagnosticLabel, levelName, sourceName } from "./labels.ts";
 
 const { t } = createI18n();
 
@@ -43,5 +43,27 @@ describe("diagnosticLabel", () => {
     expect(diagnosticLabel(t, { inProgress: false, shown: "demonstrated" })).toBe("Take a diagnostic");
     expect(diagnosticLabel(t, { inProgress: false, shown: "ai-correlated" })).toBe("Take a diagnostic");
     expect(diagnosticLabel(t, { inProgress: true, shown: "self-reported" })).toBe("Continue the diagnostic");
+  });
+});
+
+describe("aiDiagnosticLabel", () => {
+  it("checks a level the person or a model gave, takes one where none is tested, and continues one in progress", () => {
+    expect(aiDiagnosticLabel(t, { inProgress: false, shown: "self-reported" })).toBe(
+      "Check it with an AI-led diagnostic",
+    );
+    expect(aiDiagnosticLabel(t, { inProgress: false, shown: "ai-judged" })).toBe(
+      "Check it with an AI-led diagnostic",
+    );
+    expect(aiDiagnosticLabel(t, { inProgress: false })).toBe("Take an AI-led diagnostic");
+    // After a question-bank result, it offers more accuracy; after an AI-led one, to run it again (S21.2, S21.3).
+    expect(aiDiagnosticLabel(t, { inProgress: false, shown: "demonstrated" })).toBe(
+      "Get a more accurate result with AI",
+    );
+    expect(aiDiagnosticLabel(t, { inProgress: false, shown: "ai-correlated" })).toBe(
+      "Run the AI-led diagnostic again",
+    );
+    expect(aiDiagnosticLabel(t, { inProgress: true, shown: "self-reported" })).toBe(
+      "Continue the AI-led diagnostic",
+    );
   });
 });

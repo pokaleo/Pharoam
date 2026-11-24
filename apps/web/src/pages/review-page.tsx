@@ -12,7 +12,7 @@ import { useTranslation } from "react-i18next";
 import { setAsideReason } from "../ai/problems.ts";
 import { useSession } from "../profile/session.tsx";
 import { skillChoices, skillName, type SkillChoice } from "../profile/skills.ts";
-import { levelName } from "../skills/labels.ts";
+import { aiDiagnosticLabel, levelName } from "../skills/labels.ts";
 import { AiMark } from "../ui/ai-mark.tsx";
 import { Button, buttonClassName } from "../ui/button.tsx";
 import { Notice } from "../ui/notice.tsx";
@@ -246,7 +246,10 @@ function SuggestionCard({
 }): ReactElement {
   const { t } = useTranslation();
   const titleId = useId();
+  const { model } = useSession();
   const { suggestion, stale, replaced } = item;
+  // With a model set up, a level can be checked by an AI-led diagnostic too, for a skill in Pharoam's vocabulary.
+  const aiLed = model !== undefined && service.aiDiagnosticCovers(suggestion.skill);
   const [adjusting, setAdjusting] = useState(false);
   const [level, setLevel] = useState<number>();
 
@@ -358,6 +361,18 @@ function SuggestionCard({
               className="text-meta text-channel underline"
             >
               {t("skills.skillPage.check")}
+            </Link>
+          ) : null}
+          {aiLed ? (
+            <Link
+              to="/skills/$skill/ai-diagnostic"
+              params={{ skill: suggestion.skill }}
+              className="text-meta text-channel underline"
+            >
+              {aiDiagnosticLabel(t, {
+                inProgress: service.aiDiagnosticInProgress(suggestion.skill) !== undefined,
+                shown: "ai-judged",
+              })}
             </Link>
           ) : null}
         </div>

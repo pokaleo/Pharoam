@@ -41,6 +41,29 @@ export function diagnosticLabel(
 }
 
 /**
+ * What a link to a skill's AI-led diagnostic says, the same way as {@link diagnosticLabel}: continue one in
+ * progress, check a level the person or a model gave, get a more accurate result after a question-bank one, run it
+ * again after an AI-led one, or take one (MVP S21.1–S21.3, S23).
+ *
+ * @param t - The translation function.
+ * @param state - Whether an AI-led diagnostic of the skill is in progress, and where its shown level came from, if
+ * it has one.
+ * @returns The link's words, such as "Check it with an AI-led diagnostic".
+ */
+export function aiDiagnosticLabel(
+  t: TFunction,
+  state: { readonly inProgress: boolean; readonly shown?: Provenance },
+): string {
+  if (state.inProgress) return t("skills.skillPage.aiContinue");
+  // After a question-bank result, more accuracy; after an AI-led one, again (MVP S21.2, S21.3).
+  if (state.shown === "demonstrated") return t("skills.skillPage.aiMoreAccurate");
+  if (state.shown === "ai-correlated") return t("skills.skillPage.aiAgain");
+  return state.shown === "self-reported" || state.shown === "ai-judged"
+    ? t("skills.skillPage.aiCheck")
+    : t("skills.skillPage.aiTake");
+}
+
+/**
  * The name of a level's source, in the person's language.
  *
  * @param t - The translation function.

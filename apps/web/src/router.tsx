@@ -21,6 +21,7 @@ import { PathwayPage } from "./pages/pathway-page.tsx";
 import { PathwaysPage } from "./pages/pathways-page.tsx";
 import { CustomSkillPage } from "./pages/custom-skill-page.tsx";
 import { RecordLevelPage } from "./pages/record-level-page.tsx";
+import { AiDiagnosticPage } from "./pages/ai-diagnostic-page.tsx";
 import { DiagnosticPage } from "./pages/diagnostic-page.tsx";
 import { SkillPage } from "./pages/skill-page.tsx";
 import { SkillsPage } from "./pages/skills-page.tsx";
@@ -163,6 +164,17 @@ const diagnosticRoute = createRoute({
   },
 });
 
+const aiDiagnosticRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/skills/$skill/ai-diagnostic",
+  component: function AiDiagnostic() {
+    const { skill } = aiDiagnosticRoute.useParams();
+    return (
+      <ProfileRoute page={(service) => <AiDiagnosticPage key={skill} service={service} skill={skill} />} />
+    );
+  },
+});
+
 const skillRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/skills/$skill",
@@ -219,6 +231,7 @@ const routeTree = rootRoute.addChildren([
   customSkillRoute,
   skillRoute,
   diagnosticRoute,
+  aiDiagnosticRoute,
   startRoute,
   aboutRoute,
   activityRoute,
