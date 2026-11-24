@@ -337,6 +337,12 @@ describe("ending an AI-led diagnostic (MVP S23.3, S23.4)", () => {
     const outcome = ended.outcome;
     if (outcome === undefined) throw new Error("No outcome.");
     expect(outcome.result).toBe(4);
+    // What it considered, in words, for the result and its record (S23.3).
+    expect(outcome.considered).toEqual({
+      evidence: [{ id: EVIDENCE_ID, title: "Payments reporting" }],
+      claims: [{ level: 4, provenance: "self-reported", since: "2026-11-23" }],
+      earlier: [],
+    });
     const evidence = outcome.evidence.record;
     expect(evidence).toMatchObject({
       schema: "evidence/1",

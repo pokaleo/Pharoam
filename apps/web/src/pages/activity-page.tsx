@@ -18,7 +18,17 @@ const TASKS = [
   "suggest-skill-links",
   "judge-skill-level",
   "explain-gap",
+  "write-diagnostic-item",
+  "mark-diagnostic-answer",
+  "explain-diagnostic",
 ] as const;
+
+// An AI-led diagnostic's tasks, whose answers it uses as they come, with no step to accept (MVP S23.4).
+const DIAGNOSTIC: readonly string[] = [
+  "write-diagnostic-item",
+  "mark-diagnostic-answer",
+  "explain-diagnostic",
+];
 
 /**
  * The activity log: each AI call and each read and write of the person's storage this session, newest first
@@ -157,7 +167,10 @@ function CallEntry({ logged }: { readonly logged: LoggedCall }): ReactElement {
   const when = new Intl.DateTimeFormat(t("app.locale"), { dateStyle: "medium", timeStyle: "medium" });
   // A scan's answer becomes suggestions, each decided in Review rather than here.
   const scan = name === "suggest-skill-links" || name === "judge-skill-level";
-  const outcome = decision ?? (scan && call.outcome === "answered" ? "inReview" : call.outcome);
+  const answered = call.outcome === "answered";
+  const outcome =
+    decision ??
+    (scan && answered ? "inReview" : DIAGNOSTIC.includes(name) && answered ? "inDiagnostic" : call.outcome);
   const size = new Intl.NumberFormat(t("app.locale")).format(
     call.sent.system.length + call.sent.prompt.length,
   );

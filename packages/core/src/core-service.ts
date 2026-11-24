@@ -96,6 +96,7 @@ import { parseProfileRecord, type ProfileRecord, type ProfileRecordError } from 
 import type { McqItem } from "./schemas/assessment-item.ts";
 import type { AiLedItem, AiLedStep, Considered, EvidenceRecord } from "./schemas/evidence.ts";
 import type { SuggestionInput } from "./schemas/session.ts";
+import type { Provenance } from "./schemas/fields.ts";
 import type { Observation } from "./schemas/skill-record.ts";
 import type { SkillEntry } from "./schemas/skill.ts";
 
@@ -979,6 +980,27 @@ export interface AiDiagnosticOutcome {
   readonly explanation: HeldExplanation;
   /** The assessment evidence written. */
   readonly evidence: LoadedRecord;
+  /** What it considered, in words (S23.3). */
+  readonly considered: ConsideredView;
+}
+
+/**
+ * What an AI-led diagnostic considered, as the person can read it (MVP S23.3): the evidence by title, the claims by
+ * level and source, and the earlier results by level and day.
+ *
+ * @remarks Anything gone since is left out; the record keeps every ID it sent.
+ */
+export interface ConsideredView {
+  /** Each evidence record sent, by ID and title. */
+  readonly evidence: readonly { readonly id: string; readonly title: string }[];
+  /** Each claim sent: its level, where it came from, and the day it was made. */
+  readonly claims: readonly {
+    readonly level: number;
+    readonly provenance: Provenance;
+    readonly since: string;
+  }[];
+  /** Each earlier question-bank result sent: its level and the day it ended. */
+  readonly earlier: readonly { readonly level: number; readonly date: string }[];
 }
 
 /** What an AI-led diagnostic's assessment record reports, for its readable title and summary. */
@@ -999,6 +1021,8 @@ export interface AiAssessmentFacts {
   readonly explanation: HeldExplanation;
   /** The day it ended, as `YYYY-MM-DD`. */
   readonly date: string;
+  /** What it considered, in words (S23.3). */
+  readonly considered: ConsideredView;
 }
 
 /**
@@ -1813,6 +1837,29 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
     return { evidence, claims, earlier };
   }
 
+  // What an AI-led diagnostic considered, in words: evidence titles, claims and earlier results still there.
+  function consideredView(skill: string, considered: Considered): ConsideredView {
+    const record = skillRecord(skill)?.record;
+    const entries = record?.schema === "skill-record/1" ? record.entries : [];
+    return {
+      evidence: considered.evidence.flatMap(({ evidence }) => {
+        const found = evidenceNow(evidence)?.record;
+        return found === undefined ? [] : [{ id: found.id, title: found.title }];
+      }),
+      claims: considered.claims.flatMap((id) => {
+        const entry = entries.find((one) => one.id === id);
+        return entry === undefined || !("provenance" in entry)
+          ? []
+          : [{ level: entry.level, provenance: entry.provenance, since: entry.observed_at.slice(0, 10) }];
+      }),
+      earlier: considered.earlier.flatMap((id) => {
+        const found = byId(id);
+        const result = found === undefined ? undefined : earlierResult(found.record, skill);
+        return result === undefined ? [] : [{ level: result.level, date: result.date }];
+      }),
+    };
+  }
+
   // Begins an AI-led diagnostic of a skill with a model: only its session is written, and nothing is sent.
   async function beginAiDiagnostic(
     skill: string,
@@ -1945,11 +1992,22 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
     const { steps } = session;
     const result = diagnosticResult(steps);
     const { ai, ...said } = explanation;
+    const considered = consideredView(skill, session.considered);
     const now = timestamp(ids.now());
     if (byId(evidenceId) === undefined) {
       const name = content.skills.find((one) => one.slug === skill)?.name ?? skill;
       const date = now.slice(0, 10);
-      const { title, body } = writer({ skill, name, start, result, steps, rule, explanation, date });
+      const { title, body } = writer({
+        skill,
+        name,
+        start,
+        result,
+        steps,
+        rule,
+        explanation,
+        date,
+        considered,
+      });
       const top = {
         schema: "evidence/1",
         id: evidenceId,
@@ -2001,7 +2059,7 @@ export function createCoreService(options: CoreServiceOptions): CoreService {
     if (!completed.ok) return completed;
     const evidence = byId(evidenceId);
     if (evidence === undefined) throw new Error("The assessment record written isn't loaded.");
-    return ok({ result, steps, explanation, evidence });
+    return ok({ result, steps, explanation, evidence, considered });
   }
 
   // An evidence record as it is now, for a scan to read or compare with what it read.

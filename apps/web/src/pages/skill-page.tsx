@@ -63,10 +63,13 @@ function SkillDetail({
   readonly content: ContentPack;
 }): ReactElement {
   const { t } = useTranslation();
+  const { model } = useSession();
   const shownId = useId();
   const [change, setChange] = useState<Change | undefined>(undefined);
   const item = service.skillView(content.skills).find((view) => view.skill === skill);
   const entry = content.skills.find((s) => s.slug === skill);
+  // An AI-led diagnostic tests a skill in Pharoam's vocabulary, with a model set up (MVP S21.1, S23).
+  const aiLed = model !== undefined && entry?.status === "active";
   const history = service.skillHistory(skill);
   const record =
     item === undefined ? undefined : service.records().find((r) => r.location === item.location)?.record;
@@ -119,6 +122,17 @@ function SkillDetail({
                   inProgress: service.diagnosticInProgress(skill) !== undefined,
                   ...(item?.shown !== undefined && { shown: item.shown.provenance }),
                 })}
+              </Link>
+            ) : null}
+            {aiLed ? (
+              <Link
+                to="/skills/$skill/ai-diagnostic"
+                params={{ skill }}
+                className={buttonClassName("secondary")}
+              >
+                {service.aiDiagnosticInProgress(skill) === undefined
+                  ? t("skills.skillPage.aiTake")
+                  : t("skills.skillPage.aiContinue")}
               </Link>
             ) : null}
             <Link to="/skills/record" search={{ skill }} className={buttonClassName("primary")}>
